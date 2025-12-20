@@ -216,13 +216,31 @@ CRITICAL:
         
         # JSON 파싱 시도
         try:
-            return json.loads(text)
+            parsed = json.loads(text)
+            
+            # ✅ FIX: Handle list responses from Gemini
+            if isinstance(parsed, list):
+                if len(parsed) > 0 and isinstance(parsed[0], dict):
+                    print(f"⚠️ Gemini returned a list, using first element")
+                    return parsed[0]
+                else:
+                    print(f"⚠️ Gemini returned empty or invalid list")
+                    return {"error": "Invalid list response"}
+            
+            return parsed
+            
         except json.JSONDecodeError as e:
             # 더 적극적인 정리
             try:
                 # 역슬래시 이스케이프 문제 수정
                 text = text.replace('\\\\', '\\')
-                return json.loads(text)
+                parsed = json.loads(text)
+                
+                # Check for list again
+                if isinstance(parsed, list) and len(parsed) > 0:
+                    return parsed[0] if isinstance(parsed[0], dict) else {"error": "Invalid list"}
+                    
+                return parsed
             except:
                 pass
             
@@ -230,7 +248,13 @@ CRITICAL:
             try:
                 # 마지막 콤마 제거
                 text = re.sub(r',(\s*[}\]])', r'\1', text)
-                return json.loads(text)
+                parsed = json.loads(text)
+                
+                # Check for list again
+                if isinstance(parsed, list) and len(parsed) > 0:
+                    return parsed[0] if isinstance(parsed[0], dict) else {"error": "Invalid list"}
+                    
+                return parsed
             except:
                 pass
             
@@ -292,6 +316,15 @@ CRITICAL:
             print(f"⚠️ Parse error for {article.title[:50]}: {analysis_data['error']}")
             return None
         
+        # Helper function to convert string booleans safely
+        def _safe_bool(value: Any) -> bool:
+            """Convert any value to boolean safely"""
+            if isinstance(value, bool):
+                return value
+            if isinstance(value, str):
+                return value.lower() in ('true', '1', 'yes')
+            return bool(value)
+        
         # DB에 저장 (simplified schema)
         news_analysis = NewsAnalysis(
             article_id=article.id,
@@ -322,15 +355,15 @@ CRITICAL:
             indirect_expressions=[],
             red_flags=[],
             
-            # Trading Relevance
-            trading_actionable=analysis_data.get("actionable", False),
+            # Trading Relevance - Fixed Boolean conversion
+            trading_actionable=_safe_bool(analysis_data.get("actionable", False)),
             risk_category=analysis_data.get("risk_category", "none"),
             recommendation="",
             
-            # Credibility (defaults)
+            # Credibility (defaults) - Fixed Boolean conversion
             source_reliability=0.7,
-            data_backed=False,
-            multiple_sources_cited=False,
+            data_backed=_safe_bool(analysis_data.get("data_backed", False)),
+            multiple_sources_cited=_safe_bool(analysis_data.get("multiple_sources", False)),
             potential_bias="",
             
             # Model Info
@@ -342,7 +375,9 @@ CRITICAL:
         self.db.add(news_analysis)
         
         # Extract tickers from title
+        print(f"🔍 Extracting tickers from title: {article.title}")
         extracted_tickers = self.extract_tickers_from_title(article.title)
+        print(f"📌 Found {len(extracted_tickers)} tickers: {extracted_tickers}")
         
         # Save ticker relevances
         for ticker in extracted_tickers:

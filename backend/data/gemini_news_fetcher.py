@@ -48,109 +48,129 @@ class GeminiNewsFetcher:
         use_grounding: bool = True
     ) -> List[Dict[str, Any]]:
         """
-        Fetch news articles using Gemini
+        DEPRECATED: Use fetch_news_v2 for new 2-phase pipeline
         
-        Args:
-            query: Search query
-            max_articles: Maximum number of articles to return
-            use_grounding: Use Google Search grounding
+        Kept for backward compatibility
+        """
+        return self.fetch_news_v2(query=query, max_articles=max_articles)
+    
+    def fetch_news_v2(
+        self,
+        query: str = "latest stock market news",
+        max_articles: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        2-Phase Grounding Pipeline (공식 문서 기반)
+        
+        Phase 1: Grounding Search - 실제 웹 검색 (text response)
+        Phase 2: Auto-Extraction - 구조화된 데이터 추출 (JSON)
         
         Returns:
-            List of news articles with analysis
+            List of structured articles with grounding validation
         """
-        
-        prompt = f"""
-Search for {query} from the past 24 hours.
-
-For each article (up to {max_articles}), provide:
-- title: Article headline
-- url: Direct link (if available)
-- source: Publication name
-- published_date: Publication date/time
-- summary: 2-3 sentence summary
-- tickers: List of mentioned stock tickers (e.g., ["AAPL", "NVDA"])
-- sentiment: "positive", "negative", or "neutral"
-- urgency: "low", "medium", "high", or "critical"
-- market_impact: "bullish", "bearish", or "neutral"
-- actionable: true if tradeable insight, false otherwise
-
-Return ONLY a valid JSON array of articles.
-Do not include markdown, code blocks, or explanations.
-
-Example format:
-[
-  {{
-    "title": "Apple announces new product",
-    "url": "https://...",
-    "source": "Reuters",
-    "published_date": "2024-12-20T10:00:00Z",
-    "summary": "Apple unveiled...",
-    "tickers": ["AAPL"],
-    "sentiment": "positive",
-    "urgency": "medium",
-    "market_impact": "bullish",
-    "actionable": true
-  }}
-]
-"""
+        from .prompts import GROUNDING_SEARCH_PROMPT, ANALYSIS_EXTRACTION_PROMPT
         
         try:
-            # IMPORTANT: Grounding cannot be used with JSON mode in Gemini API
-            # "400 Search Grounding can't be used with JSON/YAML/XML mode"
-            # Solution: Disable grounding for now to get structured output
-            # Future: Use two-step approach (grounding search → JSON formatting)
+            # ================================================================
+            # PHASE 1: GROUNDING SEARCH (실제 웹 검색)
+            # ================================================================
+            print(f"\n🔍 Phase 1: Grounding web search for '{query}'")
             
-            response = self.model.generate_content(
-                prompt,
+            grounding_prompt = GROUNDING_SEARCH_PROMPT.format(ticker=query)
+            
+            # 공식 문서 레거시 방식 (google.generativeai SDK 호환)
+            # REST API 형식으로 전달
+            response_grounding = self.model.generate_content(
+                grounding_prompt,
+                tools=[{
+                    "google_search_retrieval": {
+                        "dynamic_retrieval_config": {
+                            "mode": "MODE_DYNAMIC",
+                            "dynamic_threshold": 0.3  # 30% 신뢰도 이상일 때 검색
+                        }
+                    }
+                }],
                 generation_config=genai.GenerationConfig(
-                    temperature=0.2,  # Lower for factual accuracy
-                    max_output_tokens=4000,
-                    response_mime_type="application/json",  # Requires grounding OFF
-                ),
-                # tools=None  # Grounding disabled due to API limitation
+                    temperature=0.1,
+                    max_output_tokens=3000,
+                )
             )
             
-            # Parse JSON response
-            articles = json.loads(response.text)
+            grounding_text = response_grounding.text
+            print(f"✅ Grounding completed: {len(grounding_text)} chars")
             
-            # HALLUCINATION PREVENTION: Validate citations
-            if use_grounding and hasattr(response, 'candidates'):
-                for candidate in response.candidates:
+            # 실제 URL 추출 (Grounding metadata)
+            real_urls = []
+            if hasattr(response_grounding, 'candidates') and response_grounding.candidates:
+                for candidate in response_grounding.candidates:
                     if hasattr(candidate, 'grounding_metadata'):
                         metadata = candidate.grounding_metadata
-                        # Store grounding sources for validation
-                        grounding_sources = []
                         if hasattr(metadata, 'grounding_chunks'):
                             for chunk in metadata.grounding_chunks:
                                 if hasattr(chunk, 'web'):
-                                    grounding_sources.append({
-                                        "uri": chunk.web.uri,
-                                        "title": chunk.web.title if hasattr(chunk.web, 'title') else None
+                                    real_urls.append({
+                                        'uri': chunk.web.uri,
+                                        'title': chunk.web.title if hasattr(chunk.web, 'title') else None
                                     })
-                        
-                        # Add grounding_sources to first article as metadata
-                        if articles and grounding_sources:
-                            articles[0]["grounding_sources"] = grounding_sources
-                            articles[0]["grounding_validated"] = True
             
-            # Add metadata
-            for article in articles:
-                article["fetched_at"] = datetime.utcnow().isoformat()
-                article["source_type"] = "gemini_llm"  # No grounding (JSON mode incompatible)
-                article["model_version"] = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+            print(f"📊 Found {len(real_urls)} grounding sources (real URLs)")
+            
+            # ================================================================
+            # PHASE 2: AUTO-EXTRACTION (JSON 구조화)
+            # ================================================================
+            print(f"\n🔄 Phase 2: Auto-extracting structured data")
+            
+            extraction_prompt = ANALYSIS_EXTRACTION_PROMPT.format(
+                grounding_text=grounding_text
+            )
+            
+            response_extraction = self.model.generate_content(
+                extraction_prompt,
+                generation_config=genai.GenerationConfig(
+                    temperature=0.1,
+                    max_output_tokens=4000,
+                    response_mime_type="application/json",  # JSON mode (Grounding OFF)
+                )
+            )
+            
+            # JSON 파싱
+            articles = json.loads(response_extraction.text)
+            print(f"✅ Extracted {len(articles)} structured articles")
+            
+            # ================================================================
+            # URL 병합 및 메타데이터 추가
+            # ================================================================
+            for i, article in enumerate(articles):
+                # Grounding URL 병합 (진짜 URL!)
+                if i < len(real_urls):
+                    grounding_url = real_urls[i]['uri']
+                    llm_url = article.get('url', '')
+                    
+                    # URL 검증
+                    if llm_url and llm_url != grounding_url:
+                        article['url_mismatch_warning'] = True
+                        print(f"⚠️ URL mismatch detected for article {i+1}")
+                    
+                    article['url'] = grounding_url  # Grounding URL 우선!
+                    article['grounding_source'] = real_urls[i]
+                    article['grounding_validated'] = True
                 
-                # Hallucination check: Articles without URLs are flagged
-                if not article.get("url") or article["url"] == "":
-                    article["validation_warning"] = "No source URL - verify accuracy"
+                # 메타데이터 추가
+                article['fetched_at'] = datetime.utcnow().isoformat()
+                article['source_type'] = 'gemini_grounding_v2'
+                article['model_version'] = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
+                article['pipeline_version'] = '2.0'
             
             return articles
             
         except json.JSONDecodeError as e:
-            print(f"⚠️ JSON parse error: {e}")
-            print(f"Response: {response.text[:500]}")
+            print(f"⚠️ JSON parse error in Phase 2: {e}")
+            print(f"Response preview: {response_extraction.text[:500]}")
             return []
         except Exception as e:
-            print(f"❌ Error fetching news: {e}")
+            print(f"❌ Pipeline error: {e}")
+            import traceback
+            traceback.print_exc()
             return []
     
     def fetch_ticker_news(
@@ -159,10 +179,10 @@ Example format:
         max_articles: int = 5
     ) -> List[Dict[str, Any]]:
         """
-        Fetch news for a specific ticker
+        Fetch news for a specific ticker using 2-phase pipeline
         """
         query = f"latest news about {ticker} stock"
-        return self.fetch_news(query, max_articles)
+        return self.fetch_news_v2(query=query, max_articles=max_articles)
     
     def fetch_breaking_news(self) -> List[Dict[str, Any]]:
         """

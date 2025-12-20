@@ -354,8 +354,13 @@ if GLOBAL_MACRO_AVAILABLE:
 if AUTO_TRADE_AVAILABLE:
     app.include_router(auto_trade_router)
     logger.info("Auto Trade router registered")
+    
+# Emergency Detection
+from backend.api.emergency_router import router as emergency_router
+app.include_router(emergency_router, prefix="/api")
+logger.info("Emergency router registered")
 
-# =============================================================================
+# System/Mock routers (no prefix)=============================================================================
 # Request/Response models
 # =============================================================================
 class AnalyzeRequest(BaseModel):

@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Search, TrendingUp, TrendingDown, Minus, AlertTriangle } from 'lucide-react';
+import { Search, TrendingUp, TrendingDown, Minus, AlertTriangle, Radio } from 'lucide-react';
 import { analyzeTicker, analyzeBatch, type AIDecision } from '../services/api';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -14,11 +14,14 @@ import { Badge } from '../components/common/Badge';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { Alert } from '../components/common/Alert';
 import { TickerAutocompleteInput } from '../components/common/TickerAutocompleteInput';
+import axios from 'axios';
 
 export const Analysis: React.FC = () => {
   const [ticker, setTicker] = useState('');
   const [batchTickers, setBatchTickers] = useState('');
   const [analysisResult, setAnalysisResult] = useState<AIDecision | null>(null);
+  const [showGroundingWarning, setShowGroundingWarning] = useState(false);
+  const [groundingNews, setGroundingNews] = useState<any>(null);
 
   // Single ticker analysis mutation
   const analyzeMutation = useMutation({
@@ -31,6 +34,17 @@ export const Analysis: React.FC = () => {
   // Batch analysis mutation
   const batchMutation = useMutation({
     mutationFn: (tickers: string[]) => analyzeBatch(tickers),
+  });
+
+  // Grounding search mutation
+  const groundingMutation = useMutation({
+    mutationFn: async (ticker: string) => {
+      const response = await axios.get(`/api/news/gemini/search/ticker/${ticker}?max_articles=5`);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      setGroundingNews(data);
+    },
   });
 
   const handleAnalyze = async () => {
@@ -47,6 +61,16 @@ export const Analysis: React.FC = () => {
 
     if (tickers.length === 0) return;
     batchMutation.mutate(tickers);
+  };
+
+  const handleEmergencySearch = () => {
+    setShowGroundingWarning(true);
+  };
+
+  const confirmGroundingSearch = () => {
+    if (!ticker.trim()) return;
+    setShowGroundingWarning(false);
+    groundingMutation.mutate(ticker.toUpperCase());
   };
 
   const getActionColor = (action: string) => {
@@ -105,6 +129,14 @@ export const Analysis: React.FC = () => {
                     Analyze
                   </>
                 )}
+              </Button>
+              <Button
+                onClick={handleEmergencySearch}
+                disabled={!ticker.trim()}
+                className="flex items-center gap-2 bg-red-600 hover:bg-red-700"
+              >
+                <Radio size={16} />
+                🔴 Emergency News
               </Button>
             </div>
           </div>
@@ -266,6 +298,87 @@ export const Analysis: React.FC = () => {
           )}
         </div>
       </Card>
+
+      {/* Emergency Grounding Warning Modal */}
+      {showGroundingWarning && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowGroundingWarning(false)}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start gap-3 mb-4">
+              <AlertTriangle className="text-red-600" size={24} />
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">🚨 Emergency Real-Time Search</h3>
+                <p className="text-sm text-gray-600 mt-1">This feature uses Gemini Grounding API</p>
+              </div>
+            </div>
+
+            <Alert variant="warning" className="mb-4">
+              <strong>Cost Warning:</strong> $0.035 per search
+            </Alert>
+
+            <div className="space-y-2 text-sm text-gray-700 mb-4">
+              <p><strong>Use this only for:</strong></p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>Breaking news (war, crisis)</li>
+                <li>Market crashes</li>
+                <li>Emergency events</li>
+                <li>Real-time situation updates</li>
+              </ul>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                onClick={() => setShowGroundingWarning(false)}
+                variant="secondary"
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmGroundingSearch}
+                className="flex-1 bg-red-600 hover:bg-red-700"
+              >
+                Search Now ($0.035)
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Grounding News Results */}
+      {groundingNews && (
+        <Card title="🔴 Emergency Real-Time News">
+          <div className="space-y-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-sm text-red-800">
+                <strong>Ticker:</strong> {groundingNews.ticker} | <strong>Cost:</strong> {groundingNews.cost_info.current_cost}
+              </p>
+            </div>
+
+            {groundingNews.articles && groundingNews.articles.length > 0 ? (
+              <div className="space-y-3">
+                {groundingNews.articles.map((article: any, idx: number) => (
+                  <div key={idx} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <h4 className="font-semibold text-gray-900 mb-2">{article.title}</h4>
+                    <p className="text-sm text-gray-600 mb-2">{article.summary}</p>
+                    {article.url && (
+                      <a
+                        href={article.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:underline"
+                      >
+                        Read more →
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-600">No breaking news found</p>
+            )}
+          </div>
+        </Card>
+      )}
     </div>
   );
 };

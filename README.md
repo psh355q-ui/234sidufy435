@@ -31,8 +31,13 @@ AI Trading System은 다중 AI 모델을 활용한 엔터프라이즈급 자동 
 
 ### 📰 뉴스 기반 트레이딩 (Phase 1-10)
 - **RSS 뉴스 크롤링**: 50+ 금융 뉴스 소스 실시간 수집
+- **Historical Data Seeding**:
+  - 5개 소스(NewsAPI, Google, Reuters, Yahoo, Bloomberg) 과거 데이터 수집
+  - yfinance 기반 과거 주가 데이터(OHLCV) 대량 수집
+  - **Backfill API**: 날짜/티커 지정 자동 수집 및 진행률 추적
 - **AI 뉴스 분석**:
   - 감성 분석 (긍정/부정/중립)
+  - **Data Explorer**: 수집된 뉴스/주가 데이터 실시간 검색 및 필터링 UI
   - 시장 영향도 평가 (단기/장기)
   - 티커 관련성 스코어링
   - 리스크 카테고리 분류 (법적/규제/운영/재무/전략)
@@ -745,4 +750,4 @@ python create_sample_data.py --days 180
 
 **Built with ❤️ by AI Trading System Team**
 
-**Version 1.1.0** | Last Updated: 2025-11-27 | Phase 14 Deep Reasoning Added
+**Version 1.2.0** | Last Updated: 2025-12-21 | Historical Data Seeding & Data Explorer Added

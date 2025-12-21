@@ -48,6 +48,12 @@ const AGENTS = {
         color: '#9C27B0',
         role: '기관'
     },
+    news: {
+        name: 'News',
+        icon: '📰',
+        color: '#00BCD4',
+        role: '뉴스'
+    },
     pm: {
         name: 'PM',
         icon: '🤵',
@@ -350,7 +356,7 @@ const WarRoom: React.FC<WarRoomProps> = ({
                     <div className="war-room-footer">
                         <div className="stat">
                             <span className="stat-label">Agents</span>
-                            <span className="stat-value">{messages.filter(m => !m.isDecision).length}/5</span>
+                            <span className="stat-value">{messages.filter(m => !m.isDecision).length}/6</span>
                         </div>
                         <div className="stat">
                             <span className="stat-label">BUY</span>

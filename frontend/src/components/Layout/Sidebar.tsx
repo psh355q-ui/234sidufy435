@@ -4,7 +4,7 @@ import {
   LayoutDashboard, TrendingUp, Activity, Newspaper, Rss, FileText,
   FileSearch, Settings, X, MessageSquare, TrendingDown, BarChart3,
   LineChart, Brain, Zap, PieChart, TestTube2, Wallet, Globe,
-  ChevronDown, ChevronRight, DollarSign
+  ChevronDown, ChevronRight, DollarSign, Database
 } from 'lucide-react';
 
 interface NavItem {
@@ -40,6 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
       items: [
         { path: '/war-room', icon: MessageSquare, label: 'AI War Room' },
         { path: '/trading', icon: Zap, label: 'Trading Signals' },
+        { path: '/signal-consolidation', icon: BarChart3, label: 'Signal Consolidation' },
         { path: '/backtest', icon: TestTube2, label: 'Backtest' },
         { path: '/deep-reasoning', icon: Brain, label: 'Deep Reasoning' },
       ]
@@ -58,6 +59,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
     {
       title: 'Data & News',
       items: [
+        { path: '/data-backfill', icon: Database, label: 'Data Backfill' },
         { path: '/news', icon: Newspaper, label: 'News' },
         { path: '/rss-management', icon: Rss, label: 'RSS Management' },
       ]

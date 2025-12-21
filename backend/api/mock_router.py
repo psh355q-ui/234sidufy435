@@ -210,6 +210,8 @@ async def get_alerts(limit: int = 20, db: Session = Depends(get_db)):
 async def analyze_ticker(request: Dict[str, Any]):
     """
     Analyze a ticker - returns mock data matching frontend AIDecision interface
+    
+    Now includes auto-save to database with source='manual_analysis'
     """
     ticker = request.get("ticker", "").upper()
     
@@ -220,6 +222,8 @@ async def analyze_ticker(request: Dict[str, Any]):
     try:
         # Import here to avoid circular dependencies if any
         from backend.ai.trading_agent import TradingAgent
+        from backend.database.models import TradingSignal as DBTradingSignal
+        from backend.database.repository import get_sync_session
         
         # Initialize agent
         agent = TradingAgent()
@@ -227,6 +231,32 @@ async def analyze_ticker(request: Dict[str, Any]):
         # Analyze
         logger.info(f"Starting real AI analysis for {ticker}")
         decision = await agent.analyze(ticker=ticker)
+        
+        # 💾 Save to database (Phase 2: Signal Generator Integration)
+        if decision.action in ["BUY", "SELL"]:  # Don't save HOLD signals
+            db = get_sync_session()
+            try:
+                signal = DBTradingSignal(
+                    analysis_id=None,  # Analysis Lab is independent
+                    ticker=ticker,
+                    action=decision.action,
+                    signal_type="PRIMARY",  # Manual analysis = primary signal
+                    confidence=decision.conviction,
+                    reasoning=decision.reasoning,
+                    source="manual_analysis",  # 🆕 Source tracking
+                    generated_at=datetime.now()
+                )
+                db.add(signal)
+                db.commit()
+                db.refresh(signal)
+                
+                logger.info(f"📊 Signal saved to DB: {ticker} {decision.action} (ID: {signal.id})")
+            
+            except Exception as db_error:
+                logger.error(f"Failed to save signal to DB: {db_error}")
+                # Don't fail the request if DB save fails
+            finally:
+                db.close()
         
         return decision.to_dict()
         

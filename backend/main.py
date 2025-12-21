@@ -312,9 +312,19 @@ if NEWS_ROUTER_AVAILABLE:
 if AUTH_ROUTER_AVAILABLE:
     app.include_router(auth_router)
     logger.info("Auth router registered")
-if SIGNALS_AVAILABLE:
+if SIGNALS_AVAILABLE:    # Phase 4: Trading Signals
     app.include_router(signals_router, prefix="/api")
     logger.info("Signals router registered")
+    
+    # 🆕 War Room (7-Agent Debate System)
+    from backend.api.war_room_router import router as war_room_router
+    app.include_router(war_room_router)
+    logger.info("War Room router registered")
+    
+    # 🆕 Signal Consolidation (Multi-Source Aggregation)
+    from backend.api.signal_consolidation_router import router as signal_consolidation_router
+    app.include_router(signal_consolidation_router)
+    logger.info("Signal Consolidation router registered")
 if NOTIFICATIONS_AVAILABLE:
     app.include_router(notifications_router)
     logger.info("Notifications router registered")
@@ -359,6 +369,14 @@ if AUTO_TRADE_AVAILABLE:
 from backend.api.emergency_router import router as emergency_router
 app.include_router(emergency_router, prefix="/api")
 logger.info("Emergency router registered")
+
+# Data Backfill (Historical Data Seeding)
+try:
+    from backend.api.data_backfill_router import router as data_backfill_router
+    app.include_router(data_backfill_router)
+    logger.info("Data Backfill router registered")
+except Exception as e:
+    logger.warning(f"Data Backfill router not available: {e}")
 
 # System/Mock routers (no prefix)=============================================================================
 # Request/Response models

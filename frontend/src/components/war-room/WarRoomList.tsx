@@ -3,7 +3,9 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { DebateSession, MOCK_DEBATE_SESSIONS } from '../../data/mockDebateSessions';
+import { useQuery } from '@tanstack/react-query';
+import { DebateSession } from '../../data/mockDebateSessions';
+import { warRoomApi } from '../../services/warRoomApi';
 import WarRoomCard from './WarRoomCard';
 import { TickerAutocompleteInput } from '../common/TickerAutocompleteInput';
 import './WarRoomList.css';
@@ -11,7 +13,36 @@ import './WarRoomList.css';
 type StatusFilter = 'all' | 'active' | 'completed' | 'pending';
 
 const WarRoomList: React.FC = () => {
-    const [sessions] = useState<DebateSession[]>(MOCK_DEBATE_SESSIONS);
+    // Fetch real War Room sessions from API
+    const { data: apiSessions, isLoading, error } = useQuery({
+        queryKey: ['war-room-sessions'],
+        queryFn: () => warRoomApi.getSessions({ limit: 20 }),
+        refetchInterval: 10000, // Refetch every 10 seconds for real-time updates
+    });
+
+    // Transform API response to match DebateSession interface
+    const sessions: DebateSession[] = useMemo(() => {
+        if (!apiSessions) return [];
+
+        return apiSessions.map(session => ({
+            id: session.id.toString(),
+            ticker: session.ticker,
+            status: session.signal_generated ? 'completed' : 'active',
+            startedAt: new Date(session.created_at),
+            completedAt: session.signal_generated ? new Date(session.created_at) : undefined,
+            messages: [], // Messages loaded separately when card is expanded
+            consensus: session.consensus_confidence,
+            finalDecision: {
+                action: session.consensus_action,
+                confidence: session.consensus_confidence
+            },
+            constitutionalResult: {
+                isValid: session.constitutional_valid,
+                violations: session.constitutional_valid ? [] : ['제3조 위반: 인간 승인이 필요합니다'],
+                violatedArticles: session.constitutional_valid ? [] : ['제3조: 인간 최종 결정권']
+            }
+        }));
+    }, [apiSessions]);
     const [searchTicker, setSearchTicker] = useState('');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
@@ -50,6 +81,30 @@ const WarRoomList: React.FC = () => {
     const handleBackdropClick = () => {
         setExpandedCardId(null);
     };
+
+    // Loading state
+    if (isLoading) {
+        return (
+            <div className="war-room-list">
+                <div className="loading-state" style={{ textAlign: 'center', padding: '40px' }}>
+                    <div className="spinner">🔄</div>
+                    <p>War Room 세션 불러오는 중...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Error state
+    if (error) {
+        return (
+            <div className="war-room-list">
+                <div className="error-state" style={{ textAlign: 'center', padding: '40px', color: '#F44336' }}>
+                    <p>⚠️ War Room 세션을 불러올 수 없습니다</p>
+                    <p style={{ fontSize: '14px', opacity: 0.7 }}>{(error as Error).message}</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="war-room-list">

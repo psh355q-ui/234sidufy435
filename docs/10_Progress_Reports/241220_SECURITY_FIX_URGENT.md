@@ -9,7 +9,7 @@
 
 **파일**: `docs/09_Troubleshooting/FIX_API_KEY.md`  
 **라인**: 49  
-**노출된 키**: `AIzaSyBgp8dhRSRnGcXmhE_fw3qef2DKv_tnCAI`
+**노출된 키**: 
 
 **GitHub 커밋**: 5aa2b87d (PHASE5_TASK1_COMPLETE.md)
 

@@ -11,9 +11,11 @@ SQLAlchemy models for storing:
 Database: TimescaleDB (PostgreSQL with time-series extensions)
 """
 
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text, Boolean, ForeignKey, Index
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text, Boolean, ForeignKey, Index, BigInteger
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
+from pgvector.sqlalchemy import Vector
 from datetime import datetime
 from typing import Optional
 
@@ -33,6 +35,17 @@ class NewsArticle(Base):
     crawled_at = Column(DateTime, nullable=False, default=datetime.now)
     content_hash = Column(String(64), nullable=False, unique=True, index=True)
 
+    # NLP & Embedding Fields (Added in Phase 17)
+    embedding = Column(ARRAY(Float), nullable=True)  # Fallback: ARRAY(Float)
+    tags = Column(ARRAY(String), nullable=True)
+    tickers = Column(ARRAY(String), nullable=True)
+    sentiment_score = Column(Float, nullable=True)
+    sentiment_label = Column(String(20), nullable=True)
+    source_category = Column(String(50), nullable=True)
+    metadata_ = Column("metadata", JSONB, nullable=True) # mapped to 'metadata' column
+    processed_at = Column(DateTime, nullable=True)
+    embedding_model = Column(String(100), nullable=True)
+
     # Relationships
     analyses = relationship("AnalysisResult", back_populates="article", cascade="all, delete-orphan")
 
@@ -41,6 +54,10 @@ class NewsArticle(Base):
         Index('idx_news_published_date', 'published_date'),
         Index('idx_news_source', 'source'),
         Index('idx_news_crawled_at', 'crawled_at'),
+        Index('idx_news_tickers', 'tickers', postgresql_using='gin'),
+        Index('idx_news_tags', 'tags', postgresql_using='gin'),
+        # Vector index would be created via migration, rarely defined in model for basic sync usage
+        # Index('idx_news_embedding', 'embedding', postgresql_using='ivfflat', postgresql_ops={'embedding': 'vector_cosine_ops'}, postgresql_with={'lists': 100}),
     )
 
     def __repr__(self):
@@ -88,14 +105,17 @@ class TradingSignal(Base):
     __tablename__ = 'trading_signals'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    analysis_id = Column(Integer, ForeignKey('analysis_results.id'), nullable=False)
+    analysis_id = Column(Integer, ForeignKey('analysis_results.id'), nullable=True)  # 🔄 CHANGED: nullable
 
     # Signal details
     ticker = Column(String(10), nullable=False, index=True)
     action = Column(String(10), nullable=False)  # BUY, SELL, TRIM, HOLD
-    signal_type = Column(String(20), nullable=False, index=True)  # PRIMARY, HIDDEN, LOSER
+    signal_type = Column(String(20), nullable=False, index=True)  # PRIMARY, HIDDEN, LOSER, CONSENSUS
     confidence = Column(Float, nullable=False)
     reasoning = Column(Text, nullable=False)
+    
+    # 🆕 NEW: Source tracking
+    source = Column(String(50), nullable=True, index=True)  # war_room, deep_reasoning, manual_analysis, news_analysis
 
     # Timestamps
     generated_at = Column(DateTime, nullable=False, default=datetime.now)
@@ -237,6 +257,52 @@ class SignalPerformance(Base):
         return f"<SignalPerformance(signal_id={self.signal_id}, return={self.actual_return_pct:.1f}%, outcome='{self.outcome}')>"
 
 
+class AIDebateSession(Base):
+    """War Room AI Debate 세션 기록 (7 agents)"""
+    __tablename__ = 'ai_debate_sessions'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    
+    # Debate context
+    ticker = Column(String(10), nullable=False, index=True)
+    
+    # Consensus result
+    consensus_action = Column(String(10), nullable=False)  # BUY, SELL, HOLD
+    consensus_confidence = Column(Float, nullable=False)  # 0.0-1.0
+    
+    # Individual agent votes
+    trader_vote = Column(String(10), nullable=True)
+    risk_vote = Column(String(10), nullable=True)
+    analyst_vote = Column(String(10), nullable=True)
+    macro_vote = Column(String(10), nullable=True)
+    institutional_vote = Column(String(10), nullable=True)
+    news_vote = Column(String(10), nullable=True)  # 🆕 7th agent
+    pm_vote = Column(String(10), nullable=True)
+    
+    # Debate details
+    debate_transcript = Column(Text, nullable=True)  # JSON-encoded votes
+    
+    # Constitutional validation
+    constitutional_valid = Column(Boolean, default=True)
+    
+    # Signal linkage
+    signal_id = Column(Integer, ForeignKey('trading_signals.id'), nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime, nullable=False, default=datetime.now)
+    completed_at = Column(DateTime, nullable=True)
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_debate_ticker', 'ticker'),
+        Index('idx_debate_created_at', 'created_at'),
+        Index('idx_debate_consensus_action', 'consensus_action'),
+    )
+
+    def __repr__(self):
+        return f"<AIDebateSession(id={self.id}, ticker='{self.ticker}', consensus='{self.consensus_action}' @ {self.consensus_confidence:.0%})>"
+
+
 class GroundingSearchLog(Base):
     """Grounding API 검색 비용 추적"""
     __tablename__ = 'grounding_search_log'
@@ -336,3 +402,82 @@ def setup_timescaledb_hypertables(connection):
         except Exception as e:
             print(f"[WARNING] Failed to create hypertable {table_name}: {e}")
             print("  This is normal if TimescaleDB extension is not installed")
+
+
+class StockPrice(Base):
+    """Historical Stock Prices (OHLCV)"""
+    __tablename__ = 'stock_prices'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ticker = Column(String(10), nullable=False, index=True)
+    date = Column("time", DateTime, nullable=False) # Map 'date' attribute to 'time' column
+    
+    open = Column(Float, nullable=False)
+    high = Column(Float, nullable=False)
+    low = Column(Float, nullable=False)
+    close = Column(Float, nullable=False)
+    volume = Column(BigInteger, nullable=False)
+    adj_close = Column("adjusted_close", Float, nullable=True) # Map attribute to column
+    
+    source = Column(String(50), default="yfinance")
+    created_at = Column(DateTime, default=datetime.now)
+    
+    __table_args__ = (
+        Index('idx_stock_prices_ticker_date', 'ticker', 'time', unique=True),
+        Index('idx_stock_prices_date', 'time'),
+    )
+
+    def __repr__(self):
+        return f"<StockPrice({self.ticker}, {self.date}, {self.close})>"
+
+
+class DataCollectionProgress(Base):
+    """historical data collection job progress"""
+    __tablename__ = 'data_collection_progress'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    source = Column(String(50), nullable=False)
+    collection_type = Column(String(50), nullable=False) # 'news', 'prices', 'embeddings'
+    
+    start_date = Column(DateTime, nullable=False)
+    end_date = Column(DateTime, nullable=False)
+    
+    total_items = Column(Integer, default=0)
+    processed_items = Column(Integer, default=0)
+    failed_items = Column(Integer, default=0)
+    
+    status = Column(String(20), default='pending') # pending, running, completed, failed
+    error_message = Column(Text, nullable=True)
+    
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    job_metadata = Column("metadata", JSONB, nullable=True)
+    
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+    __table_args__ = (
+        Index('idx_collection_status', 'status'),
+        Index('idx_collection_source', 'source'),
+    )
+
+
+class NewsSource(Base):
+    """News Source Configuration"""
+    __tablename__ = 'news_sources'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100), unique=True, nullable=False)
+    source_type = Column(String(50), nullable=False) # newsapi, rss, scraper
+    category = Column(String(50), nullable=True)
+    priority = Column(Integer, default=5)
+    is_active = Column(Boolean, default=True)
+    rate_limit = Column(Integer, nullable=True) # req/day
+    config = Column(JSONB, nullable=True)
+    
+    last_crawled_at = Column(DateTime, nullable=True)
+    total_articles = Column(Integer, default=0)
+    
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+

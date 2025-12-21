@@ -35,8 +35,10 @@ class Settings(BaseSettings):
     # ===== AI API Keys =====
     anthropic_api_key: str = Field(default="", env="ANTHROPIC_API_KEY")
     openai_api_key: str = Field(default="", env="OPENAI_API_KEY")
-    gemini_api_key: str = Field(default="", env="GEMINI_API_KEY")
+    gemini_api_key: str = Field(default="", env="GEMINI_API_KEY")  # Keeping for backward compatibility
+    google_api_key: str = Field(default="", env="GOOGLE_API_KEY")  # Primary key for Gemini
     chatgpt_api_key: str = Field(default="", env="CHATGPT_API_KEY")
+    newsapi_key: str = Field(default_factory=lambda: os.getenv("NEWS_API_KEY", ""), env="NEWS_API_KEY")
     
     # ===== AI Configuration =====
     ai_max_tokens: int = Field(default=4096, env="AI_MAX_TOKENS")

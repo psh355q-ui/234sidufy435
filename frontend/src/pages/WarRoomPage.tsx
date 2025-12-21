@@ -49,7 +49,7 @@ const WarRoomPage: React.FC = () => {
                         fontWeight: '600',
                         textShadow: '0 2px 10px rgba(0, 0, 0, 0.2)'
                     }}>
-                        AI 투자 위원회 실시간 토론 - 5개 에이전트의 집단 지성
+                        AI 투자 위원회 실시간 토론 - 7개 에이전트의 집단 지성
                     </p>
                 </div>
             </div>

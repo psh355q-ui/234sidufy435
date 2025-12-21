@@ -23,6 +23,8 @@ async def analyze_ticker_manually(request: AnalyzeRequest):
     """
     Trigger Deep Reasoning on a ticker with provided context (Manual/Dev Mode).
     
+    Now includes auto-save to database with source='deep_reasoning'
+    
     Optional advanced features:
     - enable_macro_check: Add macro consistency check
     - enable_skeptic: Add skeptic challenge (반박논리)
@@ -40,6 +42,40 @@ async def analyze_ticker_manually(request: AnalyzeRequest):
     
     if not thesis:
         raise HTTPException(status_code=500, detail="Failed to generate thesis")
+    
+    # 💾 Save to database (Phase 2: Signal Generator Integration)
+    if thesis.direction in ["BUY", "SELL"]:  # Don't save HOLD
+        try:
+            from backend.database.models import TradingSignal as DBTradingSignal
+            from backend.database.repository import get_sync_session
+            from datetime import datetime
+            
+            db = get_sync_session()
+            try:
+                signal = DBTradingSignal(
+                    analysis_id=None,  # Deep Reasoning is independent
+                    ticker=request.ticker,
+                    action=thesis.direction,
+                    signal_type="PRIMARY",  # Deep Reasoning = primary signal
+                    confidence=thesis.final_confidence_score,
+                    reasoning=thesis.summary,
+                    source="deep_reasoning",  # 🆕 Source tracking
+                    generated_at=datetime.now()
+                )
+                db.add(signal)
+                db.commit()
+                db.refresh(signal)
+                
+                logger.info(f"📊 Deep Reasoning signal saved: {request.ticker} {thesis.direction} (ID: {signal.id})")
+            
+            except Exception as db_error:
+                logger.error(f"Failed to save Deep Reasoning signal: {db_error}")
+                # Don't fail the request if DB save fails
+            finally:
+                db.close()
+        
+        except Exception as import_error:
+            logger.error(f"Failed to import DB models: {import_error}")
     
     # Prepare response
     response = thesis.dict()

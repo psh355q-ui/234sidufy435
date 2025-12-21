@@ -113,7 +113,20 @@ class InstitutionalAgent:
             f"(confidence={confidence:.0%})"
         )
         
-        return signal
+        # 🆕 War Room compatibility: Return dict instead of InvestmentSignal
+        return {
+            "agent": "institutional",
+            "action": action.value,  # Convert enum to string
+            "confidence": confidence,
+            "reasoning": reasoning,
+            "institutional_factors": {
+                "buying_pressure": f"{smart_money.institution_buying_pressure*100:.0f}%",
+                "insider_score": smart_money.insider_activity_score,
+                "signal_strength": smart_money.signal_strength.value,
+                "key_institutions": smart_money.key_institutions[:3] if smart_money.key_institutions else [],
+                "key_insiders": smart_money.key_insiders[:2] if smart_money.key_insiders else []
+            }
+        }
     
     def _map_signal_to_action(
         self,

@@ -26,7 +26,10 @@ from backend.database.models import (
     TradingSignal,
     BacktestRun,
     BacktestTrade,
-    SignalPerformance
+    SignalPerformance,
+    StockPrice,
+    DataCollectionProgress,
+    NewsSource
 )
 from backend.news.rss_crawler import NewsArticle as RSSNewsArticle
 from backend.ai.reasoning.deep_reasoning import DeepReasoningResult
@@ -57,6 +60,62 @@ class NewsRepository:
         self.session.add(db_article)
         self.session.commit()
         self.session.refresh(db_article)
+        return db_article
+
+    def save_processed_article(self, article_data: Dict) -> NewsArticle:
+        """
+        NLP 처리된 뉴스 저장 (Embeddings 포함)
+        
+        Args:
+            article_data: Dict from ProcessedNews.to_db_dict()
+        """
+        # Check existing hash first to avoid duplicates
+        content_hash = article_data.get('content_hash')
+        if content_hash:
+            existing = self.session.query(NewsArticle).filter_by(content_hash=content_hash).first()
+            if existing:
+                return existing
+        else:
+             # Generated fallback hash if missing
+             import hashlib
+             slug = f"{article_data['title']}{article_data['url']}"
+             content_hash = hashlib.md5(slug.encode()).hexdigest()
+
+        db_article = NewsArticle(
+            title=article_data['title'],
+            content=article_data['content'],
+            url=article_data['url'],
+            source=article_data['source'],
+            source_category=article_data.get('source_category'),
+            published_date=article_data['published_at'],
+            crawled_at=article_data.get('processed_at', datetime.now()),
+            content_hash=content_hash,
+            
+            # New fields
+            embedding=article_data.get('embedding'),
+            sentiment_score=article_data.get('sentiment_score'),
+            sentiment_label=article_data.get('sentiment_label'),
+            tags=article_data.get('tags'),
+            tickers=article_data.get('tickers'),
+            embedding_model=article_data.get('embedding_model')
+        )
+        
+        # Handle metadata JSONB
+        if 'metadata' in article_data:
+            db_article.metadata_ = article_data['metadata']
+
+        self.session.add(db_article)
+        try:
+            self.session.commit()
+            self.session.refresh(db_article)
+        except Exception:
+            self.session.rollback()
+            # Double check race condition
+            existing = self.session.query(NewsArticle).filter_by(content_hash=content_hash).first()
+            if existing:
+                return existing
+            raise
+
         return db_article
 
     def get_by_hash(self, content_hash: str) -> Optional[NewsArticle]:
@@ -520,6 +579,149 @@ class PerformanceRepository:
             "primary_avg": primary_avg,
             "outperformance_ratio": (hidden_avg / primary_avg) if primary_avg != 0 else 0.0
         }
+
+
+
+class DataCollectionRepository:
+    """Historical Data Collection Progress"""
+
+    def __init__(self, session: Session):
+        self.session = session
+
+    def create_job(
+        self,
+        source: str,
+        collection_type: str,
+        start_date: datetime,
+        end_date: datetime,
+        metadata: Optional[Dict] = None
+    ) -> DataCollectionProgress:
+        """Create new progress tracking job"""
+        job = DataCollectionProgress(
+            source=source,
+            collection_type=collection_type,
+            start_date=start_date,
+            end_date=end_date,
+            job_metadata=metadata,
+            status='pending'
+        )
+        self.session.add(job)
+        self.session.commit()
+        self.session.refresh(job)
+        return job
+
+    def update_progress(
+        self,
+        job_id: int,
+        processed: int,
+        failed: int = 0,
+        total: Optional[int] = None,
+        status: Optional[str] = None,
+        error: Optional[str] = None
+    ):
+        """Update job progress"""
+        job = self.session.query(DataCollectionProgress).filter_by(id=job_id).first()
+        if job:
+            job.processed_items = processed
+            job.failed_items = failed
+            if total is not None:
+                job.total_items = total
+            if status:
+                job.status = status
+                if status == 'running' and not job.started_at:
+                    job.started_at = datetime.now()
+                elif status in ['completed', 'failed']:
+                    job.completed_at = datetime.now()
+            if error:
+                job.error_message = error
+            self.session.commit()
+
+    def get_active_jobs(self) -> List[DataCollectionProgress]:
+        """Get currently running jobs"""
+        return (
+            self.session.query(DataCollectionProgress)
+            .filter(DataCollectionProgress.status.in_(['pending', 'running']))
+            .all()
+        )
+
+    def get_collected_news(
+        self,
+        start_date: Optional[datetime],
+        end_date: Optional[datetime],
+        ticker: Optional[str] = None,
+        limit: int = 100
+    ) -> List[NewsArticle]:
+        """
+        Get collected processed news from the specific progress
+        (Using NewsArticle table directly which is shared)
+        """
+        query = self.session.query(NewsArticle)
+
+        if start_date:
+            query = query.filter(NewsArticle.published_date >= start_date)
+        if end_date:
+            query = query.filter(NewsArticle.published_date <= end_date)
+        
+        # Ticker filtering (using ANY operator for ARRAY column)
+        if ticker:
+            # Postgres ARRAY check: ticker = ANY(tickers)
+            query = query.filter(NewsArticle.tickers.any(ticker))
+
+        return query.order_by(desc(NewsArticle.published_date)).limit(limit).all()
+
+
+class StockRepository:
+    """Stock Price Data Repository"""
+
+    def __init__(self, session: Session):
+        self.session = session
+
+    def save_prices(self, prices: List[Dict]):
+        """
+        Bulk save stock prices
+        
+        Args:
+            prices: List of dicts matching StockPrice model fields
+        """
+        db_objects = []
+        for p in prices:
+            db_obj = StockPrice(
+                ticker=p['ticker'],
+                date=p['date'],
+                open=p['open'],
+                high=p['high'],
+                low=p['low'],
+                close=p['close'],
+                volume=p['volume'],
+                adj_close=p.get('adj_close'),
+                source=p.get('source', 'yfinance')
+            )
+            db_objects.append(db_obj)
+            
+        self.session.add_all(db_objects)
+        try:
+            self.session.commit()
+        except Exception:
+            self.session.rollback()
+            raise
+
+    def get_prices(
+        self, 
+        ticker: str, 
+        start_date: datetime, 
+        end_date: datetime
+    ) -> List[StockPrice]:
+        """Get OHLCV data for ticker"""
+        return (
+            self.session.query(StockPrice)
+            .filter(and_(
+                StockPrice.ticker == ticker,
+                StockPrice.date >= start_date,
+                StockPrice.date <= end_date
+            ))
+            .order_by(StockPrice.date)
+            .all()
+        )
 
 
 # ============================================

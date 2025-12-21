@@ -573,6 +573,56 @@ Respond with ONLY a valid JSON object (no markdown, no explanation):
             }
 
 
+# ============================================================================
+# Helper Function for Simple API Calls
+# ============================================================================
+
+async def call_gemini_api(
+    prompt: str,
+    model_name: str = None,
+    temperature: float = 0.7
+) -> str:
+    """
+    Simple helper function to call Gemini API without full client initialization.
+    
+    Args:
+        prompt: The prompt to send to Gemini
+        model_name: Model name (default: from env or gemini-2.0-flash-exp)
+        temperature: Temperature for generation (0.0-1.0)
+    
+    Returns:
+        Response text as string
+    
+    Raises:
+        ImportError: If google-generativeai not installed
+        ValueError: If GEMINI_API_KEY not set
+    """
+    if not GENAI_AVAILABLE:
+        raise ImportError(
+            "google-generativeai not installed. "
+            "Install with: pip install google-generativeai"
+        )
+    
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY environment variable not set")
+    
+    genai.configure(api_key=api_key)
+    
+    # Use provided model or default
+    if model_name is None:
+        model_name = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash-exp")
+    
+    model = genai.GenerativeModel(
+        model_name,
+        generation_config={"temperature": temperature}
+    )
+    
+    response = model.generate_content(prompt)
+    
+    return response.text
+
+
 # Example usage
 if __name__ == "__main__":
     import asyncio

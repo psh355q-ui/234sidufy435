@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Search, TrendingUp, TrendingDown, Minus, AlertTriangle, Radio } from 'lucide-react';
 import { analyzeTicker, analyzeBatch, type AIDecision } from '../services/api';
 import { Card } from '../components/common/Card';
@@ -14,6 +14,7 @@ import { Badge } from '../components/common/Badge';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { Alert } from '../components/common/Alert';
 import { TickerAutocompleteInput } from '../components/common/TickerAutocompleteInput';
+import { useEmergencyStatus, useGroundingUsage } from '../hooks/useEmergencyStatus';
 import axios from 'axios';
 
 export const Analysis: React.FC = () => {
@@ -22,6 +23,35 @@ export const Analysis: React.FC = () => {
   const [analysisResult, setAnalysisResult] = useState<AIDecision | null>(null);
   const [showGroundingWarning, setShowGroundingWarning] = useState(false);
   const [groundingNews, setGroundingNews] = useState<any>(null);
+  const [historyFilter, setHistoryFilter] = useState('');
+  const [selectedHistory, setSelectedHistory] = useState<any>(null);
+
+  // Emergency status polling
+  const {
+    isEmergency,
+    severity,
+    triggers,
+    recommended,
+    searchesToday,
+    dailyLimit,
+    message: emergencyMessage,
+    vix,
+    portfolioData
+  } = useEmergencyStatus();
+
+  const { usage } = useGroundingUsage();
+
+  // Analysis history query
+  const { data: history, isLoading: historyLoading } = useQuery({
+    queryKey: ['analysis-history', historyFilter],
+    queryFn: () => axios.get('/api/analysis/history', {
+      params: {
+        ticker: historyFilter || undefined,
+        limit: 20
+      }
+    }),
+    refetchInterval: 120000, // Refresh every 2 minutes
+  });
 
   // Single ticker analysis mutation
   const analyzeMutation = useMutation({
@@ -67,10 +97,18 @@ export const Analysis: React.FC = () => {
     setShowGroundingWarning(true);
   };
 
-  const confirmGroundingSearch = () => {
+  const confirmGroundingSearch = async () => {
     if (!ticker.trim()) return;
     setShowGroundingWarning(false);
-    groundingMutation.mutate(ticker.toUpperCase());
+
+    const result = await groundingMutation.mutateAsync(ticker.toUpperCase());
+
+    // Track the search
+    await axios.post('/api/emergency/grounding/track', {
+      ticker: ticker.toUpperCase(),
+      results_count: result?.articles?.length || 0,
+      emergency_trigger: isEmergency ? triggers[0] : null
+    });
   };
 
   const getActionColor = (action: string) => {
@@ -98,6 +136,28 @@ export const Analysis: React.FC = () => {
         <h1 className="text-3xl font-bold text-gray-900">AI Analysis</h1>
         <p className="text-gray-600 mt-1">Get AI-powered trading recommendations</p>
       </div>
+
+      {/* Emergency Banner */}
+      {isEmergency && (
+        <Alert variant="error" className="animate-pulse">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="text-red-600" size={24} />
+            <div className="flex-1">
+              <strong className="text-lg">🚨 Emergency Mode Active</strong>
+              <p className="text-sm mt-1">{emergencyMessage}</p>
+              <div className="mt-2 flex gap-4 text-xs">
+                {vix && <span>VIX: {vix.toFixed(1)}</span>}
+                {portfolioData && (
+                  <>
+                    <span>Daily P&L: {portfolioData.daily_loss_pct.toFixed(2)}%</span>
+                    <span>Drawdown: {portfolioData.total_drawdown_pct.toFixed(2)}%</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </Alert>
+      )}
 
       {/* Single Ticker Analysis */}
       <Card title="Single Ticker Analysis">
@@ -132,11 +192,16 @@ export const Analysis: React.FC = () => {
               </Button>
               <Button
                 onClick={handleEmergencySearch}
-                disabled={!ticker.trim()}
-                className="flex items-center gap-2 bg-red-600 hover:bg-red-700"
+                disabled={!ticker.trim() || searchesToday >= dailyLimit}
+                className={`flex items-center gap-2 ${recommended
+                  ? 'bg-red-600 hover:bg-red-700 animate-pulse ring-2 ring-red-400'
+                  : 'bg-red-600 hover:bg-red-700'
+                  }`}
               >
-                <Radio size={16} />
+                <Radio size={16} className={recommended ? 'animate-spin' : ''} />
                 🔴 Emergency News
+                {recommended && <span className="ml-1 text-xs">⭐ RECOMMENDED</span>}
+                <span className="text-xs opacity-75">({searchesToday}/{dailyLimit})</span>
               </Button>
             </div>
           </div>
@@ -378,6 +443,125 @@ export const Analysis: React.FC = () => {
             )}
           </div>
         </Card>
+      )}
+
+      {/* Analysis History */}
+      <Card title="📊 Recent Analysis History">
+        <div className="space-y-4">
+          {/* Ticker Filter */}
+          <div className="flex gap-4">
+            <Input
+              label="Filter by Ticker"
+              value={historyFilter}
+              onChange={(e) => setHistoryFilter(e.target.value.toUpperCase())}
+              placeholder="e.g., AAPL (leave empty for all)"
+              className="flex-1"
+            />
+            {historyFilter && (
+              <Button
+                variant="secondary"
+                onClick={() => setHistoryFilter('')}
+                className="self-end"
+              >
+                Clear
+              </Button>
+            )}
+          </div>
+
+          {/* History Grid */}
+          {historyLoading ? (
+            <div className="flex justify-center p-8">
+              <LoadingSpinner />
+            </div>
+          ) : history?.data?.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {history.data.map((item: any) => (
+                <div
+                  key={item.id}
+                  onClick={() => setSelectedHistory(item)}
+                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-lg">{item.ticker}</h4>
+                    <Badge variant={getActionColor(item.action)}>
+                      {item.action}
+                    </Badge>
+                  </div>
+                  <div className="space-y-1 text-sm text-gray-600">
+                    <p>Conviction: {(item.conviction * 100).toFixed(0)}%</p>
+                    <p>Position: {item.position_size}%</p>
+                    <p className="text-xs text-gray-400">
+                      {new Date(item.timestamp).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="h-2 bg-gray-200 rounded-full mt-2">
+                    <div
+                      className="h-full bg-blue-500 rounded-full"
+                      style={{ width: `${item.conviction * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-gray-600 py-8">
+              {historyFilter
+                ? `No analysis found for ${historyFilter}`
+                : 'No analysis history yet'}
+            </p>
+          )}
+        </div>
+      </Card>
+
+      {/* History Detail Modal */}
+      {selectedHistory && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedHistory(null)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 space-y-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">{selectedHistory.ticker}</h2>
+                  <p className="text-sm text-gray-500">
+                    {new Date(selectedHistory.timestamp).toLocaleString()}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedHistory(null)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <Badge variant={getActionColor(selectedHistory.action)} className="text-lg px-4 py-2">
+                  {selectedHistory.action}
+                </Badge>
+                <div>
+                  <p className="text-sm text-gray-600">Conviction</p>
+                  <p className="text-xl font-bold">{(selectedHistory.conviction * 100).toFixed(0)}%</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Position Size</p>
+                  <p className="text-xl font-semibold">{selectedHistory.position_size}%</p>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-2">AI Reasoning</h3>
+                <p className="text-gray-700 bg-gray-50 p-4 rounded-lg whitespace-pre-wrap">
+                  {selectedHistory.reasoning}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

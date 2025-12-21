@@ -23,6 +23,7 @@ import PortfolioManagement from './pages/PortfolioManagement';
 import BacktestDashboard from './pages/BacktestDashboard';
 import GlobalMacro from './pages/GlobalMacro';
 import WarRoomPage from './pages/WarRoomPage';
+import { CostReport } from './pages/CostReport';
 // import { AIChatButton } from './components/AIChat/AIChatButton';
 // import { GeminiFreeButton } from './components/GeminiFree/GeminiFreeButton';
 
@@ -51,6 +52,7 @@ const App: React.FC = () => {
             <Route path="/portfolio" element={<PortfolioManagement />} />
             <Route path="/global-macro" element={<GlobalMacro />} />
             <Route path="/war-room" element={<WarRoomPage />} />
+            <Route path="/cost-report" element={<CostReport />} />
             <Route path="/logs" element={<Logs />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>

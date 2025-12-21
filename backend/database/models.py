@@ -237,6 +237,65 @@ class SignalPerformance(Base):
         return f"<SignalPerformance(signal_id={self.signal_id}, return={self.actual_return_pct:.1f}%, outcome='{self.outcome}')>"
 
 
+class GroundingSearchLog(Base):
+    """Grounding API 검색 비용 추적"""
+    __tablename__ = 'grounding_search_log'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    
+    # Search details
+    ticker = Column(String(10), nullable=False, index=True)
+    search_query = Column(Text, nullable=True)
+    results_count = Column(Integer, default=0)
+    
+    # Cost tracking
+    cost_usd = Column(Float, default=0.035, nullable=False)
+    
+    # Emergency context
+    emergency_trigger = Column(String(100), nullable=True)
+    was_emergency = Column(Boolean, default=False)
+    
+    # User tracking
+    user_id = Column(Integer, nullable=True)
+    
+    # Timestamp
+    created_at = Column(DateTime, nullable=False, default=datetime.now)
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_grounding_created_at', 'created_at'),
+        Index('idx_grounding_ticker', 'ticker'),
+    )
+
+    def __repr__(self):
+        return f"<GroundingSearchLog(id={self.id}, ticker='{self.ticker}', cost=${self.cost_usd})>"
+
+
+class GroundingDailyUsage(Base):
+    """Grounding API 일일 사용량 요약"""
+    __tablename__ = 'grounding_daily_usage'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    date = Column(DateTime, nullable=False, unique=True, index=True)
+    
+    # Usage stats
+    search_count = Column(Integer, default=0)
+    total_cost_usd = Column(Float, default=0.0)
+    unique_tickers = Column(Integer, default=0)
+    emergency_searches = Column(Integer, default=0)
+    
+    # Updated timestamp
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_daily_usage_date', 'date'),
+    )
+
+    def __repr__(self):
+        return f"<GroundingDailyUsage(date={self.date.date()}, searches={self.search_count}, cost=${self.total_cost_usd})>"
+
+
 # ============================================
 # Utility Functions
 # ============================================

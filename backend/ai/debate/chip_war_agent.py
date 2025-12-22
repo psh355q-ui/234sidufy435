@@ -1,5 +1,5 @@
 """
-Chip War Agent for War Room Debate
+Chip War Agent for War Room Debate (Self-Learning Edition)
 
 8번째 War Room 멤버로 반도체 칩 경쟁 분석 (Nvidia vs Google/Meta TPU)을 수행하여
 매매 의견을 제시합니다.
@@ -7,12 +7,19 @@ Chip War Agent for War Room Debate
 Vote Weight: 12%
 Focus: TorchTPU vs CUDA moat competition
 Data Sources:
-- ChipWarSimulator (software ecosystem score, TCO analysis)
+- ChipWarSimulator V2 (multi-generation roadmap)
+- ChipIntelligenceEngine (self-learning, rumors, scenarios)
 - Market disruption scoring
+
+Self-Learning Features:
+- Automatically updates chip specs from intelligence engine
+- Incorporates market rumors (high credibility only)
+- Uses future scenarios for prediction
+- Learns from past debate accuracy
 
 Author: AI Trading System
 Date: 2025-12-23
-Phase: 24 (ChipWarAgent Integration)
+Phase: 24.5 (Self-Learning Integration)
 """
 
 from datetime import datetime
@@ -21,17 +28,36 @@ import logging
 import asyncio
 
 from backend.ai.economics.chip_war_simulator import ChipWarSimulator
+from backend.ai.economics.chip_war_simulator_v2 import ChipComparator
+from backend.ai.economics.chip_intelligence_engine import (
+    ChipIntelligenceOrchestrator,
+    ConfidenceLevel
+)
+from backend.ai.debate.chip_war_agent_helpers import ChipWarAgentHelpers
 
 logger = logging.getLogger(__name__)
 
 
 class ChipWarAgent:
-    """칩 전쟁 분석 Agent (War Room 8th member)"""
+    """칩 전쟁 분석 Agent (War Room 8th member) - Self-Learning Edition"""
 
-    def __init__(self):
+    def __init__(self, enable_self_learning: bool = True):
         self.agent_name = "chip_war"
         self.vote_weight = 0.12  # 12% 투표권
+
+        # V1 Simulator (backward compatibility)
         self.simulator = ChipWarSimulator()
+
+        # V2 Enhanced Comparator (multi-generation)
+        self.comparator = ChipComparator()
+
+        # Self-learning intelligence engine
+        self.enable_self_learning = enable_self_learning
+        if enable_self_learning:
+            self.intelligence = ChipIntelligenceOrchestrator()
+            logger.info("🧠 ChipWarAgent: Self-learning enabled")
+        else:
+            self.intelligence = None
 
         # Semiconductor-related tickers
         self.chip_tickers = {
@@ -47,7 +73,7 @@ class ChipWarAgent:
             "ARM": "arm",        # Architecture
         }
 
-        logger.info(f"ChipWarAgent initialized (weight: {self.vote_weight})")
+        logger.info(f"ChipWarAgent initialized (weight: {self.vote_weight}, self-learning: {enable_self_learning})")
 
     async def analyze(self, ticker: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """
@@ -88,14 +114,68 @@ class ChipWarAgent:
         logger.info(f"🎮 ChipWarAgent analyzing {ticker} (chip war impact)")
 
         try:
-            # Run chip war simulation (base scenario)
-            report = await asyncio.to_thread(
-                self.simulator.generate_chip_war_report,
-                scenario="base"
-            )
+            # === SELF-LEARNING ENHANCEMENT ===
+            # 1. Check for high-credibility rumors
+            active_rumors = []
+            selected_scenario = "base"
 
-            # Find relevant signal for this ticker
-            vote = self._generate_vote_for_ticker(ticker, report)
+            if self.enable_self_learning and self.intelligence:
+                # Get high-credibility rumors (>80%)
+                high_cred_rumors = self.intelligence.rumor_tracker.get_high_credibility_rumors(0.8)
+
+                if high_cred_rumors:
+                    logger.info(f"🔍 Found {len(high_cred_rumors)} high-credibility rumors")
+                    active_rumors = high_cred_rumors
+
+                # Get active scenarios (>30% probability)
+                scenarios = self.intelligence.db.get_scenarios(min_probability=0.30)
+
+                if scenarios:
+                    # Select highest probability scenario
+                    top_scenario = max(scenarios, key=lambda s: s["probability"])
+                    selected_scenario = self._map_scenario_to_analysis(top_scenario, ticker)
+                    logger.info(f"🎯 Using scenario: {top_scenario['name']} ({top_scenario['probability']:.0%} prob)")
+
+            # === RUN ANALYSIS ===
+            # Use V2 Comparator for enhanced analysis
+            if ticker in ["NVDA", "GOOGL", "GOOG"]:
+                # Compare latest generation chips
+                comparison = await asyncio.to_thread(
+                    self.comparator.compare_comprehensive,
+                    nvidia_key="NV_Rubin",  # 2026 flagship
+                    google_key="Google_Ironwood_v7",  # 2025-2026
+                    scenario=selected_scenario
+                )
+
+                # Extract chip war factors
+                chip_war_factors = {
+                    "disruption_score": comparison["analysis"]["disruption_score"],
+                    "verdict": comparison["analysis"]["verdict"],
+                    "scenario": selected_scenario,
+                    "nvidia_tco": comparison["nvidia"]["tco_3yr"],
+                    "google_tco": comparison["google"]["tco_3yr"],
+                    "tco_advantage": comparison["analysis"]["economic_advantage_pct"],
+                    "active_rumors": len(active_rumors),
+                    "scenario_probability": max([s["probability"] for s in scenarios], default=0) if scenarios else 0
+                }
+
+                # Generate vote using V2 investment signals
+                vote = self._generate_vote_from_v2_analysis(ticker, comparison, chip_war_factors)
+
+            else:
+                # Fallback to V1 simulator for other tickers
+                report = await asyncio.to_thread(
+                    self.simulator.generate_chip_war_report,
+                    scenario=selected_scenario
+                )
+
+                vote = self._generate_vote_for_ticker(ticker, report)
+
+            # === POST-ANALYSIS LEARNING (Async) ===
+            if self.enable_self_learning and self.intelligence:
+                # Store this prediction for future learning
+                # (Will be evaluated after market reaction is known)
+                asyncio.create_task(self._schedule_learning_check(ticker, vote))
 
             logger.info(f"🎮 ChipWarAgent vote for {ticker}: {vote['action']} "
                        f"({vote['confidence']:.0%}) - {vote['reasoning'][:50]}...")
@@ -444,3 +524,12 @@ class ChipWarAgent:
             ),
             "chip_war_factors": factors
         }
+    # === HELPER METHODS FROM ChipWarAgentHelpers ===
+    def _map_scenario_to_analysis(self, scenario: Dict, ticker: str) -> str:
+        return ChipWarAgentHelpers.map_scenario_to_analysis(scenario, ticker)
+    
+    def _generate_vote_from_v2_analysis(self, ticker: str, comparison: Dict, chip_war_factors: Dict) -> Dict[str, Any]:
+        return ChipWarAgentHelpers.generate_vote_from_v2_analysis(ticker, comparison, chip_war_factors)
+    
+    async def _schedule_learning_check(self, ticker: str, vote: Dict):
+        await ChipWarAgentHelpers.schedule_learning_check(ticker, vote)

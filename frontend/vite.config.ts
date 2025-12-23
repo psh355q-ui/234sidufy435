@@ -17,11 +17,7 @@ export default defineConfig({
         target: 'http://localhost:8001', // FIXED: Backend port 8001
         changeOrigin: true,
       },
-      '/portfolio': {
-        target: 'http://localhost:8001/api/portfolio',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/portfolio/, ''),
-      },
+
     },
   },
 })

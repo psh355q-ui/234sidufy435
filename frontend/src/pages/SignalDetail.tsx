@@ -33,7 +33,7 @@ interface Signal {
   signal_type: string;
   confidence: number;
   reasoning: string;
-  generated_at: string;
+  created_at: string;
   alert_sent: boolean;
   entry_price?: number;
   exit_price?: number;
@@ -86,8 +86,43 @@ export default function SignalDetail() {
       if (!response.ok) {
         throw new Error('Signal not found');
       }
-      const data = await response.json();
-      setData(data);
+      const responseData = await response.json();
+
+      // Adapter: If backend returns flat SignalResponse, wrap it
+      if (!responseData.signal) {
+        // Backend returned flat keys like id, ticker, etc.
+        const flatSignal = responseData;
+
+        setData({
+          signal: flatSignal,
+          news_article: {
+            id: 0,
+            title: flatSignal.news_title || "News details not available",
+            content: "Full news content is not available for this signal yet.",
+            url: "#",
+            source: "AI System",
+            published_date: new Date().toISOString(),
+            crawled_at: new Date().toISOString()
+          },
+          analysis: {
+            id: 0,
+            theme: "Market Analysis",
+            bull_case: "Parsing bull case...",
+            bear_case: "Parsing bear case...",
+            step1_direct_impact: "Analyzing direct impact...",
+            step2_secondary_impact: "Analyzing secondary impact...",
+            step3_conclusion: flatSignal.reasoning || "Analysis conclusion...",
+            model_name: "AI-Ensemble",
+            analysis_duration_seconds: 0,
+            analyzed_at: flatSignal.created_at || new Date().toISOString()
+          },
+          related_signals: []
+        });
+      } else {
+        // Backend returned full structure
+        setData(responseData);
+      }
+
       setLoading(false);
     } catch (error) {
       console.error('Failed to fetch signal detail:', error);
@@ -185,7 +220,7 @@ export default function SignalDetail() {
                 </div>
 
                 <p className="text-gray-600">
-                  Generated on {new Date(signal.generated_at).toLocaleString()}
+                  Generated on {new Date(signal.created_at).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -409,7 +444,7 @@ export default function SignalDetail() {
               <div>
                 <div className="text-gray-500">Generated At</div>
                 <div className="text-gray-900">
-                  {new Date(signal.generated_at).toLocaleString()}
+                  {new Date(signal.created_at).toLocaleString()}
                 </div>
               </div>
 

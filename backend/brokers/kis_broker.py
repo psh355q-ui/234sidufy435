@@ -161,83 +161,86 @@ class KISBroker:
         """
         try:
             # Call KIS API for balance
-            # We use "NASD" as default context for now. KIS API requires an exchange code.
-            # Ideally we should iterate if we support multiple exchanges.
-            res = osf.get_balance(
-                cano=self.cano,
-                acnt_prdt_cd=self.prdt_cd,
-                ovrs_excg_cd="NASD" 
-            )
+            # Iterate through multiple exchanges to find positions
+            exchanges = ["NASD", "NYSE", "AMEX"]
+            total_value = 0.0
+            positions = []
+            total_daily_pnl = 0.0
             
-            output1 = res.get('output1', [])
-            output2 = res.get('output2', {}) 
-
-            if output1:
-                # Parse balance information
-                total_value = 0.0
-                positions = []
-                total_daily_pnl = 0.0
-
-                for row in output1:
-                    # Map fields based on debug output
-                    symbol = row.get('ovrs_pdno', row.get('pdno', ''))
-                    if symbol:
-                        # Use exact field names from debug output
-                        qty = float(row.get('ovrs_cblc_qty', row.get('hldg_qty', 0)))
-                        if qty > 0:
-                            avg_price = float(row.get('pchs_avg_pric', 0))
-                            current_price = float(row.get('now_pric2', 0))
-                            eval_amt = float(row.get('ovrs_stck_evlu_amt', row.get('frcr_evlu_amt2', 0)))
-                            profit_loss = float(row.get('frcr_evlu_pfls_amt', 0))
-                            
-                            # Calculate Daily P&L
-                            daily_pnl = 0.0
-                            daily_return_pct = 0.0
-                            
-                            try:
-                                # Map exchange code for Price API
-                                raw_excg = row.get('ovrs_excg_cd', 'NASD')
-                                price_excg_map = {
-                                    "NASD": "NAS", "NYSE": "NYS", "AMEX": "AMS",
-                                    "SEHK": "HKS", "SHAA": "SHS", "SZAA": "SZS",
-                                    "TKSE": "TSE", "HASE": "HNX", "VNSE": "HSX"
-                                }
-                                price_excg = price_excg_map.get(raw_excg, "NAS")
+            for exc in exchanges:
+                logger.info(f"Fetching balance for account: {self.cano}-{self.prdt_cd} (Exchange: {exc})")
+                res = osf.get_balance(
+                    cano=self.cano,
+                    acnt_prdt_cd=self.prdt_cd,
+                    ovrs_excg_cd=exc 
+                )
+                
+                output1 = res.get('output1', [])
+                
+                if output1:
+                    logger.info(f"Positions found in {exc}: {len(output1)}")
+                    
+                    # Parse balance information
+                    for row in output1:
+                        # Map fields based on debug output
+                        symbol = row.get('ovrs_pdno', row.get('pdno', ''))
+                        if symbol:
+                            # Use exact field names from debug output
+                            qty = float(row.get('ovrs_cblc_qty', row.get('hldg_qty', 0)))
+                            if qty > 0:
+                                avg_price = float(row.get('pchs_avg_pric', 0))
+                                current_price = float(row.get('now_pric2', 0))
+                                eval_amt = float(row.get('ovrs_stck_evlu_amt', row.get('frcr_evlu_amt2', 0)))
+                                profit_loss = float(row.get('frcr_evlu_pfls_amt', 0))
                                 
-                                # Fetch Price Detail
-                                price_detail = osf.get_price_detail(price_excg, symbol)
+                                # Calculate Daily P&L
+                                daily_pnl = 0.0
+                                daily_return_pct = 0.0
                                 
-                                if price_detail:
-                                    # Parse Price Data
-                                    last_price = float(price_detail.get('last', 0) or current_price)
-                                    base_price = float(price_detail.get('base', 0) or last_price)
+                                try:
+                                    # Map exchange code for Price API
+                                    raw_excg = row.get('ovrs_excg_cd', exc) # Use current exc if missing
+                                    price_excg_map = {
+                                        "NASD": "NAS", "NYSE": "NYS", "AMEX": "AMS",
+                                        "SEHK": "HKS", "SHAA": "SHS", "SZAA": "SZS",
+                                        "TKSE": "TSE", "HASE": "HNX", "VNSE": "HSX"
+                                    }
+                                    price_excg = price_excg_map.get(raw_excg, "NAS")
                                     
-                                    # Using fetched last_price as current_price if available (more realtime)
-                                    if last_price > 0:
-                                        current_price = last_price
-                                        # Recalculate eval_amt based on realtime price
-                                        # eval_amt = current_price * qty
+                                    # Fetch Price Detail
+                                    price_detail = osf.get_price_detail(price_excg, symbol)
                                     
-                                    if base_price > 0:
-                                        diff = current_price - base_price
-                                        daily_pnl = diff * qty
-                                        daily_return_pct = (diff / base_price) * 100
+                                    if price_detail:
+                                        # Parse Price Data
+                                        last_price = float(price_detail.get('last', 0) or current_price)
+                                        base_price = float(price_detail.get('base', 0) or last_price)
                                         
-                            except Exception as e:
-                                logger.warning(f"Failed to calc daily P&L for {symbol}: {e}")
-                            
-                            positions.append({
-                                "symbol": symbol,
-                                "quantity": qty,
-                                "avg_price": avg_price,
-                                "current_price": current_price,
-                                "eval_amount": eval_amt,
-                                "profit_loss": profit_loss,
-                                "daily_pnl": daily_pnl,
-                                "daily_return_pct": daily_return_pct
-                            })
-                            total_value += eval_amt
-                            total_daily_pnl += daily_pnl
+                                        # Using fetched last_price as current_price if available (more realtime)
+                                        if last_price > 0:
+                                            current_price = last_price
+                                            # Recalculate eval_amt based on realtime price
+                                            # eval_amt = current_price * qty
+                                        
+                                        if base_price > 0:
+                                            diff = current_price - base_price
+                                            daily_pnl = diff * qty
+                                            daily_return_pct = (diff / base_price) * 100
+                                            
+                                except Exception as e:
+                                    logger.warning(f"Failed to calc daily P&L for {symbol}: {e}")
+                                
+                                positions.append({
+                                    "symbol": symbol,
+                                    "quantity": qty,
+                                    "avg_price": avg_price,
+                                    "current_price": current_price,
+                                    "eval_amount": eval_amt,
+                                    "profit_loss": profit_loss,
+                                    "daily_pnl": daily_pnl,
+                                    "daily_return_pct": daily_return_pct
+                                })
+                                total_value += eval_amt
+                                total_daily_pnl += daily_pnl
 
                 # Get Cash Balance (Present Balance)
                 cash_usd = 0.0

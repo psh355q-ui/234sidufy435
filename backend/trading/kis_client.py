@@ -21,13 +21,67 @@ import time
 import yaml
 import hashlib
 import logging
+import ssl
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.ssl_ import create_urllib3_context
+
+# .env 파일 로드 (프로젝트 루트에서 명시적으로)
+from dotenv import load_dotenv
+
+# 프로젝트 루트 경로 찾기
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+ENV_FILE = PROJECT_ROOT / ".env"
+
+# 명시적으로 .env 파일 로드
+if ENV_FILE.exists():
+    load_dotenv(dotenv_path=ENV_FILE)
+    print(f"✓ Loaded .env from: {ENV_FILE}")
+else:
+    print(f"⚠ .env file not found at: {ENV_FILE}")
+    load_dotenv()  # Fallback to default search
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# TLS 1.2+ 강제 설정 (2025.12.12 한국투자증권 보안 강화)
+# =============================================================================
+
+class TLS12Adapter(HTTPAdapter):
+    """TLS 1.2 이상만 사용하도록 강제하는 어댑터"""
+    
+    def init_poolmanager(self, *args, **kwargs):
+        context = create_urllib3_context()
+        # TLS 1.2 최소 버전 설정
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
+        # SSL 인증서 검증 비활성화 (self-signed certificate 문제 해결)
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        kwargs['ssl_context'] = context
+        return super().init_poolmanager(*args, **kwargs)
+
+
+# TLS 1.2+ 세션 생성
+def create_tls12_session():
+    """TLS 1.2 이상을 사용하는 requests 세션 생성"""
+    session = requests.Session()
+    session.mount('https://', TLS12Adapter())
+    # SSL 검증 비활성화
+    session.verify = False
+    return session
+
+
+# 전역 세션 (TLS 1.2+)
+_session = create_tls12_session()
+
+# SSL 경고 억제
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 # =============================================================================
@@ -96,7 +150,9 @@ def load_config() -> Dict[str, str]:
     """
     if not CONFIG_FILE.exists():
         # 환경변수에서 읽기 (대안)
-        return {
+        logger.info(f"kis_devlp.yaml not found at {CONFIG_FILE}, loading from environment variables")
+        
+        config = {
             "my_app": os.environ.get("KIS_APP_KEY", ""),
             "my_sec": os.environ.get("KIS_APP_SECRET", ""),
             "paper_app": os.environ.get("KIS_PAPER_APP_KEY", ""),
@@ -109,6 +165,14 @@ def load_config() -> Dict[str, str]:
             "my_paper_stock": os.environ.get("KIS_PAPER_ACCOUNT", ""),
             "my_prod": os.environ.get("KIS_PROD_CODE", "01"),
         }
+        
+        # Debug: 환경 변수 로딩 확인
+        logger.info(f"Environment variables loaded:")
+        logger.info(f"  KIS_APP_KEY length: {len(config.get('my_app', ''))} chars")
+        logger.info(f"  KIS_APP_SECRET length: {len(config.get('my_sec', ''))} chars")
+        logger.info(f"  KIS_ACCOUNT_NUMBER: {config.get('my_acct_stock', 'NOT SET')}")
+        
+        return config
     
     with open(CONFIG_FILE, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
@@ -185,13 +249,23 @@ def auth(svr: str = "vps", product: str = "01") -> bool:
         _env.my_url = "https://openapi.koreainvestment.com:9443"
     else:
         # 모의투자 (기본값)
-        _env.my_app = config.get("paper_app", config.get("my_app", ""))
-        _env.my_sec = config.get("paper_sec", config.get("my_sec", ""))
-        _env.my_acct = config.get("my_paper_stock", config.get("my_acct_stock", ""))
+        # paper_app이 빈 문자열이면 my_app 사용
+        _env.my_app = config.get("paper_app") or config.get("my_app", "")
+        _env.my_sec = config.get("paper_sec") or config.get("my_sec", "")
+        _env.my_acct = config.get("my_paper_stock") or config.get("my_acct_stock", "")
         _env.my_url = "https://openapivts.koreainvestment.com:29443"
     
     _env.my_prod = product
     _env.htsid = config.get("my_htsid", "")
+    
+    # Debug: _env 설정 확인
+    logger.info(f"Auth configuration set:")
+    logger.info(f"  Server: {svr} ({'실전' if svr == 'prod' else '모의'})")
+    logger.info(f"  _env.my_app length: {len(_env.my_app)} chars")
+    logger.info(f"  _env.my_sec length: {len(_env.my_sec)} chars")
+    logger.info(f"  _env.my_acct: {_env.my_acct}")
+    logger.info(f"  _env.my_url: {_env.my_url}")
+    
     
     # 토큰 발급
     token = _get_access_token()
@@ -253,7 +327,7 @@ def _get_access_token() -> str:
     }
     
     try:
-        response = requests.post(url, headers=headers, json=body)
+        response = _session.post(url, headers=headers, json=body)
         response.raise_for_status()
         
         data = response.json()
@@ -278,6 +352,14 @@ def _get_access_token() -> str:
         logger.info(f"새 토큰 발급 완료 (만료: {expires_in}초)")
         return access_token
         
+    except requests.exceptions.HTTPError as e:
+        logger.error(f"토큰 발급 HTTP 오류: {e}")
+        logger.error(f"응답 코드: {e.response.status_code}")
+        logger.error(f"응답 본문: {e.response.text}")
+        logger.error(f"요청 URL: {url}")
+        logger.error(f"앱키 길이: {len(_env.my_app)} chars")
+        logger.error(f"시크릿 길이: {len(_env.my_sec)} chars")
+        return ""
     except Exception as e:
         logger.error(f"토큰 발급 오류: {e}")
         return ""
@@ -298,7 +380,7 @@ def _get_hashkey(body: Dict) -> str:
     }
     
     try:
-        response = requests.post(url, headers=headers, json=body)
+        response = _session.post(url, headers=headers, json=body)
         response.raise_for_status()
         
         data = response.json()
@@ -400,14 +482,14 @@ def _url_fetch(url_path: str, tr_id: str, params: Dict, method: str = "GET") -> 
     
     try:
         if method == "GET":
-            response = requests.get(url, headers=headers, params=params)
+            response = _session.get(url, headers=headers, params=params)
         else:
             # POST 요청은 해시키 필요
             if "CANO" in params:  # 주문 관련 API
                 hashkey = _get_hashkey(params)
                 if hashkey:
                     headers["hashkey"] = hashkey
-            response = requests.post(url, headers=headers, json=params)
+            response = _session.post(url, headers=headers, json=params)
         
         return APIResponse(response)
         

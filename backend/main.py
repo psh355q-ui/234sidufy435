@@ -17,7 +17,7 @@ Date: 2025-11-14
 
 import logging
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 from contextlib import asynccontextmanager
 
@@ -284,6 +284,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# WebSocket Endpoint (Explicitly mounted here to avoid router prefix issues)
+from fastapi import WebSocket, WebSocketDisconnect
+
+try:
+    from backend.api.signals_router import manager as trading_signal_manager
+    
+    @app.websocket("/api/signals/ws")
+    async def websocket_signal_endpoint(websocket: WebSocket):
+        """
+        Real-time trading signals WebSocket endpoint.
+        Uses the manager from signals_router to broadcast updates.
+        """
+        await trading_signal_manager.connect(websocket)
+        try:
+            while True:
+                # Keep connection alive
+                await websocket.receive_text()
+        except WebSocketDisconnect:
+            trading_signal_manager.disconnect(websocket)
+            
+    logger.info("WebSocket endpoint mounted at /api/signals/ws")
+except ImportError as e:
+    logger.warning(f"Failed to mount WebSocket endpoint: {e}")
+except Exception as e:
+    logger.error(f"WebSocket endpoint error: {e}")
+
 # Register routers conditionally
 if AI_CHAT_AVAILABLE:
     app.include_router(ai_chat_router)
@@ -320,11 +346,26 @@ if SIGNALS_AVAILABLE:    # Phase 4: Trading Signals
     from backend.api.war_room_router import router as war_room_router
     app.include_router(war_room_router)
     logger.info("War Room router registered")
-    
+
     # 🆕 Signal Consolidation (Multi-Source Aggregation)
     from backend.api.signal_consolidation_router import router as signal_consolidation_router
     app.include_router(signal_consolidation_router)
     logger.info("Signal Consolidation router registered")
+
+    # 🆕 Orders API (Phase 27: Frontend UI)
+    from backend.api.orders_router import router as orders_router
+    app.include_router(orders_router)
+    logger.info("Orders router registered")
+
+    # 🆕 Portfolio API (Phase 27: Frontend UI)
+    from backend.api.portfolio_router import router as portfolio_router
+    app.include_router(portfolio_router)
+    logger.info("Portfolio router registered")
+
+    # 🆕 Performance API (Phase 25.2: Agent Performance Tracking)
+    from backend.api.performance_router import router as performance_router
+    app.include_router(performance_router)
+    logger.info("Performance router registered")
 if NOTIFICATIONS_AVAILABLE:
     app.include_router(notifications_router)
     logger.info("Notifications router registered")
@@ -460,25 +501,54 @@ async def analyze_ticker(request: AnalyzeRequest, background_tasks: BackgroundTa
     """Analyze a single ticker using Trading Agent."""
     if metrics_collector:
         start_time_req = datetime.utcnow()
-    result = {
-        "ticker": request.ticker,
-        "action": "BUY",
-        "conviction": 0.78,
-        "reasoning": f"Analysis of {request.ticker} shows strong momentum",
-        "position_size": 4.5,
-        "target_price": None,
-        "stop_loss": None,
-        "timestamp": datetime.utcnow().isoformat(),
-    }
-    if metrics_collector:
-        latency = (datetime.utcnow() - start_time_req).total_seconds()
-        metrics_collector.record_trading_decision(
+    
+    try:
+        # Import and initialize TradingAgent inside the endpoint to avoid circular imports during startup
+        from backend.ai.trading_agent import TradingAgent
+        agent = TradingAgent()
+        
+        # Perform analysis
+        decision = await agent.analyze(
             ticker=request.ticker,
-            action=result["action"],
-            conviction=result["conviction"],
-            latency_seconds=latency,
+            market_context=request.market_context
         )
-    return result
+        
+        result = {
+            "ticker": decision.ticker,
+            "action": decision.action,
+            "conviction": decision.conviction,
+            "reasoning": decision.reasoning,
+            "position_size": decision.position_size,
+            "target_price": decision.target_price,
+            "stop_loss": decision.stop_loss,
+            "risk_factors": decision.risk_factors,
+            "timestamp": decision.timestamp.isoformat() if decision.timestamp else datetime.utcnow().isoformat(),
+        }
+
+        if metrics_collector:
+            latency = (datetime.utcnow() - start_time_req).total_seconds()
+            metrics_collector.record_trading_decision(
+                ticker=request.ticker,
+                action=result["action"],
+                conviction=result["conviction"],
+                latency_seconds=latency,
+            )
+        return result
+        
+    except Exception as e:
+        logger.error(f"Analysis failed for {request.ticker}: {e}", exc_info=True)
+        # Fallback to safe HOLD response
+        return {
+            "ticker": request.ticker,
+            "action": "HOLD",
+            "conviction": 0.0,
+            "reasoning": f"Analysis failed: {str(e)}",
+            "position_size": 0.0,
+            "target_price": None,
+            "stop_loss": None,
+            "risk_factors": ["system_error"],
+            "timestamp": datetime.utcnow().isoformat(),
+        }
 
 @app.post("/api/analyze/batch", tags=["Trading"])
 async def analyze_batch(request: BatchAnalyzeRequest):
@@ -490,9 +560,58 @@ async def analyze_batch(request: BatchAnalyzeRequest):
             "action": "HOLD",
             "conviction": 0.5,
             "reasoning": f"Batch analysis of {ticker}",
+            "risk_factors": [],
             "timestamp": datetime.utcnow().isoformat(),
         })
     return {"total": len(results), "results": results}
+
+@app.get("/api/analysis/history", tags=["Trading"])
+async def get_analysis_history(ticker: Optional[str] = None, limit: int = 20):
+    """Get analysis history (mock data)."""
+    # Mock data to prevent 404
+    history = [
+        {
+            "id": 1,
+            "ticker": "AAPL",
+            "action": "BUY",
+            "conviction": 0.85,
+            "position_size": 5.0,
+            "target_price": 185.0,
+            "stop_loss": 165.0,
+            "timestamp": (datetime.utcnow() - timedelta(hours=2)).isoformat(),
+            "reasoning": "Strong quarterly results expected. Technical indicators show bullish divergence.",
+            "risk_factors": ["Tech Sector Correction", "Supply Chain Issues"]
+        },
+        {
+            "id": 2,
+            "ticker": "TSLA",
+            "action": "HOLD",
+            "conviction": 0.55,
+            "position_size": 0.0,
+            "target_price": 250.0,
+            "stop_loss": 210.0,
+            "timestamp": (datetime.utcnow() - timedelta(days=1)).isoformat(),
+            "reasoning": "Mixed signals from recent delivery numbers. Waiting for clearer trend.",
+            "risk_factors": ["Regulatory Scrutiny", "Competition"]
+        },
+         {
+            "id": 3,
+            "ticker": "NVDA",
+            "action": "BUY",
+            "conviction": 0.92,
+            "position_size": 8.0,
+            "target_price": 950.0,
+            "stop_loss": 850.0,
+            "timestamp": (datetime.utcnow() - timedelta(hours=5)).isoformat(),
+            "reasoning": "Dominant market position in AI chips confirmed by recent channel checks.",
+            "risk_factors": ["Valuation Concerns", "Geopolitical Tension"]
+        }
+    ]
+    
+    if ticker:
+        return [item for item in history if item["ticker"] == ticker.upper()]
+        
+    return history
 
 @app.get("/api/portfolio", tags=["Portfolio"])
 async def get_portfolio():

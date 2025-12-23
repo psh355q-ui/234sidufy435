@@ -284,7 +284,7 @@ export const Analysis: React.FC = () => {
             </div>
 
             {/* Risk Factors */}
-            {analysisResult.risk_factors.length > 0 && (
+            {analysisResult.risk_factors?.length > 0 && (
               <div>
                 <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                   <AlertTriangle size={16} className="text-yellow-600" />
@@ -453,7 +453,7 @@ export const Analysis: React.FC = () => {
             <Input
               label="Filter by Ticker"
               value={historyFilter}
-              onChange={(e) => setHistoryFilter(e.target.value.toUpperCase())}
+              onChange={(value) => setHistoryFilter(value.toUpperCase())}
               placeholder="e.g., AAPL (leave empty for all)"
               className="flex-1"
             />
@@ -473,7 +473,7 @@ export const Analysis: React.FC = () => {
             <div className="flex justify-center p-8">
               <LoadingSpinner />
             </div>
-          ) : history?.data?.length > 0 ? (
+          ) : history && Array.isArray(history.data) && history.data.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {history.data.map((item: any) => (
                 <div

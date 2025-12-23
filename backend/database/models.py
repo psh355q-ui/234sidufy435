@@ -482,3 +482,55 @@ class NewsSource(Base):
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
+
+class Order(Base):
+    """Trading Orders (KIS Broker Integration)
+    
+    Phase 26: REAL MODE - 실제 주문 실행 기록
+    """
+    __tablename__ = 'orders'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    
+    # Order details
+    ticker = Column(String(10), nullable=False, index=True)
+    action = Column(String(10), nullable=False)  # BUY, SELL
+    quantity = Column(Integer, nullable=False)
+    price = Column(Float, nullable=False)  # Execution price
+    
+    # Order type and status
+    order_type = Column(String(20), default="MARKET")  # MARKET, LIMIT
+    status = Column(String(20), default="PENDING")  # PENDING, FILLED, CANCELLED, REJECTED
+    
+    # Broker information
+    broker = Column(String(50), default="KIS")
+    order_id = Column(String(100), nullable=True)  # Broker order ID
+    
+    # Signal linkage
+    signal_id = Column(Integer, ForeignKey('trading_signals.id'), nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime, nullable=False, default=datetime.now)
+    updated_at = Column(DateTime, nullable=True, onupdate=datetime.now)
+    filled_at = Column(DateTime, nullable=True)  # When order was executed
+    
+    # Execution details
+    filled_quantity = Column(Integer, nullable=True)
+    filled_price = Column(Float, nullable=True)
+    commission = Column(Float, default=0.0)
+    
+    # Rejection reason (if any)
+    reject_reason = Column(Text, nullable=True)
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_orders_ticker', 'ticker'),
+        Index('idx_orders_status', 'status'),
+        Index('idx_orders_created_at', 'created_at'),
+        Index('idx_orders_signal_id', 'signal_id'),
+    )
+
+    def __repr__(self):
+        return f"<Order(id={self.id}, ticker='{self.ticker}', action='{self.action}', quantity={self.quantity}, status='{self.status}')>"
+
+

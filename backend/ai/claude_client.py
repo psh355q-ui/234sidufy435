@@ -59,7 +59,7 @@ Article 3: Conservative Approach
 - Missing an opportunity is better than incurring a loss
 
 Article 4: Transparency and Explainability
-- Always provide clear reasoning (2-3 sentences minimum)
+- Always provide clear reasoning (2-3 sentences minimum) in KOREAN
 - List specific risk factors identified
 - Explain which data points drove the decision
 - Never provide vague or generic explanations
@@ -87,7 +87,7 @@ Always return valid JSON in this exact format:
 {
     "action": "BUY" | "SELL" | "HOLD",
     "conviction": 0.0-1.0,
-    "reasoning": "Brief explanation (2-3 sentences)",
+    "reasoning": "Brief explanation in KOREAN (한국어로 2-3문장 설명)",
     "risk_factors": ["factor1", "factor2", ...],
     "target_price": null or number,
     "stop_loss": null or number,
@@ -246,13 +246,14 @@ Current Portfolio:
 
         prompt += """
 TASK:
-Provide a trading recommendation in the following JSON format:
+Provide a trading recommendation in the following JSON format.
+IMPORTANT: The "reasoning" field MUST be in KOREAN (한국어).
 
 ```json
 {
     "action": "BUY" | "SELL" | "HOLD",
     "conviction": 0.0-1.0,
-    "reasoning": "Brief explanation (2-3 sentences)",
+    "reasoning": "Brief explanation in KOREAN (한국어로 2-3문장 설명)",
     "risk_factors": ["factor1", "factor2", ...],
     "target_price": null or number,
     "stop_loss": null or number,

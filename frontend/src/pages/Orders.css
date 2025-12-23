@@ -1,0 +1,259 @@
+/* Orders Page Styles */
+
+.orders-page {
+    padding: 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Header */
+.page-header {
+    margin-bottom: 32px;
+}
+
+.page-header h1 {
+    font-size: 32px;
+    font-weight: bold;
+    margin: 0 0 16px 0;
+    color: #212121;
+}
+
+.header-stats {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 120px;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: #757575;
+    font-weight: 500;
+}
+
+.stat-value {
+    font-size: 28px;
+    font-weight: bold;
+    color: #212121;
+}
+
+/* Filters */
+.filters {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.search-box {
+    flex: 1;
+    min-width: 250px;
+}
+
+.search-input {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 16px;
+    border: 2px solid #E0E0E0;
+    border-radius: 8px;
+    background: white;
+    transition: border-color 0.2s;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #2196F3;
+}
+
+.status-filters {
+    display: flex;
+    gap: 8px;
+}
+
+.filter-btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    border: 2px solid #E0E0E0;
+    border-radius: 8px;
+    background: white;
+    color: #424242;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.filter-btn:hover {
+    border-color: #2196F3;
+    background: #E3F2FD;
+}
+
+.filter-btn.active {
+    border-color: #2196F3;
+    background: #2196F3;
+    color: white;
+}
+
+/* Orders Table */
+.orders-table-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.orders-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.orders-table thead {
+    background: #F5F5F5;
+}
+
+.orders-table th {
+    padding: 16px;
+    text-align: left;
+    font-size: 14px;
+    font-weight: 600;
+    color: #616161;
+    border-bottom: 2px solid #E0E0E0;
+}
+
+.orders-table td {
+    padding: 16px;
+    font-size: 14px;
+    color: #424242;
+    border-bottom: 1px solid #F5F5F5;
+}
+
+.orders-table tbody tr:hover {
+    background: #FAFAFA;
+}
+
+.orders-table .mono {
+    font-family: 'Courier New', monospace;
+}
+
+.orders-table .ticker {
+    font-weight: bold;
+    font-size: 16px;
+    color: #212121;
+}
+
+/* Badges */
+.action-badge,
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    text-align: center;
+}
+
+/* Empty State */
+.empty-state {
+    padding: 80px 24px;
+    text-align: center;
+    color: #757575;
+}
+
+.empty-state p {
+    font-size: 18px;
+    margin: 0 0 8px 0;
+}
+
+.empty-state .hint {
+    font-size: 14px;
+    opacity: 0.7;
+}
+
+/* Loading/Error States */
+.loading-state,
+.error-state {
+    padding: 80px 24px;
+    text-align: center;
+}
+
+.loading-state .spinner {
+    font-size: 48px;
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.error-state p {
+    font-size: 18px;
+    margin: 0 0 8px 0;
+    color: #F44336;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .orders-table-container {
+        overflow-x: auto;
+    }
+
+    .orders-table {
+        min-width: 1000px;
+    }
+}
+
+@media (max-width: 768px) {
+    .orders-page {
+        padding: 16px;
+    }
+
+    .page-header h1 {
+        font-size: 24px;
+    }
+
+    .header-stats {
+        width: 100%;
+    }
+
+    .stat-card {
+        flex: 1;
+        min-width: 80px;
+        padding: 12px 16px;
+    }
+
+    .stat-value {
+        font-size: 20px;
+    }
+
+    .filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .search-box {
+        width: 100%;
+    }
+
+    .status-filters {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .filter-btn {
+        flex: 1;
+        font-size: 12px;
+        padding: 8px 12px;
+    }
+}

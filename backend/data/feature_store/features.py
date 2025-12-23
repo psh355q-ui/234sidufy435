@@ -23,6 +23,14 @@ FEATURE_DEFINITIONS = {
     # =========================================================================
     # Technical Features (기존)
     # =========================================================================
+    "current_price": {
+        "description": "현재 주가 (Close)",
+        "category": "technical",
+        "data_sources": ["yahoo_finance"],
+        "update_frequency": "realtime",
+        "cache_ttl": 60,  # 1분
+    },
+
     "ret_5d": {
         "description": "5일 수익률 (%)",
         "category": "technical",
@@ -116,7 +124,9 @@ async def calculate_feature(
     
     try:
         # Technical features
-        if feature_name == "ret_5d":
+        if feature_name == "current_price":
+            return await calculate_current_price(ticker, as_of_date)
+        elif feature_name == "ret_5d":
             return await calculate_ret_5d(ticker, as_of_date)
         elif feature_name == "ret_20d":
             return await calculate_ret_20d(ticker, as_of_date)
@@ -147,6 +157,26 @@ async def calculate_feature(
 # =============================================================================
 # Technical Feature Calculations
 # =============================================================================
+
+async def calculate_current_price(ticker: str, as_of_date: datetime) -> Optional[float]:
+    """Calculate current price (latest close)."""
+    try:
+        # Fetch just the latest day
+        end_date = as_of_date
+        start_date = as_of_date - timedelta(days=5)
+        
+        stock = yf.Ticker(ticker)
+        df = stock.history(start=start_date, end=end_date)
+        
+        if len(df) == 0:
+            return None
+        
+        return float(df['Close'].iloc[-1])
+        
+    except Exception as e:
+        logger.error(f"Error calculating current_price for {ticker}: {e}")
+        return None
+
 
 async def calculate_ret_5d(ticker: str, as_of_date: datetime) -> Optional[float]:
     """Calculate 5-day return."""

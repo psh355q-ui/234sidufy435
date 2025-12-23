@@ -15,11 +15,14 @@ Usage:
 """
 
 import logging
+import time
+import json
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from backend.data.feature_store.cache_layer import RedisCache, TimescaleCache
 from backend.data.collectors.yahoo_collector import YahooFinanceCollector
 from backend.data.models.feature import FeatureResponse
+from backend.data.feature_store.features import get_feature_calculator, list_available_features
 
 logger = logging.getLogger(__name__)
 
@@ -226,7 +229,7 @@ class FeatureStore:
         self.computations += 1
 
         try:
-            value = await calculator(ticker, as_of, data_fetcher)
+            value = await calculator(ticker, as_of)
             logger.info(f"Computed {ticker} {feature_name} = {value}")
             return value
         except Exception as e:

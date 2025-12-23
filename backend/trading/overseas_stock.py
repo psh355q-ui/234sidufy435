@@ -51,7 +51,9 @@ def get_balance(cano: str, acnt_prdt_cd: str, ovrs_excg_cd: str, tr_crcy_cd: str
         tr_id = "VTTS3012R"
     else:
         tr_id = "TTTS3012R"
-        
+    
+    logger.info(f"Calling get_balance: CANO={cano}, ACNT_PRDT_CD={acnt_prdt_cd}, OVRS_EXCG_CD={ovrs_excg_cd}, TR_ID={tr_id}")
+    
     params = {
         "CANO": cano,
         "ACNT_PRDT_CD": acnt_prdt_cd,
@@ -65,11 +67,26 @@ def get_balance(cano: str, acnt_prdt_cd: str, ovrs_excg_cd: str, tr_crcy_cd: str
     
     if resp.isOK():
         body = resp.getBody()
+        logger.info(f"get_balance API success")
+        logger.info(f"  body type: {type(body)}")
+        logger.info(f"  body.output1 type: {type(body.output1) if hasattr(body, 'output1') else 'N/A'}")
+        
+        output1 = body.output1 if hasattr(body, 'output1') else None
+        output2 = body.output2 if hasattr(body, 'output2') else None
+        
+        if output1:
+            logger.info(f"  output1 length: {len(output1) if isinstance(output1, list) else 'not a list'}")
+            if isinstance(output1, list) and len(output1) > 0:
+                logger.info(f"  output1[0] keys: {output1[0].keys() if isinstance(output1[0], dict) else 'not a dict'}")
+        else:
+            logger.warning(f"  output1 is empty or falsy: {output1}")
+        
         return {
-            "output1": body.output1, # 잔고상세
-            "output2": body.output2  # 결제잔고상세
+            "output1": output1, # 잔고상세
+            "output2": output2  # 결제잔고상세
         }
     else:
+        logger.error(f"get_balance API failed - status code: {resp.response.status_code}")
         resp.printError()
         return {}
 

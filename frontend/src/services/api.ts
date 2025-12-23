@@ -86,12 +86,32 @@ export interface SystemInfo {
 // API Functions
 export const getPortfolio = async (): Promise<Portfolio> => {
   const response = await apiClient.get('/portfolio');
-  return response.data;
+  const data = response.data;
+
+  // Map backend response format to frontend interface
+  return {
+    total_value: data.total_value || 0,
+    cash: data.cash || 0,
+    positions_value: data.invested || 0, // backend: invested -> frontend: positions_value
+    daily_pnl: data.daily_pnl || 0,
+    total_pnl: data.total_pnl || 0,
+    daily_return_pct: data.daily_return_pct || 0,
+    total_return_pct: data.total_pnl_pct || 0, // backend: total_pnl_pct -> frontend: total_return_pct
+    positions: (data.positions || []).map((pos: any) => ({
+      ticker: pos.symbol || '', // backend: symbol -> frontend: ticker
+      quantity: pos.quantity || 0,
+      entry_price: pos.avg_price || 0, // backend: avg_price -> frontend: entry_price
+      current_price: pos.current_price || 0,
+      market_value: pos.market_value || 0,
+      unrealized_pnl: pos.profit_loss || 0, // backend: profit_loss -> frontend: unrealized_pnl
+      unrealized_pnl_pct: pos.profit_loss_pct || 0, // backend: profit_loss_pct -> frontend: unrealized_pnl_pct
+    })),
+    recent_trades: data.recent_trades || [],
+  };
 };
 
 export const getDailyPortfolio = async (): Promise<Portfolio> => {
-  const response = await apiClient.get('/portfolio');
-  return response.data;
+  return getPortfolio();
 };
 
 export const analyzeTicker = async (ticker: string): Promise<AIDecision> => {

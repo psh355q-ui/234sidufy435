@@ -265,8 +265,8 @@ export const Dashboard: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {portfolio.positions.map((position) => (
-                  <tr key={position.ticker} className="hover:bg-gray-50">
+                {portfolio.positions.map((position, index) => (
+                  <tr key={`${position.ticker}-${index}`} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="font-semibold text-blue-600">{position.ticker}</span>
                     </td>
@@ -274,21 +274,21 @@ export const Dashboard: React.FC = () => {
                       {position.quantity}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ${position.entry_price.toFixed(2)}
+                      ${(position.entry_price || 0).toFixed(2)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ${position.current_price.toFixed(2)}
+                      ${(position.current_price || 0).toFixed(2)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ${position.market_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      ${(position.market_value || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className={`text-sm font-medium ${position.unrealized_pnl_pct >= 0 ? 'text-green-600' : 'text-red-600'
                         }`}>
                         {position.unrealized_pnl_pct >= 0 ? '+' : ''}
-                        ${position.unrealized_pnl.toFixed(2)}
+                        ${(position.unrealized_pnl || 0).toFixed(2)}
                         <span className="text-xs ml-1">
-                          ({position.unrealized_pnl_pct >= 0 ? '+' : ''}{position.unrealized_pnl_pct.toFixed(2)}%)
+                          ({position.unrealized_pnl_pct >= 0 ? '+' : ''}{(position.unrealized_pnl_pct || 0).toFixed(2)}%)
                         </span>
                       </div>
                     </td>
@@ -318,7 +318,7 @@ export const Dashboard: React.FC = () => {
                   </span>
                   <span className="font-semibold text-gray-900">{trade.ticker}</span>
                   <span className="text-sm text-gray-600">
-                    {trade.quantity} @ ${trade.price.toFixed(2)}
+                    {trade.quantity} @ ${(trade.price || 0).toFixed(2)}
                   </span>
                 </div>
                 <div className="text-sm text-gray-600">

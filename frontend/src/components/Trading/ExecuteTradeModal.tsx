@@ -8,7 +8,7 @@ interface Signal {
   signal_type: string;
   confidence: number;
   reasoning: string;
-  generated_at: string;
+  created_at: string;
   entry_price?: number;
 }
 
@@ -50,9 +50,9 @@ export const ExecuteTradeModal: React.FC<ExecuteTradeModalProps> = ({
       // Auto-detect API URL
       const API_BASE_URL = window.location.hostname === 'localhost'
         ? 'http://localhost:8001'
-        : `http://${window.location.hostname}:8000`;
+        : `http://${window.location.hostname}:8001`;
 
-      const response = await fetch(`${API_BASE_URL}/api/market/price/${ticker}`);
+      const response = await fetch(`${API_BASE_URL}/api/stock-prices/${ticker}`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch price');
@@ -157,8 +157,8 @@ export const ExecuteTradeModal: React.FC<ExecuteTradeModalProps> = ({
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Signal Type</span>
               <span className={`text-sm font-semibold px-2 py-1 rounded ${signal.signal_type === 'PRIMARY' ? 'bg-blue-100 text-blue-700' :
-                  signal.signal_type === 'HIDDEN' ? 'bg-purple-100 text-purple-700' :
-                    'bg-yellow-100 text-yellow-700'
+                signal.signal_type === 'HIDDEN' ? 'bg-purple-100 text-purple-700' :
+                  'bg-yellow-100 text-yellow-700'
                 }`}>
                 {signal.signal_type}
               </span>
@@ -265,8 +265,8 @@ export const ExecuteTradeModal: React.FC<ExecuteTradeModalProps> = ({
             onClick={handleExecute}
             disabled={isLoading || success || !entryPrice || !shares}
             className={`px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${isBuy
-                ? 'bg-green-500 hover:bg-green-600 text-white'
-                : 'bg-red-500 hover:bg-red-600 text-white'
+              ? 'bg-green-500 hover:bg-green-600 text-white'
+              : 'bg-red-500 hover:bg-red-600 text-white'
               } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {isLoading ? (

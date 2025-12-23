@@ -26,6 +26,9 @@ import WarRoomPage from './pages/WarRoomPage';
 import SignalConsolidationPage from './pages/SignalConsolidationPage';
 import { CostReport } from './pages/CostReport';
 import DataBackfill from './pages/DataBackfill';
+import Orders from './pages/Orders';  // 🆕 Phase 27
+import Portfolio from './pages/Portfolio';  // 🆕 Phase 27 (new portfolio page)
+import Performance from './pages/Performance';  // 🆕 Phase 25.2 (performance dashboard)
 // import { AIChatButton } from './components/AIChat/AIChatButton';
 // import { GeminiFreeButton } from './components/GeminiFree/GeminiFreeButton';
 
@@ -51,7 +54,10 @@ const App: React.FC = () => {
             <Route path="/trading" element={<TradingDashboard />} />
             <Route path="/trading/signal/:id" element={<SignalDetail />} />
             <Route path="/backtest" element={<BacktestDashboard />} />
-            <Route path="/portfolio" element={<PortfolioManagement />} />
+            <Route path="/portfolio-management" element={<PortfolioManagement />} />  {/* Renamed */}
+            <Route path="/portfolio" element={<Portfolio />} />  {/* 🆕 Phase 27 New Portfolio Dashboard */}
+            <Route path="/orders" element={<Orders />} />  {/* 🆕 Phase 27 Orders Page */}
+            <Route path="/performance" element={<Performance />} />  {/* 🆕 Phase 25.2 Performance Dashboard */}
             <Route path="/global-macro" element={<GlobalMacro />} />
             <Route path="/war-room" element={<WarRoomPage />} />
             <Route path="/signal-consolidation" element={<SignalConsolidationPage />} />

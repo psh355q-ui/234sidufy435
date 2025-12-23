@@ -76,7 +76,6 @@ class ChipProfile:
     # Cost Structure
     unit_price_usd: float  # Per-chip cost
     deployment_type: DeploymentType
-    cloud_hourly_rate: Optional[float] = None  # $/hour if cloud
 
     # Software Ecosystem (0.0-1.0)
     # 1.0 = Zero friction (CUDA level)
@@ -87,6 +86,9 @@ class ChipProfile:
     # 1.0 = Excellent scaling efficiency (low latency, high bandwidth)
     # 0.5 = Limited scaling or high inter-node cost
     cluster_scalability: float
+
+    # Optional fields with defaults
+    cloud_hourly_rate: Optional[float] = None  # $/hour if cloud
 
     # Market Positioning
     is_training_focused: bool = False

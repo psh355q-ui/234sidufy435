@@ -30,7 +30,7 @@ interface Signal {
   signal_type: string;
   confidence: number;
   reasoning: string;
-  generated_at: string;
+  created_at: string;
   alert_sent: boolean;
   news_title?: string;
   news_source?: string;
@@ -53,8 +53,10 @@ interface SignalStats {
 const API_BASE_URL = import.meta.env.VITE_API_URL ||
   (window.location.hostname === 'localhost' ? 'http://localhost:8001' : `http://${window.location.hostname}:8001`);
 
-const WS_URL = import.meta.env.VITE_WS_URL ||
-  (window.location.hostname === 'localhost' ? 'ws://localhost:8001/ws/signals' : `ws://${window.location.hostname}:8001/ws/signals`);
+// For local debugging, prioritize strict IPv4 localhost
+const WS_URL = window.location.hostname === 'localhost'
+  ? 'ws://127.0.0.1:8001/api/signals/ws'
+  : (import.meta.env.VITE_WS_URL || `ws://${window.location.hostname}:8001/api/signals/ws`);
 
 export default function TradingDashboard() {
   const [signals, setSignals] = useState<Signal[]>([]);
@@ -289,7 +291,7 @@ export default function TradingDashboard() {
               <Star className="w-5 h-5 text-purple-500" />
             </div>
             <p className="text-3xl font-bold text-purple-600">{stats.hidden_count}</p>
-            <p className="text-sm text-gray-500 mt-1">{((stats.hidden_count / stats.total_signals) * 100).toFixed(1)}% of total</p>
+            <p className="text-sm text-gray-500 mt-1">{stats.total_signals > 0 ? ((stats.hidden_count / stats.total_signals) * 100).toFixed(1) : '0.0'}% of total</p>
           </div>
 
           {/* Avg Confidence */}
@@ -298,7 +300,7 @@ export default function TradingDashboard() {
               <h3 className="text-sm font-medium text-gray-600">Avg Confidence</h3>
               <Zap className="w-5 h-5 text-green-500" />
             </div>
-            <p className="text-3xl font-bold text-gray-900">{(stats.avg_confidence * 100).toFixed(1)}%</p>
+            <p className="text-3xl font-bold text-gray-900">{((stats.avg_confidence || 0) * 100).toFixed(1)}%</p>
             <p className="text-sm text-gray-500 mt-1">{stats.high_confidence_count} signals ≥85%</p>
           </div>
 
@@ -416,8 +418,8 @@ export default function TradingDashboard() {
                     <button
                       onClick={() => openExecuteModal(signal)}
                       className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${signal.action === 'BUY'
-                          ? 'bg-green-500 hover:bg-green-600 text-white'
-                          : 'bg-red-500 hover:bg-red-600 text-white'
+                        ? 'bg-green-500 hover:bg-green-600 text-white'
+                        : 'bg-red-500 hover:bg-red-600 text-white'
                         }`}
                     >
                       <Play className="w-4 h-4" />
@@ -440,8 +442,8 @@ export default function TradingDashboard() {
                   </div>
 
                   <div className="text-sm text-gray-500">
-                    <p>{new Date(signal.generated_at).toLocaleDateString()}</p>
-                    <p>{new Date(signal.generated_at).toLocaleTimeString()}</p>
+                    <p>{new Date(signal.created_at).toLocaleDateString()}</p>
+                    <p>{new Date(signal.created_at).toLocaleTimeString()}</p>
                   </div>
                 </div>
               </div>

@@ -14,9 +14,9 @@ Date: 2025-11-15
 
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 import asyncio
 
 # Import modules
@@ -37,7 +37,7 @@ from backend.notifications.notification_manager import (
 )
 
 # Import database models
-from backend.database.models import TradingSignal as DBTradingSignal, AnalysisResult
+from backend.database.models import TradingSignal as DBTradingSignal, AnalysisResult, NewsArticle
 from backend.database.repository import get_sync_session
 
 # Import auth if available
@@ -49,6 +49,29 @@ router = APIRouter(prefix="/signals", tags=["Trading Signals"])
 _signal_generator = None
 _signal_validator = None
 _notification_manager = None
+
+# WebSocket Connection Manager
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: Dict):
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except Exception:
+                # Handle broken connections gracefully
+                pass
+
+manager = ConnectionManager()
 
 # REMOVED: In-memory storage replaced with PostgreSQL database
 # All signals are now stored in 'trading_signals' table
@@ -119,6 +142,42 @@ class SignalResponse(BaseModel):
     rejection_reason: Optional[str] = None
 
 
+class NewsArticleResponse(BaseModel):
+    id: int
+    title: str
+    content: str
+    url: str
+    source: str
+    published_date: str
+    crawled_at: str
+
+    class Config:
+        from_attributes = True
+
+
+class AnalysisResultResponse(BaseModel):
+    id: int
+    theme: str
+    bull_case: str
+    bear_case: str
+    step1_direct_impact: Optional[str]
+    step2_secondary_impact: Optional[str]
+    step3_conclusion: Optional[str]
+    model_name: str
+    analysis_duration_seconds: Optional[float]
+    analyzed_at: str
+
+    class Config:
+        from_attributes = True
+
+
+class SignalDetailResponse(BaseModel):
+    signal: SignalResponse
+    news_article: Optional[NewsArticleResponse]
+    analysis: Optional[AnalysisResultResponse]
+    related_signals: List[SignalResponse] = []
+
+
 class ApproveSignalRequest(BaseModel):
     """Request to approve a signal"""
     execute_immediately: bool = False
@@ -157,6 +216,25 @@ class ValidatorSettingsRequest(BaseModel):
     daily_loss_limit_pct: Optional[float] = None
     max_consecutive_losses: Optional[int] = None
     market_hours_only: Optional[bool] = None
+
+
+# ============================================================================
+# WebSocket Endpoint
+# ============================================================================
+
+@router.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """
+    WebSocket endpoint for real-time signal updates.
+    URL: /api/signals/ws
+    """
+    await manager.connect(websocket)
+    try:
+        while True:
+            # Keep connection alive
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
 
 
 # ============================================================================
@@ -258,7 +336,16 @@ async def generate_signal_from_news(
 async def _send_signal_notification(notifier, signal_data: Dict[str, Any]):
     """Send signal notification (background task)"""
     try:
+        # 1. Send via NotificationManager (Slack/Email)
         await notifier.send_trading_signal(signal_data, priority="HIGH")
+        
+        # 2. Broadcast via WebSocket
+        # Format for frontend needs to match: { type: 'new_signal', data: signal }
+        await manager.broadcast({
+            "type": "new_signal",
+            "data": signal_data
+        })
+        
     except Exception as e:
         import logging
         logging.error(f"Failed to send signal notification: {e}")
@@ -407,25 +494,28 @@ async def get_signal_history(
         db.close()
 
 
-@router.get("/{signal_id}", response_model=SignalResponse)
+@router.get("/{signal_id}", response_model=SignalDetailResponse)
 async def get_signal_by_id(
     signal_id: int,
     # api_key: str = Depends(require_read),
 ):
     """
-    Get a specific signal by ID from database.
+    Get a specific signal by ID with full details (Analysis + News).
     """
     db = get_sync_session()
     
     try:
+        # Join with Analysis -> News
         signal = db.query(DBTradingSignal)\
+            .options(joinedload(DBTradingSignal.analysis).joinedload(AnalysisResult.article))\
             .filter(DBTradingSignal.id == signal_id)\
             .first()
         
         if not signal:
             raise HTTPException(status_code=404, detail=f"Signal {signal_id} not found")
         
-        return SignalResponse(
+        # 1. Base Signal Response
+        signal_resp = SignalResponse(
             id=signal.id,
             ticker=signal.ticker,
             action=signal.action,
@@ -435,10 +525,48 @@ async def get_signal_by_id(
             reason=signal.reasoning,
             urgency="MEDIUM",
             created_at=signal.generated_at.isoformat(),
-            news_title=None,
+            news_title=signal.analysis.article.title if signal.analysis and signal.analysis.article else None,
             affected_sectors=[],
             auto_execute=False,
             status="EXECUTED" if signal.exit_price else "PENDING",
+        )
+
+        # 2. Analysis Response
+        analysis_resp = None
+        news_resp = None
+
+        if signal.analysis:
+            analysis_resp = AnalysisResultResponse(
+                id=signal.analysis.id,
+                theme=signal.analysis.theme,
+                bull_case=signal.analysis.bull_case,
+                bear_case=signal.analysis.bear_case,
+                step1_direct_impact=signal.analysis.step1_direct_impact,
+                step2_secondary_impact=signal.analysis.step2_secondary_impact,
+                step3_conclusion=signal.analysis.step3_conclusion,
+                model_name=signal.analysis.model_name,
+                analysis_duration_seconds=signal.analysis.analysis_duration_seconds,
+                analyzed_at=signal.analysis.analyzed_at.isoformat(),
+            )
+
+            # 3. News Response (linked via Analysis)
+            if signal.analysis.article:
+                art = signal.analysis.article
+                news_resp = NewsArticleResponse(
+                    id=art.id,
+                    title=art.title,
+                    content=art.content,
+                    url=art.url,
+                    source=art.source,
+                    published_date=art.published_date.isoformat(),
+                    crawled_at=art.crawled_at.isoformat(),
+                )
+
+        return SignalDetailResponse(
+            signal=signal_resp,
+            analysis=analysis_resp,
+            news_article=news_resp,
+            related_signals=[]  # Can implement related signal fetch logic later
         )
     
     finally:

@@ -38,6 +38,9 @@ from backend.ai.debate.macro_agent import MacroAgent
 from backend.ai.debate.institutional_agent import InstitutionalAgent
 from backend.ai.debate.chip_war_agent import ChipWarAgent
 
+# Constitutional Validator
+from backend.constitution.constitution import Constitution
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/war-room", tags=["war-room"])
@@ -68,6 +71,7 @@ class DebateResponse(BaseModel):
     consensus: Dict[str, Any]
     signal_id: Optional[int] = None
     constitutional_valid: bool = True
+    order_id: Optional[str] = None  # 🆕 REAL MODE
 
 
 # ============================================================================
@@ -200,13 +204,28 @@ class WarRoomEngine:
         
         # 가중 투표 집계
         action_scores = {"BUY": 0.0, "SELL": 0.0, "HOLD": 0.0}
-        
+
+        # 액션 매핑 (다양한 액션을 표준 BUY/SELL/HOLD로 변환)
+        action_mapping = {
+            "BUY": "BUY",
+            "SELL": "SELL",
+            "HOLD": "HOLD",
+            "MAINTAIN": "HOLD",  # 유지 = HOLD
+            "REDUCE": "SELL",    # 축소 = SELL
+            "INCREASE": "BUY",   # 증가 = BUY
+            "TRIM": "SELL",      # 정리 = SELL
+            "ADD": "BUY"         # 추가 = BUY
+        }
+
         for vote in votes:
             agent = vote["agent"]
-            action = vote["action"]
+            raw_action = vote["action"]
             confidence = vote["confidence"]
             weight = self.vote_weights.get(agent, 0.1)
-            
+
+            # 액션 변환
+            action = action_mapping.get(raw_action, "HOLD")
+
             action_scores[action] += weight * confidence
         
         # 최고 점수 액션 선택
@@ -239,14 +258,300 @@ def get_war_room_engine() -> WarRoomEngine:
 
 
 # ============================================================================
+# Price Tracking (Phase 25.1: 24h Performance Measurement)
+# ============================================================================
+
+async def save_initial_price_tracking(
+    session_id: int,
+    ticker: str,
+    consensus_action: str,
+    consensus_confidence: float,
+    debate_transcript: List[Dict[str, Any]],
+    db: Any
+) -> None:
+    """
+    Save initial price for 24-hour tracking (consensus + individual agent votes)
+
+    Phase 25.1 + 25.3: Price tracking and agent performance tracking
+
+    Args:
+        session_id: War Room session ID
+        ticker: Stock symbol
+        consensus_action: BUY/SELL/HOLD
+        consensus_confidence: Consensus confidence
+        debate_transcript: List of agent votes with reasoning
+        db: Database session
+    """
+    import os
+    from backend.brokers.kis_broker import KISBroker
+
+    try:
+        # Get current price from KIS
+        account_no = os.environ.get("KIS_ACCOUNT_NUMBER", "")
+        is_virtual = os.environ.get("KIS_IS_VIRTUAL", "true").lower() == "true"
+
+        if not account_no:
+            logger.warning("KIS_ACCOUNT_NUMBER not set - skipping price tracking")
+            return
+
+        broker = KISBroker(account_no=account_no, is_virtual=is_virtual)
+        price_data = broker.get_price(ticker, exchange="NASDAQ")
+
+        if not price_data:
+            logger.warning(f"Failed to get price for {ticker} - skipping price tracking")
+            return
+
+        current_price = price_data["current_price"]
+
+        # Save consensus to price_tracking table
+        from sqlalchemy import text
+
+        insert_sql = text("""
+            INSERT INTO price_tracking (
+                session_id, ticker, initial_price, initial_timestamp,
+                consensus_action, consensus_confidence, status, created_at
+            ) VALUES (
+                :session_id, :ticker, :initial_price, :initial_timestamp,
+                :consensus_action, :consensus_confidence, 'PENDING', NOW()
+            )
+        """)
+
+        db.execute(insert_sql, {
+            "session_id": session_id,
+            "ticker": ticker,
+            "initial_price": current_price,
+            "initial_timestamp": datetime.now(),
+            "consensus_action": consensus_action,
+            "consensus_confidence": consensus_confidence
+        })
+        db.commit()
+
+        logger.info(f"💾 Price tracking saved: {ticker} @ ${current_price:.2f} (Session #{session_id})")
+
+        # 🆕 Phase 25.3: Save individual agent votes
+        await save_agent_votes_tracking(
+            session_id=session_id,
+            ticker=ticker,
+            debate_transcript=debate_transcript,
+            current_price=current_price,
+            db=db
+        )
+
+    except Exception as e:
+        logger.error(f"Failed to save price tracking: {e}", exc_info=True)
+        # Don't fail the whole debate if price tracking fails
+        pass
+
+
+async def save_agent_votes_tracking(
+    session_id: int,
+    ticker: str,
+    debate_transcript: List[Dict[str, Any]],
+    current_price: float,
+    db: Any
+) -> None:
+    """
+    Save individual agent votes for 24-hour tracking
+
+    Phase 25.3: Self-Learning Feedback Loop
+
+    Args:
+        session_id: War Room session ID
+        ticker: Stock symbol
+        debate_transcript: List of agent votes with reasoning
+        current_price: Current stock price
+        db: Database session
+    """
+    from sqlalchemy import text
+
+    try:
+        logger.info(f"💾 Saving {len(debate_transcript)} agent votes for tracking...")
+
+        for vote in debate_transcript:
+            agent_name = vote.get("agent")
+            vote_action = vote.get("action")
+            vote_confidence = vote.get("confidence", 0.5)
+            vote_reasoning = vote.get("reasoning", "")
+
+            # Skip PM agent (consensus is tracked separately in price_tracking)
+            if agent_name == "pm":
+                continue
+
+            insert_sql = text("""
+                INSERT INTO agent_vote_tracking (
+                    session_id, agent_name, vote_action, vote_confidence, vote_reasoning,
+                    ticker, initial_price, initial_timestamp, status, created_at
+                ) VALUES (
+                    :session_id, :agent_name, :vote_action, :vote_confidence, :vote_reasoning,
+                    :ticker, :initial_price, :initial_timestamp, 'PENDING', NOW()
+                )
+            """)
+
+            db.execute(insert_sql, {
+                "session_id": session_id,
+                "agent_name": agent_name,
+                "vote_action": vote_action,
+                "vote_confidence": vote_confidence,
+                "vote_reasoning": vote_reasoning,
+                "ticker": ticker,
+                "initial_price": current_price,
+                "initial_timestamp": datetime.now()
+            })
+
+        db.commit()
+        logger.info(f"✅ Saved {len(debate_transcript) - 1} agent votes (excluding PM)")
+
+    except Exception as e:
+        logger.error(f"Failed to save agent votes tracking: {e}", exc_info=True)
+        # Don't fail the whole debate if tracking fails
+        pass
+
+
+# ============================================================================
+# KIS Order Execution (REAL MODE)
+# ============================================================================
+
+async def execute_kis_order(
+    ticker: str,
+    action: str,
+    confidence: float,
+    signal_id: int,
+    session_id: int,
+    db: Any
+) -> Optional[Dict[str, Any]]:
+    """
+    Execute KIS order based on War Room consensus
+
+    Args:
+        ticker: Stock symbol
+        action: BUY/SELL/HOLD
+        confidence: Consensus confidence
+        signal_id: Trading signal ID
+        session_id: War Room session ID
+        db: Database session
+
+    Returns:
+        Order result dictionary or None
+    """
+    import os
+    from backend.brokers.kis_broker import KISBroker
+    from backend.database.models import Order
+
+    # HOLD는 주문 실행하지 않음
+    if action == "HOLD":
+        logger.info(f"⏸️ HOLD action - No order execution for {ticker}")
+        return None
+
+    try:
+        # 1. Initialize KIS Broker
+        account_no = os.environ.get("KIS_ACCOUNT_NUMBER", "")
+        is_virtual = os.environ.get("KIS_IS_VIRTUAL", "true").lower() == "true"
+
+        if not account_no:
+            logger.error("KIS_ACCOUNT_NUMBER not set in environment")
+            return None
+
+        broker = KISBroker(
+            account_no=account_no,
+            is_virtual=is_virtual
+        )
+
+        # 2. Get current price
+        price_data = broker.get_price(ticker, exchange="NASDAQ")
+        if not price_data:
+            logger.error(f"Failed to get price for {ticker}")
+            return None
+
+        current_price = price_data["current_price"]
+
+        # 3. Calculate order quantity
+        # Risk management: Max 5% of portfolio per position
+        balance = broker.get_account_balance()
+        if not balance:
+            logger.error("Failed to get account balance")
+            return None
+
+        total_value = balance.get("total_value", 0) + balance.get("cash", 0)
+        max_position_size = total_value * 0.05  # 5% max
+
+        # Adjust by confidence (higher confidence = larger position)
+        position_size = max_position_size * confidence
+        quantity = int(position_size / current_price)
+
+        if quantity < 1:
+            logger.warning(f"Calculated quantity too small: {quantity}")
+            return None
+
+        # 4. Execute order
+        logger.info(f"📋 Order: {action} {quantity} shares of {ticker} @ ${current_price:.2f}")
+
+        order_result = None
+        if action == "BUY":
+            order_result = broker.buy_market_order(ticker, quantity)
+        elif action == "SELL":
+            # Check if we have position
+            positions = balance.get("positions", [])
+            ticker_position = next((p for p in positions if p["symbol"] == ticker), None)
+
+            if not ticker_position or ticker_position["quantity"] < quantity:
+                logger.warning(f"Insufficient {ticker} position for SELL")
+                return None
+
+            order_result = broker.sell_market_order(ticker, quantity)
+
+        if not order_result:
+            logger.error(f"Order execution failed for {ticker}")
+            return None
+
+        # 5. Save order to database
+        order_id = order_result.get("order_id") or order_result.get("ODNO", "")
+
+        order = Order(
+            ticker=ticker,
+            action=action,
+            quantity=quantity,
+            price=current_price,
+            order_type="MARKET",
+            status="PENDING",
+            broker="KIS",
+            order_id=order_id,
+            signal_id=signal_id,
+            created_at=datetime.now()
+        )
+
+        db.add(order)
+        db.commit()
+        db.refresh(order)
+
+        logger.info(f"✅ Order saved to DB: {order.id}")
+
+        return {
+            "order_id": order_id,
+            "ticker": ticker,
+            "action": action,
+            "quantity": quantity,
+            "price": current_price,
+            "status": "PENDING"
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to execute KIS order: {e}", exc_info=True)
+        return None
+
+
+# ============================================================================
 # API Endpoints
 # ============================================================================
 
 @router.post("/debate", response_model=DebateResponse)
-async def run_war_room_debate(request: DebateRequest):
+async def run_war_room_debate(request: DebateRequest, execute_trade: bool = False):
     """
     War Room 토론 실행 (7 agents)
-    
+
+    Args:
+        request: DebateRequest with ticker
+        execute_trade: If True, execute KIS order after constitutional validation
+
     Response:
         {
             "session_id": int,
@@ -256,20 +561,51 @@ async def run_war_room_debate(request: DebateRequest):
                 "action": "BUY",
                 "confidence": 0.75
             },
-            "signal_id": int or null
+            "signal_id": int or null,
+            "order_id": str or null  # 🆕 REAL MODE
         }
     """
     ticker = request.ticker.upper()
-    
-    logger.info(f"🏛️ War Room debate requested for {ticker}")
-    
+
+    logger.info(f"🏛️ War Room debate requested for {ticker} (execute_trade={execute_trade})")
+
     # 1. Debate Engine 실행
     engine = get_war_room_engine()
     votes, pm_decision = await engine.run_debate(ticker)
-    
-    # 2. DB에 세션 저장
+
+    # 2. Constitutional 검증
+    constitution = Constitution()
+
+    # 제안서 생성
+    proposal = {
+        "ticker": ticker,
+        "action": pm_decision["consensus_action"],
+        "confidence": pm_decision["consensus_confidence"],
+        "is_approved": not execute_trade,  # execute_trade=False면 인간 승인 필요
+    }
+
+    # Context 생성 (간소화 버전)
+    context = {
+        "total_capital": 100000,  # TODO: 실제 계좌 잔고에서 가져오기
+        "daily_trades": 0,  # TODO: 오늘 거래 횟수
+        "weekly_trades": 0,  # TODO: 이번주 거래 횟수
+    }
+
+    # Constitutional 검증 실행
+    is_valid, violations, violated_articles = constitution.validate_proposal(
+        proposal=proposal,
+        context=context,
+        skip_allocation_rules=True  # War Room 단계에서는 배분 규칙 스킵
+    )
+
+    logger.info(f"⚖️ Constitutional validation: {is_valid}")
+    if not is_valid:
+        logger.warning(f"⚠️ Violations: {violations}")
+        logger.warning(f"⚠️ Violated articles: {violated_articles}")
+
+    # 3. DB에 세션 저장
     db = get_sync_session()
-    
+
     try:
         # AIDebateSession에 저장
         session = AIDebateSession(
@@ -285,19 +621,31 @@ async def run_war_room_debate(request: DebateRequest):
             chip_war_vote=next((v["action"] for v in votes if v["agent"] == "chip_war"), None),  # 🆕 Phase 24
             pm_vote=pm_decision["consensus_action"],
             debate_transcript=json.dumps(votes, ensure_ascii=False),
-            constitutional_valid=True,  # TODO: Constitution Validator 통합
+            constitutional_valid=is_valid,  # 🆕 실제 Constitutional 검증 결과
             created_at=datetime.now(),
             completed_at=datetime.now()
         )
-        
+
         db.add(session)
         db.commit()
         db.refresh(session)
-        
+
         logger.info(f"💾 War Room session saved: ID {session.id}")
-        
-        # 3. Signal 생성 (confidence >= 0.7)
+
+        # 3. 🆕 Phase 25.1 + 25.3: Save initial price + agent votes for 24h tracking
+        await save_initial_price_tracking(
+            session_id=session.id,
+            ticker=ticker,
+            consensus_action=pm_decision["consensus_action"],
+            consensus_confidence=pm_decision["consensus_confidence"],
+            debate_transcript=votes,  # 🆕 Phase 25.3: Include agent votes
+            db=db
+        )
+
+        # 4. Signal 생성 (confidence >= 0.7)
         signal_id = None
+        order_id = None
+
         if pm_decision["consensus_confidence"] >= 0.7:
             signal = TradingSignal(
                 analysis_id=None,  # War Room은 analysis와 독립
@@ -312,15 +660,33 @@ async def run_war_room_debate(request: DebateRequest):
             db.add(signal)
             db.commit()
             db.refresh(signal)
-            
+
             # signal_id 연결
             session.signal_id = signal.id
             db.commit()
-            
+
             signal_id = signal.id
             logger.info(f"📊 Trading signal created: ID {signal_id}")
-        
-        # 4. Response 생성
+
+            # 4. 🆕 REAL MODE: Execute KIS Order
+            if execute_trade and session.constitutional_valid:
+                logger.info(f"💼 Executing trade for {ticker}: {pm_decision['consensus_action']}")
+                order_result = await execute_kis_order(
+                    ticker=ticker,
+                    action=pm_decision["consensus_action"],
+                    confidence=pm_decision["consensus_confidence"],
+                    signal_id=signal_id,
+                    session_id=session.id,
+                    db=db
+                )
+
+                if order_result and "order_id" in order_result:
+                    order_id = order_result["order_id"]
+                    logger.info(f"✅ Order executed: {order_id}")
+                else:
+                    logger.warning(f"⚠️ Order execution failed or skipped")
+
+        # 5. Response 생성
         response = DebateResponse(
             session_id=session.id,
             ticker=ticker,
@@ -331,16 +697,17 @@ async def run_war_room_debate(request: DebateRequest):
                 "summary": pm_decision.get("summary", "")
             },
             signal_id=signal_id,
-            constitutional_valid=session.constitutional_valid
+            constitutional_valid=session.constitutional_valid,
+            order_id=order_id  # 🆕 REAL MODE
         )
-        
+
         return response
-    
+
     except Exception as e:
         logger.error(f"❌ War Room debate failed: {e}", exc_info=True)
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Debate failed: {str(e)}")
-    
+
     finally:
         db.close()
 
@@ -365,6 +732,14 @@ async def get_debate_sessions(
         
         result = []
         for s in sessions:
+            # Parse debate_transcript to get full vote details with reasoning
+            votes_detail = []
+            if s.debate_transcript:
+                try:
+                    votes_detail = json.loads(s.debate_transcript)
+                except:
+                    votes_detail = []
+
             result.append({
                 "id": s.id,
                 "ticker": s.ticker,
@@ -380,8 +755,10 @@ async def get_debate_sessions(
                     "chip_war": s.chip_war_vote,  # 🆕 Phase 24
                     "pm": s.pm_vote
                 },
+                "votes_detail": votes_detail,  # 🆕 Full vote details with reasoning
                 "created_at": s.created_at.isoformat() if s.created_at else None,
-                "signal_id": s.signal_id
+                "signal_id": s.signal_id,
+                "constitutional_valid": s.constitutional_valid
             })
         
         return result
@@ -392,6 +769,51 @@ async def get_debate_sessions(
     
     finally:
         db.close()
+
+
+@router.post("/debate-and-execute")
+async def debate_and_execute_trade(
+    request: DebateRequest,
+    dry_run: bool = True  # 기본값: 시뮬레이션
+):
+    """
+    War Room 토론 → 실거래 실행
+
+    Args:
+        ticker: 종목 코드
+        dry_run: True = 시뮬레이션만, False = 실제 주문 (모의투자)
+
+    Returns:
+        토론 결과 + 체결 결과
+    """
+    ticker = request.ticker.upper()
+
+    # Step 1: War Room 토론
+    logger.info(f"🎭 War Room 토론 + 실거래 실행: {ticker}")
+    debate_result = await run_war_room_debate(request)
+
+    # Step 2: 실거래 실행
+    from backend.trading.war_room_executor import WarRoomExecutor
+
+    executor = WarRoomExecutor(kis_broker=None)  # DRY RUN용
+
+    execution_result = await executor.execute_war_room_decision(
+        ticker=ticker,
+        consensus_action=debate_result.consensus["action"],
+        consensus_confidence=debate_result.consensus["confidence"],
+        votes=[v.dict() for v in debate_result.votes],
+        dry_run=dry_run
+    )
+
+    # Step 3: 결과 통합
+    result = {
+        "debate": debate_result.dict(),
+        "execution": execution_result
+    }
+
+    logger.info(f"✅ 토론 + 실행 완료: {ticker} {execution_result['status']}")
+
+    return result
 
 
 @router.get("/health")

@@ -29,24 +29,57 @@ const WarRoomList: React.FC = () => {
     const sessions: DebateSession[] = useMemo(() => {
         if (!apiSessions) return [];
 
-        return apiSessions.map(session => ({
-            id: session.id.toString(),
-            ticker: session.ticker,
-            status: session.signal_generated ? 'completed' : 'active',
-            startedAt: new Date(session.created_at),
-            completedAt: session.signal_generated ? new Date(session.created_at) : undefined,
-            messages: [], // Messages loaded separately when card is expanded
-            consensus: session.consensus_confidence,
-            finalDecision: {
+        return apiSessions.map(session => {
+            // Convert votes_detail to messages format with actual reasoning
+            const messages: any[] = [];
+            const votesDetail = session.votes_detail || [];
+            const agentOrder = ['risk', 'macro', 'institutional', 'trader', 'news', 'analyst'];
+
+            agentOrder.forEach((agent, index) => {
+                const voteDetail = votesDetail.find((v: any) => v.agent === agent);
+                if (voteDetail && voteDetail.agent !== 'chip_war') {  // Skip chip_war (not implemented yet)
+                    messages.push({
+                        id: `msg-${session.id}-${agent}`,
+                        agent: agent,
+                        action: voteDetail.action,
+                        confidence: voteDetail.confidence,
+                        reasoning: voteDetail.reasoning || `${agent} agent vote: ${voteDetail.action}`,
+                        timestamp: new Date(session.created_at),
+                        isDecision: false
+                    });
+                }
+            });
+
+            // Add PM decision
+            messages.push({
+                id: `msg-${session.id}-pm`,
+                agent: 'pm',
                 action: session.consensus_action,
-                confidence: session.consensus_confidence
-            },
-            constitutionalResult: {
-                isValid: session.constitutional_valid,
-                violations: session.constitutional_valid ? [] : ['제3조 위반: 인간 승인이 필요합니다'],
-                violatedArticles: session.constitutional_valid ? [] : ['제3조: 인간 최종 결정권']
-            }
-        }));
+                confidence: session.consensus_confidence,
+                reasoning: `PM Final Decision: ${session.consensus_action} (${(session.consensus_confidence * 100).toFixed(0)}% confidence)`,
+                timestamp: new Date(session.created_at),
+                isDecision: true
+            });
+
+            return {
+                id: session.id.toString(),
+                ticker: session.ticker,
+                status: 'completed', // All sessions with votes are completed
+                startedAt: new Date(session.created_at),
+                completedAt: new Date(session.created_at),
+                messages: messages,
+                consensus: session.consensus_confidence,
+                finalDecision: {
+                    action: session.consensus_action,
+                    confidence: session.consensus_confidence
+                },
+                constitutionalResult: {
+                    isValid: session.constitutional_valid,
+                    violations: session.constitutional_valid ? [] : ['제3조 위반: 인간 승인이 필요합니다'],
+                    violatedArticles: session.constitutional_valid ? [] : ['제3조: 인간 최종 결정권']
+                }
+            };
+        });
     }, [apiSessions]);
     const [searchTicker, setSearchTicker] = useState('');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');

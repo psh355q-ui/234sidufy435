@@ -67,22 +67,18 @@ export const NewsAggregation: React.FC = () => {
   });
 
   // Mutations
-  const crawlMutation = useMutation({
-    mutationFn: () => crawlRSSFeeds(true),
-    onSuccess: (data) => {
-      setCrawlCount(data.articles_new);
-      setShowCrawlProgress(true);
-      queryClient.invalidateQueries({ queryKey: ['news-articles'] });
-      queryClient.invalidateQueries({ queryKey: ['news-stats'] });
-    },
-  });
+  // Removed crawlMutation since RssCrawlProgress handles the crawling via SSE stream
 
   const handleCrawl = () => {
-    crawlMutation.mutate();
+    // Directly open the progress modal which triggers the stream
+    setShowCrawlProgress(true);
   };
 
   const handleCrawlComplete = () => {
     setShowCrawlProgress(false);
+    // Refresh data after crawl completes
+    queryClient.invalidateQueries({ queryKey: ['news-articles'] });
+    queryClient.invalidateQueries({ queryKey: ['news-stats'] });
   };
 
   const handleArticleClick = async (articleId: number) => {
@@ -110,11 +106,11 @@ export const NewsAggregation: React.FC = () => {
         <div className="flex items-center space-x-3">
           <button
             onClick={handleCrawl}
-            disabled={crawlMutation.isPending}
+            disabled={showCrawlProgress}
             className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
-            <RefreshCw size={16} className={crawlMutation.isPending ? 'animate-spin' : ''} />
-            <span>{crawlMutation.isPending ? '크롤링 중...' : 'RSS 크롤링'}</span>
+            <RefreshCw size={16} className={showCrawlProgress ? 'animate-spin' : ''} />
+            <span>{showCrawlProgress ? '크롤링 중...' : 'RSS 크롤링'}</span>
           </button>
 
           <button
@@ -327,10 +323,10 @@ export const NewsAggregation: React.FC = () => {
         </div>
       )}
 
-      {/* Success Toast */}
-      {crawlMutation.isSuccess && crawlCount > 0 && (
+      {/* Success Toast - Show when recent articles found */}
+      {!showCrawlProgress && crawlCount > 0 && (
         <div className="fixed bottom-6 right-6 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg animate-fade-in">
-          ✅ {crawlCount}개의 새 기사를 수집했습니다!
+          ✅ {crawlCount}개의 기사가 처리되었습니다.
         </div>
       )}
     </div>

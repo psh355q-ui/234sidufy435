@@ -70,14 +70,23 @@ class TradingAgent:
         """
         self.metrics["total_analyses"] += 1
         
+        # Initialize features to avoid UnboundLocalError in except block
+        features = {}
+        
         try:
             logger.info(f"=== Analyzing {ticker} ===")
             
             # Step 1: Get features from Feature Store (cached)
-            features = await self.feature_store.get_features(
+            # Define standard features needed for analysis
+            feature_names = [
+                "current_price", "ret_5d", "ret_20d", "vol_20d", "mom_20d"
+            ]
+            feature_response = await self.feature_store.get_features(
                 ticker=ticker,
-                as_of_date=datetime.now(),
+                feature_names=feature_names,
+                as_of=datetime.now(),
             )
+            features = feature_response.features
             
             if not features:
                 logger.warning(f"No features available for {ticker}")
@@ -127,7 +136,7 @@ class TradingAgent:
             return decision
         
         except Exception as e:
-            logger.error(f"Error analyzing {ticker}: {e}")
+            logger.error(f"Error analyzing {ticker}: {e}", exc_info=True)
             # Conservative default: HOLD on error
             decision = TradingDecision(
                 ticker=ticker,

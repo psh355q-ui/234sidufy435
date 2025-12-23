@@ -24,11 +24,11 @@ import sys
 import argparse
 from pathlib import Path
 
-# Add backend to path
-sys.path.insert(0, str(Path(__file__).parent))
+# Add backend and project root to path
+sys.path.insert(0, str(Path(__file__).parent))  # backend/
+sys.path.insert(0, str(Path(__file__).parent.parent))  # Project root (for backend.x imports)
 
 from live_trading_engine import LiveTradingEngine, LiveTradingConfig, TradingMode
-from config import get_settings
 
 
 def setup_logging(log_level: str = "INFO"):

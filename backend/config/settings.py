@@ -58,6 +58,32 @@ class Settings(BaseSettings):
             )
         return v
     
+    # ===== Trading Pre-Checks =====
+    max_volatility_pct: float = Field(default=50.0, env="MAX_VOLATILITY_PCT")
+    min_momentum_pct: float = Field(default=-30.0, env="MIN_MOMENTUM_PCT")
+    
+    # ===== Post-Check Thresholds =====
+    conviction_threshold_buy: float = Field(default=0.7, env="CONVICTION_THRESHOLD_BUY")
+    conviction_threshold_sell: float = Field(default=0.6, env="CONVICTION_THRESHOLD_SELL")
+    
+    # ===== Risk Management =====
+    max_position_size_pct: float = Field(default=5.0, env="MAX_POSITION_SIZE_PCT")
+    stop_loss_fixed_pct: float = Field(default=3.0, env="STOP_LOSS_FIXED_PCT")
+    kill_switch_daily_loss_pct: float = Field(default=2.0, env="KILL_SWITCH_DAILY_LOSS_PCT")
+    
+    # ===== Management Credibility =====
+    min_management_credibility: float = Field(default=0.3, env="MIN_MANAGEMENT_CREDIBILITY")
+    management_credibility_position_scaling: bool = Field(default=True, env="MANAGEMENT_CREDIBILITY_POSITION_SCALING")
+    
+    # ===== Supply Chain Risk =====
+    min_supply_chain_risk_threshold: float = Field(default=0.6, env="MIN_SUPPLY_CHAIN_RISK_THRESHOLD")
+    
+    # ===== Non-Standard Risk =====
+    max_non_standard_risk_critical: float = Field(default=0.6, env="MAX_NON_STANDARD_RISK_CRITICAL")
+    max_non_standard_risk_high: float = Field(default=0.3, env="MAX_NON_STANDARD_RISK_HIGH")
+    non_standard_risk_position_scaling: bool = Field(default=True, env="NON_STANDARD_RISK_POSITION_SCALING")
+    high_risk_position_reduction_pct: float = Field(default=50.0, env="HIGH_RISK_POSITION_REDUCTION_PCT")
+
     # ===== Trading API Keys =====
     kis_app_key: Optional[str] = Field(default=None, env="KIS_APP_KEY")
     kis_app_secret: Optional[str] = Field(default=None, env="KIS_APP_SECRET")

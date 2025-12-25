@@ -199,15 +199,15 @@ const Portfolio: React.FC = () => {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-gray-600">총 손익</p>
-                            <p className={`text-2xl font-bold mt-1 ${portfolio.total_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {portfolio.total_pnl >= 0 ? '+' : ''}${portfolio.total_pnl.toFixed(2)}
+                            <p className={`text-2xl font-bold mt-1 ${(portfolio.total_pnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {(portfolio.total_pnl || 0) >= 0 ? '+' : ''}${(portfolio.total_pnl || 0).toFixed(2)}
                             </p>
-                            <p className={`text-sm mt-1 ${portfolio.total_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {portfolio.total_pnl_pct >= 0 ? '+' : ''}{portfolio.total_pnl_pct.toFixed(2)}%
+                            <p className={`text-sm mt-1 ${(portfolio.total_pnl_pct || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {(portfolio.total_pnl_pct || 0) >= 0 ? '+' : ''}{(portfolio.total_pnl_pct || 0).toFixed(2)}%
                             </p>
                         </div>
-                        <div className={`p-3 rounded-full ${portfolio.total_pnl >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
-                            <span className="text-2xl">{portfolio.total_pnl >= 0 ? '🎯' : '📉'}</span>
+                        <div className={`p-3 rounded-full ${(portfolio.total_pnl || 0) >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+                            <span className="text-2xl">{(portfolio.total_pnl || 0) >= 0 ? '🎯' : '📉'}</span>
                         </div>
                     </div>
                 </div>

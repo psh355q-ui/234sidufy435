@@ -31,12 +31,17 @@ export const InteractivePortfolio: React.FC = () => {
                 const portfolio = await response.json();
 
                 if (portfolio.positions && portfolio.positions.length > 0) {
-                    const totalValue = portfolio.total_value || 1;
+                    // 주식들의 총 가치 계산 (현금 제외)
+                    const positionsTotal = portfolio.positions.reduce(
+                        (sum: number, pos: any) => sum + (pos.market_value || 0),
+                        0
+                    );
+
                     const portfolioItems = portfolio.positions.map((pos: any, idx: number) => ({
                         id: String(idx + 1),
                         ticker: pos.symbol || pos.ticker || 'UNKNOWN',  // Use symbol field
-                        currentWeight: Math.round((pos.market_value / totalValue) * 100),
-                        targetWeight: Math.round((pos.market_value / totalValue) * 100)
+                        currentWeight: Math.round((pos.market_value / positionsTotal) * 100),
+                        targetWeight: Math.round((pos.market_value / positionsTotal) * 100)
                     }));
 
                     setItems(portfolioItems);

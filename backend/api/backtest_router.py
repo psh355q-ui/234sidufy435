@@ -1,13 +1,52 @@
 """
-Phase 10: Signal Backtest API Router
-백테스트 실행 및 결과 조회 API 엔드포인트
+backtest_router.py - 백테스트 API
 
-엔드포인트:
-- POST /api/backtest/run - 새 백테스트 실행
-- GET /api/backtest/results - 백테스트 결과 목록
-- GET /api/backtest/results/{id} - 특정 결과 상세
-- POST /api/backtest/optimize - 파라미터 최적화
-- GET /api/backtest/compare - 결과 비교
+📊 Data Sources:
+    - PostgreSQL: analysis_results, news_articles 테이블
+        - 과거 뉴스 분석 데이터 조회
+        - 백테스트 기간별 필터링
+    - KIS API: 과거 주가 데이터
+        - kis_client.inquire_daily_price: 국내주식 일봉
+        - overseas_stock.get_daily_price: 해외주식 일봉
+    - SignalBacktestEngine: 백테스트 엔진
+        - 시그널 생성 시뮬레이션
+        - 거래 실행 시뮬레이션
+        - 성과 지표 계산
+    - File System: ./backtest_results/*.json
+        - 백테스트 결과 영구 저장
+        - 비동기 작업 상태 관리
+
+🔗 External Dependencies:
+    - fastapi: API 라우팅, BackgroundTasks
+    - pydantic: 설정 모델 검증
+    - backend.backtesting.signal_backtest_engine: 백테스트 엔진
+    - backend.backtesting.consensus_backtest: Consensus 백테스트
+    - uuid: Job ID 생성
+    - asyncio: 비동기 실행
+
+📤 API Endpoints:
+    - POST /backtest/run: 백테스트 실행 (비동기)
+    - GET /backtest/results: 백테스트 목록
+    - GET /backtest/results/{id}: 상세 결과 조회
+    - GET /backtest/status/{id}: 작업 상태 확인
+    - DELETE /backtest/results/{id}: 결과 삭제
+    - POST /backtest/optimize: 파라미터 Grid Search 최적화
+    - POST /backtest/compare: 여러 백테스트 비교
+    - POST /backtest/consensus/run: Consensus 백테스트
+
+🔄 Called By:
+    - frontend/src/pages/Backtest.tsx
+    - frontend/src/components/Backtest/BacktestRunner.tsx
+    - frontend/src/components/Backtest/ComparisonChart.tsx
+
+📝 Notes:
+    - 백테스트는 BackgroundTasks로 비동기 실행
+    - 결과는 JSON 파일로 저장 (메모리 + 디스크)
+    - 실제 데이터 vs 샘플 데이터 선택 가능
+    - Grid Search로 파라미터 최적화 지원
+    - Consensus 전략 별도 엔드포인트
+
+Phase 10: Signal Backtest API Router
 """
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks

@@ -52,7 +52,7 @@ models.py - SQLAlchemy 데이터베이스 모델
 Database: TimescaleDB (PostgreSQL with time-series extensions)
 """
 
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text, Boolean, ForeignKey, Index, BigInteger
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text, Boolean, ForeignKey, Index, BigInteger, Numeric
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
@@ -422,37 +422,51 @@ class Order(Base):
 
 class DividendAristocrat(Base):
     """
-    배당 귀족주 캐시 테이블
+    배당 귀족주 (25년+ 연속 배당 증가)
     
-    연 1회 갱신 (매년 3월 1일 권장)
+    Phase 21: Dividend Intelligence Module
+    
+    연 1회 갱신 권장: 매년 3월 1일
     - S&P 배당 귀족주 리스트: 1월 말~2월 초 발표
     - 기업 배당금 확정: 2월 중순~3월 초
     
+    Data Sources:
+        - Yahoo Finance API (배당 이력, 재무 데이터)
+        - S&P Dividend Aristocrats list
+    
     Used By:
         - backend/api/dividend_router.py: /aristocrats endpoint
+        - backend/core/models/dividend_models.py: Original schema definition
     """
     __tablename__ = "dividend_aristocrats"
     
-    id = Column(Integer, primary_key=True, index=True)
-    ticker = Column(String, unique=True, index=True, nullable=False)
-    company_name = Column(String, nullable=False)
-    sector = Column(String, nullable=True)
-    consecutive_years = Column(Integer, nullable=False, default=0)
-    total_years = Column(Integer, nullable=False, default=0)
-    current_yield = Column(Float, nullable=False, default=0.0)
-    growth_rate = Column(Float, nullable=False, default=0.0)  # 평균 연간 증가율 (%)
-    last_dividend = Column(Float, nullable=False, default=0.0)
+    ticker = Column(String(10), primary_key=True)
+    company_name = Column(String(200), nullable=False)
+    sector = Column(String(50), index=True)
+    industry = Column(String(100))
+    
+    # 배당 이력
+    consecutive_years = Column(Integer, nullable=False)  # 연속 배당 증가 연수
+    first_dividend_year = Column(Integer)  # 최초 배당 연도
+    
+    # 배당 데이터
+    current_yield = Column(Numeric(5, 2))  # 현재 배당률 (%)
+    payout_ratio = Column(Numeric(5, 2))   # 배당 성향 (%)
+    dividend_growth_5y = Column(Numeric(5, 2))   # 5년 배당 성장률 (%)
+    dividend_growth_10y = Column(Numeric(5, 2))  # 10년 배당 성장률 (%)
+    
+    # 재무 건전성
+    debt_to_equity = Column(Numeric(10, 2))  # 부채비율
+    free_cashflow = Column(Numeric(15, 2))   # 잉여현금흐름 (USD)
+    market_cap = Column(Numeric(15, 2))      # 시가총액 (USD)
     
     # 메타데이터
-    analyzed_at = Column(DateTime, nullable=False, default=datetime.now)
-    updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
+    is_sp500 = Column(Integer, default=0)  # S&P 500 포함 여부 (boolean)
+    is_reit = Column(Integer, default=0)   # REIT 여부 (boolean)
+    notes = Column(Text)  # 특이사항
     
-    # Indexes
-    __table_args__ = (
-        Index('idx_aristocrat_ticker', 'ticker'),
-        Index('idx_aristocrat_consecutive_years', 'consecutive_years'),
-        Index('idx_aristocrat_sector', 'sector'),
-    )
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     
     def __repr__(self):
-        return f"<DividendAristocrat {self.ticker}: {self.consecutive_years} years>"
+        return f"<DividendAristocrat(ticker={self.ticker}, company={self.company_name}, years={self.consecutive_years})>"

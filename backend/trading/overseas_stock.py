@@ -292,6 +292,20 @@ def get_dividend_by_ticker(
         body = resp.getBody()
         output1 = body.output1 if hasattr(body, 'output1') else []
         
+        # DEBUG: Log the actual API response
+        logger.info(f"🔍 Dividend API Response for {symb}:")
+        logger.info(f"  - Response type: {type(output1)}")
+        logger.info(f"  - Record count: {len(output1) if isinstance(output1, list) else 'N/A'}")
+        
+        if isinstance(output1, list) and len(output1) > 0:
+            logger.info(f"  - Sample record keys: {output1[0].keys() if isinstance(output1[0], dict) else 'N/A'}")
+            logger.info(f"  - First 3 records:")
+            for idx, record in enumerate(output1[:3]):
+                ca_type = record.get('ca_type', 'N/A')
+                ex_dt = record.get('ex_dt', record.get('base_dt', 'N/A'))
+                amount = record.get('ca_amt', record.get('div_amt', 'N/A'))
+                logger.info(f"    [{idx}] ca_type={ca_type}, ex_dt={ex_dt}, amount={amount}")
+        
         # 배당 데이터 필터링 (배당 관련만)
         dividend_records = []
         if isinstance(output1, list):
@@ -301,6 +315,8 @@ def get_dividend_by_ticker(
                 event_type = record.get('ca_type', '').upper()
                 if 'DIV' in event_type or '배당' in event_type:
                     dividend_records.append(record)
+        
+        logger.info(f"  - Filtered dividend records: {len(dividend_records)}")
         
         if not dividend_records:
             logger.info(f"배당 정보 없음: {symb}, 기본값 반환")

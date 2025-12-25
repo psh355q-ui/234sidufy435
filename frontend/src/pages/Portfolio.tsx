@@ -407,8 +407,8 @@ const Portfolio: React.FC = () => {
                                             {/* Sector breakdown for stocks */}
                                             {asset.key === 'stocks' && (() => {
                                                 // Get unique sectors from stock positions
-                                                const stockPositions = portfolio.positions.filter(p => getAssetType(p.symbol) === 'stocks');
-                                                const sectors = Array.from(new Set(stockPositions.map(p => p.sector).filter(Boolean)));
+                                                const stockPositions = portfolio.positions.filter((p: Position) => getAssetType(p.symbol) === 'stocks');
+                                                const sectors = Array.from(new Set(stockPositions.map((p: Position) => p.sector).filter(Boolean))) as string[];
 
                                                 if (sectors.length === 0) return null;
 
@@ -433,9 +433,9 @@ const Portfolio: React.FC = () => {
                                                     <div className="ml-8 text-xs text-gray-500">
                                                         <div className="font-semibold text-gray-600 mb-2">섹터 구분:</div>
                                                         <div className="flex flex-wrap gap-2">
-                                                            {displaySectors.map(sector => (
+                                                            {displaySectors.map((sector: string) => (
                                                                 <div key={sector} className="flex items-center gap-1.5 bg-white px-2 py-1 rounded border border-gray-200">
-                                                                    <div className={`w-3 h-3 ${sectorColors[sector!] || 'bg-gray-400'} rounded`}></div>
+                                                                    <div className={`w-3 h-3 ${sectorColors[sector] || 'bg-gray-400'} rounded`}></div>
                                                                     <span>{sector}</span>
                                                                 </div>
                                                             ))}

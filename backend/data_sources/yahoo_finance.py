@@ -86,8 +86,15 @@ def get_dividend_info(symbol: str) -> Dict:
             logger.info(f"  TTM dividend amounts: {ttm_divs.values[-5:].tolist()}")
         logger.info(f"  TTM sum: ${annual_dividend:.4f}")
         
-        # Determine frequency
-        payment_count = len(ttm_divs)
+        # Fallback: if TTM is 0 but we have recent dividends (last 2 years), use those
+        if annual_dividend == 0 and len(recent_divs) > 0:
+            logger.info(f"  TTM is $0, using recent dividends as fallback...")
+            annual_dividend = float(recent_divs.sum())
+            payment_count = len(recent_divs)
+            logger.info(f"  Using {payment_count} recent dividends totaling ${annual_dividend:.4f}")
+        else:
+            # Determine frequency from TTM
+            payment_count = len(ttm_divs)
         if payment_count >= 12:
             frequency = "M"  # Monthly
         elif payment_count >= 4:

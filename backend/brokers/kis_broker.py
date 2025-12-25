@@ -192,6 +192,9 @@ class KISBroker:
                                 current_price = float(row.get('now_pric2', 0))
                                 eval_amt = float(row.get('ovrs_stck_evlu_amt', row.get('frcr_evlu_amt2', 0)))
                                 
+                                # DEBUG: Log actual values from KIS API
+                                logger.info(f"{symbol} KIS 원본 데이터: ovrs_stck_evlu_amt={row.get('ovrs_stck_evlu_amt')}, now_pric2={row.get('now_pric2')}, eval_amt={eval_amt}, current_price={current_price}, qty={qty}")
+                                
                                 # Fallback: Calculate market_value if KIS returns 0
                                 if eval_amt == 0 and current_price > 0:
                                     eval_amt = current_price * qty

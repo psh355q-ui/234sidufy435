@@ -302,7 +302,14 @@ export const SectorHeatmap: React.FC = () => {
         // 포지션별 섹터 분류 (간단한 ticker 기반 추정)
         if (portfolio.positions && portfolio.positions.length > 0) {
           portfolio.positions.forEach((pos: any) => {
-            const ticker = pos.ticker.toUpperCase();
+            // symbol 필드 사용 (ticker 대신) 및 null 체크
+            const symbol = pos.symbol || pos.ticker;
+            if (!symbol) {
+              console.warn('Position without symbol:', pos);
+              return;
+            }
+
+            const ticker = symbol.toUpperCase();
             const value = pos.market_value || 0;
 
             // 디버깅: ticker 값 확인
@@ -380,9 +387,9 @@ export const RiskMatrix: React.FC = () => {
 
         if (portfolio.positions && portfolio.positions.length > 0) {
           const positionsData = portfolio.positions.map((pos: any) => ({
-            name: pos.ticker,
-            x: Math.abs(pos.unrealized_pnl_pct || 0) * 2, // Risk (변동성 추정)
-            y: pos.unrealized_pnl_pct || 0, // Return
+            name: pos.symbol || pos.ticker || 'UNKNOWN',
+            x: Math.abs(pos.profit_loss_pct || pos.unrealized_pnl_pct || 0) * 2, // Risk (변동성 추정)
+            y: pos.profit_loss_pct || pos.unrealized_pnl_pct || 0, // Return
             z: pos.market_value || 100 // Position Size
           }));
 

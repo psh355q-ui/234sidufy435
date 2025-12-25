@@ -133,15 +133,45 @@ const CompoundSimulator: React.FC = () => {
                     <ResponsiveContainer width="100%" height={400}>
                         <LineChart data={results}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                            <XAxis dataKey="year" stroke="#6b7280" />
-                            <YAxis stroke="#6b7280" tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`} />
+                            <XAxis
+                                dataKey="year"
+                                stroke="#6b7280"
+                                label={{ value: '년도', position: 'insideBottom', offset: -5 }}
+                            />
+                            <YAxis
+                                stroke="#6b7280"
+                                tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                                label={{ value: '금액 (USD)', angle: -90, position: 'insideLeft' }}
+                            />
                             <Tooltip
                                 contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px' }}
-                                formatter={(value: any) => `$${value.toLocaleString()}`}
+                                formatter={(value: any) => [`$${value.toLocaleString()}`, '']}
+                                labelFormatter={(label) => `${label}년차`}
                             />
-                            <Legend />
-                            <Line type="monotone" dataKey="portfolio_value_usd" stroke="#10b981" name="Portfolio Value" strokeWidth={2} />
-                            <Line type="monotone" dataKey="cumulative_dividends_usd" stroke="#3b82f6" name="Cumulative Dividends" strokeWidth={2} />
+                            <Legend
+                                iconType="line"
+                                formatter={(value) => {
+                                    if (value === 'portfolio_value_usd') return '포트폴리오 가치';
+                                    if (value === 'cumulative_dividends_usd') return '누적 배당금';
+                                    return value;
+                                }}
+                            />
+                            <Line
+                                type="monotone"
+                                dataKey="portfolio_value_usd"
+                                stroke="#10b981"
+                                name="포트폴리오 가치"
+                                strokeWidth={2}
+                                dot={{ fill: '#10b981', r: 4 }}
+                            />
+                            <Line
+                                type="monotone"
+                                dataKey="cumulative_dividends_usd"
+                                stroke="#3b82f6"
+                                name="누적 배당금"
+                                strokeWidth={2}
+                                dot={{ fill: '#3b82f6', r: 4 }}
+                            />
                         </LineChart>
                     </ResponsiveContainer>
                 </div>

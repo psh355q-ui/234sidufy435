@@ -392,14 +392,36 @@ const Portfolio: React.FC = () => {
                                 {assetTypes.map(asset => {
                                     const percentage = (asset.value / total) * 100;
                                     return (
-                                        <div key={asset.key} className="flex items-center gap-3 bg-gray-50 rounded-lg p-3 hover:shadow-md transition-shadow">
-                                            <div className={`w-5 h-5 ${asset.color} rounded shadow-sm`}></div>
-                                            <div className="flex-1">
-                                                <div className="text-sm font-semibold text-gray-700">{asset.label}</div>
-                                                <div className="text-xs text-gray-500 font-mono">
-                                                    ${asset.value.toFixed(2)} ({percentage.toFixed(1)}%)
+                                        <div key={asset.key} className="flex flex-col gap-2">
+                                            <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-3 hover:shadow-md transition-shadow">
+                                                <div className={`w-5 h-5 ${asset.color} rounded shadow-sm`}></div>
+                                                <div className="flex-1">
+                                                    <div className="text-sm font-semibold text-gray-700">{asset.label}</div>
+                                                    <div className="text-xs text-gray-500 font-mono">
+                                                        ${asset.value.toFixed(2)} ({percentage.toFixed(1)}%)
+                                                    </div>
                                                 </div>
                                             </div>
+
+                                            {/* Sector breakdown for stocks */}
+                                            {asset.key === 'stocks' && (
+                                                <div className="ml-8 text-xs text-gray-500 space-y-1">
+                                                    <div className="font-semibold text-gray-600">섹터 구분:</div>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                                                        <span>Technology</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-3 h-3 bg-green-500 rounded"></div>
+                                                        <span>Finance</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-3 h-3 bg-red-500 rounded"></div>
+                                                        <span>Healthcare</span>
+                                                    </div>
+                                                    <div className="text-gray-400 mt-1">+ 8 more sectors</div>
+                                                </div>
+                                            )}
                                         </div>
                                     );
                                 })}

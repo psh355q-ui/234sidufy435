@@ -234,7 +234,7 @@ class KISBroker:
                                     "quantity": qty,
                                     "avg_price": avg_price,
                                     "current_price": current_price,
-                                    "eval_amount": eval_amt,
+                                    "market_value": eval_amt,  # Changed from eval_amount
                                     "profit_loss": profit_loss,
                                     "daily_pnl": daily_pnl,
                                     "daily_return_pct": daily_return_pct

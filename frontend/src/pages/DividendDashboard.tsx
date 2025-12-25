@@ -222,9 +222,9 @@ const DividendDashboard: React.FC = () => {
                 <div className="flex justify-center items-center py-12">
                     <LoadingSpinner size="lg" />
                 </div>
-            ) : (
-                <DividendSummaryCards portfolioIncome={portfolioIncome} />
-            )}
+            ) : portfolio ? (
+                <DividendSummaryCards portfolioIncome={portfolio} />
+            ) : null}
 
             {/* Tabs and Content */}
             <div className="space-y-6">

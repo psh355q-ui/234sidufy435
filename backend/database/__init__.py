@@ -12,7 +12,6 @@ from backend.database.models import (
     BacktestRun,
     BacktestTrade,
     SignalPerformance,
-    create_all_tables,
     drop_all_tables,
     setup_timescaledb_hypertables
 )

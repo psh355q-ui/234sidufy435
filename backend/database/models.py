@@ -1,12 +1,51 @@
 """
-Phase 16+: Database Models for Persistent Storage
+models.py - SQLAlchemy 데이터베이스 모델
 
-SQLAlchemy models for storing:
-- News articles (RSS crawled)
-- Analysis results (Deep Reasoning)
-- Trading signals (PRIMARY/HIDDEN/LOSER)
-- Backtest results (historical performance)
-- Signal outcomes (actual returns)
+📊 Data Sources:
+    - PostgreSQL (TimescaleDB): 시계열 최적화 DB
+        - Hypertables: news_articles, trading_signals, backtest_runs, etc.
+        - pgvector: 임베딩 검색 (뉴스 semantic search)
+    - 외부 시스템 연동:
+        - News: RSS crawler, NewsAPI → NewsArticle
+        - Signals: War Room, Deep Reasoning → TradingSignal
+        - Orders: KIS Broker → Order
+        - Backtest: SignalBacktestEngine → BacktestRun, BacktestTrade
+
+🔗 External Dependencies:
+    - SQLAlchemy: ORM 프레임워크
+    - pgvector: 벡터 유사도 검색
+    - TimescaleDB: 시계열 데이터 압축 및 집계
+
+📤 Database Models (15 classes):
+    1. NewsArticle: RSS 뉴스 (embedding, sentiment, tickers)
+    2. AnalysisResult: Deep Reasoning 분석 (bull/bear case)
+    3. TradingSignal: 매매 시그널 (PRIMARY/HIDDEN/LOSER, 출처 추적)
+    4. BacktestRun: 백테스트 실행 (Sharpe, Max DD, 수익률)
+    5. BacktestTrade: 백테스트 개별 거래
+    6. SignalPerformance: 실제 시그널 성과 (alpha, outcome)
+    7. AIDebateSession: War Room 토론 기록 (9 agents vote)
+    8. GroundingSearchLog: Grounding API 비용 추적
+    9. GroundingDailyUsage: 일일 Grounding 사용량
+    10. StockPrice: OHLCV 주가 데이터
+    11. DataCollectionProgress: 데이터 수집 작업 진행률
+    12. NewsSource: 뉴스 소스 설정
+    13. Order: 실제 주문 실행 기록 (KIS Broker)
+    14. (배당 모델들은 별도 파일에 정의)
+
+🔄 Imported By (참조가 가장 많음):
+    - backend/api/*.py: 모든 API 라우터
+    - backend/services/*.py: 모든 서비스
+    - backend/data/*.py: 데이터 수집기
+    - backend/scripts/*.py: 마이그레이션 스크립트
+    - backend/analysis/*.py: 분석 엔진
+
+📝 Notes:
+    - TimescaleDB Hypertables: 시계열 데이터 자동 파티션닝
+    - pgvector Vector(1536): OpenAI embedding 차원
+    - JSONB: 메타데이터 유연한 저장
+    - Relationships: SQLAlchemy ORM 관계 설정
+    - Indexes: 쿼리 성능 최적화 (GIN, BTREE)
+    - Phase 16+: 지속적 확장 중
 
 Database: TimescaleDB (PostgreSQL with time-series extensions)
 """

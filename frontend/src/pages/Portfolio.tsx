@@ -218,46 +218,94 @@ const Portfolio: React.FC = () => {
                 <h2 className="text-xl font-bold text-gray-900 mb-4">📊 보유 종목 ({portfolio.positions.length})</h2>
 
                 {portfolio.positions.length > 0 ? (
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="border-b border-gray-200">
-                                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">티커</th>
-                                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">수량</th>
-                                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">평균 단가</th>
-                                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">현재가</th>
-                                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">평가액</th>
-                                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">손익</th>
-                                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">수익률</th>
-                                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">일일 손익</th>
-                                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">일일 수익률</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {portfolio.positions.map((position: Position) => (
-                                    <tr key={position.symbol} className="border-b border-gray-100 hover:bg-gray-50">
-                                        <td className="py-3 px-4 font-semibold text-gray-900">{position.symbol}</td>
-                                        <td className="text-right py-3 px-4 font-mono text-sm text-gray-700">{position.quantity}</td>
-                                        <td className="text-right py-3 px-4 font-mono text-sm text-gray-700">${position.avg_price.toFixed(2)}</td>
-                                        <td className="text-right py-3 px-4 font-mono text-sm text-gray-700">${position.current_price.toFixed(2)}</td>
-                                        <td className="text-right py-3 px-4 font-mono text-sm text-gray-700">${position.market_value.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                                        <td className={`text-right py-3 px-4 font-mono text-sm font-semibold ${position.profit_loss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                            {position.profit_loss >= 0 ? '+' : ''}${position.profit_loss.toFixed(2)}
-                                        </td>
-                                        <td className={`text-right py-3 px-4 font-mono text-sm font-semibold ${position.profit_loss_pct >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                            {position.profit_loss_pct >= 0 ? '+' : ''}{position.profit_loss_pct.toFixed(2)}%
-                                        </td>
-                                        <td className={`text-right py-3 px-4 font-mono text-sm ${position.daily_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                            {position.daily_pnl >= 0 ? '+' : ''}${position.daily_pnl.toFixed(2)}
-                                        </td>
-                                        <td className={`text-right py-3 px-4 font-mono text-sm ${position.daily_return_pct >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                            {position.daily_return_pct >= 0 ? '+' : ''}{position.daily_return_pct.toFixed(2)}%
-                                        </td>
+                    <>
+                        {/* Mobile: Card Layout */}
+                        <div className="md:hidden space-y-4">
+                            {portfolio.positions.map((position: Position) => (
+                                <div key={position.symbol} className="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow">
+                                    {/* Header */}
+                                    <div className="flex justify-between items-center mb-3">
+                                        <div>
+                                            <h3 className="text-lg font-bold text-gray-900">{position.symbol}</h3>
+                                            <p className="text-sm text-gray-500">{position.quantity}주 보유</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-lg font-mono font-semibold text-gray-900">${position.current_price.toFixed(2)}</div>
+                                            <div className="text-xs text-gray-500">평균: ${position.avg_price.toFixed(2)}</div>
+                                        </div>
+                                    </div>
+
+                                    {/* Grid Info */}
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <p className="text-xs text-gray-500 mb-1">평가액</p>
+                                            <p className="text-sm font-mono font-semibold text-gray-900">${position.market_value.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500 mb-1">손익</p>
+                                            <p className={`text-sm font-mono font-semibold ${position.profit_loss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {position.profit_loss >= 0 ? '+' : ''}${position.profit_loss.toFixed(2)}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500 mb-1">수익률</p>
+                                            <p className={`text-sm font-mono font-semibold ${position.profit_loss_pct >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {position.profit_loss_pct >= 0 ? '+' : ''}{position.profit_loss_pct.toFixed(2)}%
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500 mb-1">일일 손익</p>
+                                            <p className={`text-sm font-mono ${position.daily_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {position.daily_pnl >= 0 ? '+' : ''}${position.daily_pnl.toFixed(2)} ({position.daily_return_pct >= 0 ? '+' : ''}{position.daily_return_pct.toFixed(2)}%)
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Desktop: Table Layout */}
+                        <div className="hidden md:block overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b border-gray-200">
+                                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">티커</th>
+                                        <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">수량</th>
+                                        <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">평균 단가</th>
+                                        <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">현재가</th>
+                                        <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">평가액</th>
+                                        <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">손익</th>
+                                        <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">수익률</th>
+                                        <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">일일 손익</th>
+                                        <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">일일 수익률</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                    {portfolio.positions.map((position: Position) => (
+                                        <tr key={position.symbol} className="border-b border-gray-100 hover:bg-gray-50">
+                                            <td className="py-3 px-4 font-semibold text-gray-900">{position.symbol}</td>
+                                            <td className="text-right py-3 px-4 font-mono text-sm text-gray-700">{position.quantity}</td>
+                                            <td className="text-right py-3 px-4 font-mono text-sm text-gray-700">${position.avg_price.toFixed(2)}</td>
+                                            <td className="text-right py-3 px-4 font-mono text-sm text-gray-700">${position.current_price.toFixed(2)}</td>
+                                            <td className="text-right py-3 px-4 font-mono text-sm text-gray-700">${position.market_value.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                            <td className={`text-right py-3 px-4 font-mono text-sm font-semibold ${position.profit_loss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {position.profit_loss >= 0 ? '+' : ''}${position.profit_loss.toFixed(2)}
+                                            </td>
+                                            <td className={`text-right py-3 px-4 font-mono text-sm font-semibold ${position.profit_loss_pct >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {position.profit_loss_pct >= 0 ? '+' : ''}{position.profit_loss_pct.toFixed(2)}%
+                                            </td>
+                                            <td className={`text-right py-3 px-4 font-mono text-sm ${position.daily_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {position.daily_pnl >= 0 ? '+' : ''}${position.daily_pnl.toFixed(2)}
+                                            </td>
+                                            <td className={`text-right py-3 px-4 font-mono text-sm ${position.daily_return_pct >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {position.daily_return_pct >= 0 ? '+' : ''}{position.daily_return_pct.toFixed(2)}%
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
                 ) : (
                     <div className="text-center py-12">
                         <p className="text-gray-500 text-lg">보유 종목이 없습니다</p>

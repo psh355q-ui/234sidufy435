@@ -11,6 +11,35 @@
  * - 필터링 (출처, 액션, 신뢰도)
  */
 
+/**
+ * SignalConsolidationPage.tsx - 시그널 통합 대시보드
+ * 
+ * 📊 Data Sources:
+ *   - API: GET /api/signals (모든 트레이딩 시그널)
+ *   - API: GET /api/signals/:id (시그널 상세)
+ *   - API: PUT /api/signals/:id/approve (시그널 승인)
+ *   - API: PUT /api/signals/:id/reject (시그널 거부)
+ *   - State: signals, filters, selectedSignal
+ * 
+ * 🔗 Dependencies:
+ *   - react: useState, useEffect
+ *   - @tanstack/react-query: useQuery, useMutation
+ *   - lucide-react: Filter, CheckCircle, XCircle
+ * 
+ * 📤 Components Used:
+ *   - Card, LoadingSpinner, Button, Badge
+ *   - SignalCard: 개별 시그널 카드
+ *   - FilterPanel: 필터 패널
+ * 
+ * 🔄 Used By:
+ *   - App.tsx (route: /signals)
+ * 
+ * 📝 Notes:
+ *   - Phase 10: Signal Consolidation
+ *   - 필터링: PRIMARY/HIDDEN/LOSER, 날짜, 신뢰도
+ *   - 평균 신뢰도 계산 수정 (NaN% 버그 해결)
+ */
+
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { signalConsolidationApi, ConsolidatedSignal } from '../services/signalConsolidationApi';

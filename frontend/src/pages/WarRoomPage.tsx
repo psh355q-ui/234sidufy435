@@ -4,7 +4,36 @@
  * 여러 티커의 AI Agents 실시간 토론을 시각화
  */
 
-import React from 'react';
+/**
+ * WarRoomPage.tsx - War Room AI Debate 페이지
+ * 
+ * 📊 Data Sources:
+ *   - API: GET /api/war-room/debates (AI Debate 세션)
+ *   - API: POST /api/war-room/start (새 토론 시작)
+ *   - API: GET /api/weights (에이전트 가중치)
+ *   - State: debates, selectedTicker, agents
+ * 
+ * 🔗 Dependencies:
+ *   - react: useState, useEffect
+ *   - @tanstack/react-query: useQuery, useMutation
+ *   - lucide-react: Users, MessageSquare, BarChart3
+ * 
+ * 📤 Components Used:
+ *   - Card, LoadingSpinner, Button
+ *   - AgentVoteDisplay: 에이전트 투표 표시
+ *   - DebateTimeline: 토론 타임라인
+ * 
+ * 🔄 Used By:
+ *   - App.tsx (route: /war-room)
+ * 
+ * 📝 Notes:
+ *   - Phase 27: Constitutional AI UI
+ *   - 9 Agents: Trader, Risk, Analyst, Macro, Institutional, News, ChipWar, DividendRisk, PM
+ *   - 가중 투표 시스템
+ *   - Constitutional AI 안전장치
+ */
+
+import React, { useState } from 'react';
 import WarRoomList from '../components/war-room/WarRoomList';
 
 const WarRoomPage: React.FC = () => {

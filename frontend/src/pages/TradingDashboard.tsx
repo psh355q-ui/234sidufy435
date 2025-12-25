@@ -8,6 +8,34 @@
  * - Click to view signal details
  */
 
+/**
+ * TradingDashboard.tsx - 트레이딩 대시보드
+ * 
+ * 📊 Data Sources:
+ *   - API: GET /api/signals (트레이딩 시그널)
+ *   - API: GET /api/orders (주문 내역)
+ *   - API: POST /api/trade/execute (매매 실행)
+ *   - State: signals, orders, selectedSignal
+ * 
+ * 🔗 Dependencies:
+ *   - react: useState, useEffect
+ *   - @tanstack/react-query: useQuery, useMutation
+ *   - lucide-react: TrendingUp, Activity, AlertCircle
+ * 
+ * 📤 Components Used:
+ *   - Card, LoadingSpinner, Button
+ *   - ExecuteTradeModal: 매매 실행 모달
+ *   - ClosePositionModal: 포지션 청산 모달
+ * 
+ * 🔄 Used By:
+ *   - App.tsx (route: /trading)
+ * 
+ * 📝 Notes:
+ *   - Phase 26: REAL MODE 실거래
+ *   - KIS Broker 연동
+ *   - 실시간 시그널 모니터링
+ */
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {

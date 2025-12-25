@@ -1,3 +1,36 @@
+/**
+ * DividendDashboard.tsx - 배당 대시보드 페이지
+ * 
+ * 📊 Data Sources:
+ *   - API: GET /api/portfolio (배당 포함 포트폴리오)
+ *   - API: GET /api/dividend/calendar (배당 캘린더)
+ *   - API: GET /api/dividend/risk/:ticker (배당 리스크)
+ *   - API: GET /api/dividend/aristocrats (배당 귀족주)
+ *   - State: activeTab, portfolio, loading
+ * 
+ * 🔗 Dependencies:
+ *   - react: useState, useEffect
+ *   - lucide-react: DollarSign, Calendar, TrendingUp, Shield, PlusCircle, Trophy
+ * 
+ * 📤 Components Used:
+ *   - Card, LoadingSpinner
+ *   - DividendSummaryCards: 배당 요약 카드
+ *   - DividendCalendar: 배당 캘린더
+ *   - CompoundSimulator: DRIP 복리 시뮬레이션
+ *   - RiskScoreTable: 배당 리스크 테이블
+ *   - CashInjectionSlider: 예수금 추가 시뮬레이션
+ *   - AristocratsTable: 배당 귀족주 목록
+ * 
+ * 🔄 Used By:
+ *   - App.tsx (route: /dividend)
+ * 
+ * 📝 Notes:
+ *   - Phase 21: Dividend Intelligence Module
+ *   - 6개 탭: 보유종목/캘린더/DRIP/리스크/예수금/귀족주
+ *   - portfolioIncome 계산: sum(annual_dividend * quantity)
+ *   - 방금 수정: portfolioIncome undefined 오류 해결
+ */
+
 import React, { useState, useEffect } from 'react';
 import { DollarSign, Calendar, TrendingUp, Shield, PlusCircle, Trophy } from 'lucide-react';
 import { Card } from '../components/common/Card';

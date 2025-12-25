@@ -1,4 +1,34 @@
-import React, { useState, useEffect } from 'react';
+/**
+ * BacktestDashboard.tsx - 백테스트 대시보드
+ * 
+ * 📊 Data Sources:
+ *   - API: GET /api/backtest/runs (백테스트 실행 목록)
+ *   - API: POST /api/backtest/execute (백테스트 실행)
+ *   - API: GET /api/backtest/:id/results (백테스트 결과)
+ *   - State: runs, selectedRun, parameters
+ * 
+ * 🔗 Dependencies:
+ *   - react: useState, useEffect
+ *   - @tanstack/react-query: useQuery, useMutation
+ *   - recharts: LineChart, BarChart (성과 차트)
+ *   - lucide-react: PlayCircle, TrendingUp, Calendar
+ * 
+ * 📤 Components Used:
+ *   - Card, LoadingSpinner, Button
+ *   - ConsensusBacktest: Consensus 백테스트
+ *   - PerformanceChart: 성과 차트
+ * 
+ * 🔄 Used By:
+ *   - App.tsx (route: /backtest)
+ * 
+ * 📝 Notes:
+ *   - Phase 13: Backtesting Engine
+ *   - Grid Search 파라미터 최적화
+ *   - Sharpe Ratio, Max Drawdown 계산
+ *   - 승률, 평균 수익률 통계
+ */
+
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 // API 클라이언트
@@ -134,7 +164,7 @@ export const BacktestDashboard: React.FC = () => {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-sm p-4">
               <h2 className="text-lg font-semibold mb-4">백테스트 결과</h2>
-              
+
               {isLoading ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
@@ -150,11 +180,10 @@ export const BacktestDashboard: React.FC = () => {
                     <div
                       key={result.id}
                       onClick={() => setSelectedResult(result.id)}
-                      className={`p-3 rounded-lg border cursor-pointer transition ${
-                        selectedResult === result.id
+                      className={`p-3 rounded-lg border cursor-pointer transition ${selectedResult === result.id
                           ? 'border-blue-500 bg-blue-50'
                           : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                        }`}
                     >
                       <div className="flex justify-between items-start">
                         <div>
@@ -165,14 +194,13 @@ export const BacktestDashboard: React.FC = () => {
                         </div>
                         <StatusBadge status={result.status} />
                       </div>
-                      
+
                       {result.status === 'COMPLETED' && (
                         <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
                           <div>
                             <span className="text-gray-600">수익률:</span>
-                            <span className={`ml-1 font-medium ${
-                              (result.total_return_pct || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                            }`}>
+                            <span className={`ml-1 font-medium ${(result.total_return_pct || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                              }`}>
                               {result.total_return_pct?.toFixed(2)}%
                             </span>
                           </div>
@@ -348,18 +376,18 @@ const ResultDetail: React.FC<{ result: any }> = ({ result }) => {
       <div className="bg-white rounded-lg shadow-sm p-6">
         <h3 className="text-lg font-semibold mb-4">📅 일별 성과</h3>
         <div className="grid grid-cols-3 gap-4">
-          <StatItem 
-            label="최고의 날" 
+          <StatItem
+            label="최고의 날"
             value={`${data.best_day_pct.toFixed(2)}%`}
             valueColor="text-green-600"
           />
-          <StatItem 
-            label="최악의 날" 
+          <StatItem
+            label="최악의 날"
             value={`${data.worst_day_pct.toFixed(2)}%`}
             valueColor="text-red-600"
           />
-          <StatItem 
-            label="평균 일일 수익" 
+          <StatItem
+            label="평균 일일 수익"
             value={`${data.avg_daily_return_pct.toFixed(4)}%`}
           />
         </div>

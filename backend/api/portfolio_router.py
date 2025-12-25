@@ -37,6 +37,11 @@ class PositionResponse(BaseModel):
     profit_loss_pct: float
     daily_pnl: float
     daily_return_pct: float
+    # 배당 정보 (옵션 B - KIS API 통합)
+    annual_dividend: Optional[float] = 0.0
+    dividend_yield: Optional[float] = 0.0
+    dividend_frequency: Optional[str] = "Q"
+    next_dividend_date: Optional[str] = ""
 
 
 class PortfolioResponse(BaseModel):
@@ -186,19 +191,52 @@ async def get_portfolio():
         daily_pnl = balance.get("daily_pnl", 0)
         daily_return_pct = (daily_pnl / total_value * 100) if total_value > 0 else 0
 
+
         # Build positions list
         positions = []
         for pos in balance.get("positions", []):
+            symbol = pos.get("symbol", "")
+            current_price = pos.get("current_price", 0)
+            quantity = pos.get("quantity", 0)
+            avg_price = pos.get("avg_price", 0)
+            
+            # 배당 정보 조회 (KIS API)
+            dividend_info = {"annual_dividend": 0.0, "dividend_yield": 0.0, "frequency": "Q", "next_ex_date": ""}
+            if symbol:
+                try:
+                    from backend.trading import overseas_stock as osf
+                    dividend_data = osf.get_dividend_by_ticker(symbol, "US")
+                    
+                    if dividend_data and dividend_data.get("annual_dividend", 0) > 0:
+                        annual_div = dividend_data.get("annual_dividend", 0)
+                        # 배당 수익률 계산
+                        div_yield = (annual_div / current_price * 100) if current_price > 0 else 0
+                        
+                        dividend_info = {
+                            "annual_dividend": annual_div,
+                            "dividend_yield": round(div_yield, 2),
+                            "frequency": dividend_data.get("frequency", "Q"),
+                            "next_ex_date": dividend_data.get("next_ex_date", "")
+                        }
+                        logger.info(f"📊 {symbol} 배당 정보: ${annual_div:.2f}/year, {div_yield:.2f}% yield")
+                except Exception as e:
+                    logger.warning(f"배당 정보 조회 실패 ({symbol}): {e}")
+            
             positions.append(PositionResponse(
-                symbol=pos.get("symbol", ""),
-                quantity=pos.get("quantity", 0),
-                avg_price=pos.get("avg_price", 0),
-                current_price=pos.get("current_price", 0),
+                symbol=symbol,
+                quantity=quantity,
+                avg_price=avg_price,
+                current_price=current_price,
                 market_value=pos.get("eval_amt", 0),  # Fixed: eval_amt from KIS broker
                 profit_loss=pos.get("profit_loss", 0),
-                profit_loss_pct=(pos.get("profit_loss", 0) / (pos.get("avg_price", 0) * pos.get("quantity", 1)) * 100) if pos.get("avg_price", 0) > 0 else 0,
+                profit_loss_pct=(pos.get("profit_loss", 0) / (avg_price * quantity) * 100) if avg_price > 0 and quantity > 0 else 0,
                 daily_pnl=pos.get("daily_pnl", 0),
-                daily_return_pct=pos.get("daily_return_pct", 0)
+                daily_return_pct=pos.get("daily_return_pct", 0),
+                # 배당 정보
+                annual_dividend=dividend_info["annual_dividend"],
+                dividend_yield=dividend_info["dividend_yield"],
+                dividend_frequency=dividend_info["frequency"],
+                next_dividend_date=dividend_info["next_ex_date"]
             ))
 
         logger.info(f"💼 Portfolio fetched: ${total_value:.2f} total, {len(positions)} positions")

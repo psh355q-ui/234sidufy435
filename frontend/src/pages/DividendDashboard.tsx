@@ -15,43 +15,25 @@ type TabType = 'holdings' | 'calendar' | 'drip' | 'risk' | 'injection' | 'aristo
 const DividendDashboard: React.FC = () => {
     const [activeTab, setActiveTab] = useState<TabType>('holdings');
     const [loading, setLoading] = useState(false);
-    const [portfolioIncome, setPortfolioIncome] = useState<any>(null);
     const [portfolio, setPortfolio] = useState<any>(null);
 
-    // KIS 포트폴리오 데이터 및 배당 수입 조회
-    const fetchPortfolioIncome = async () => {
+    // KIS 포트폴리오 데이터 조회 (배당 정보 포함)
+    const fetchPortfolio = async () => {
         setLoading(true);
         try {
-            // KIS API에서 실제 포트폴리오 데이터 가져오기
+            // KIS API에서 포트폴리오 데이터 가져오기 (배당 정보 자동 포함)
             const portfolioData = await getPortfolio();
             setPortfolio(portfolioData);
-
-            // 포지션 데이터를 배당 API 형식으로 변환
-            const positions = portfolioData.positions.map((pos: any) => ({
-                ticker: pos.symbol,
-                shares: pos.quantity,
-                avg_price: pos.avg_price
-            }));
-
-            const response = await fetch('http://localhost:8001/api/dividend/portfolio', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(positions)
-            });
-
-            if (!response.ok) throw new Error('Failed to fetch portfolio income');
-
-            const data = await response.json();
-            setPortfolioIncome(data);
+            console.log('✅ 포트폴리오 데이터 로드 (배당 정보 포함):', portfolioData);
         } catch (error: any) {
-            console.error('Failed to fetch portfolio income:', error.message);
+            console.error('❌ 포트폴리오 조회 실패:', error.message);
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchPortfolioIncome();
+        fetchPortfolio();
     }, []);
 
     const renderTabContent = () => {
@@ -134,7 +116,7 @@ const DividendDashboard: React.FC = () => {
                             </div>
                             <div className="text-right">
                                 <span className="text-gray-700">연 배당금</span>
-                                <p className="text-lg text-green-600">${(portfolio.total_value * 0.03).toFixed(0)}</p>
+                                <p className="text-lg text-green-600">${portfolio.positions.reduce((sum: number, p: any) => sum + (p.annual_dividend || 0) * p.quantity, 0).toFixed(0)}</p>
                             </div>
                         </div>
                     </div>

@@ -5,6 +5,7 @@ Replaces functionality of overseas_stock_functions.py using backend.trading.kis_
 
 import logging
 from typing import Dict, Optional, List, Union
+from datetime import datetime, timedelta
 from backend.trading import kis_client as kc
 
 logger = logging.getLogger(__name__)
@@ -233,3 +234,189 @@ def get_price_detail(excd: str, symb: str) -> Dict:
     else:
         resp.printError()
         return {}
+
+
+# ============================================================================
+# 배당 관련 API 함수 (신규 추가)
+# ============================================================================
+
+def get_dividend_by_ticker(
+    symb: str,
+    ncod: str = "US",
+    period_days: int = 365
+) -> Dict:
+    """
+    종목별 배당 정보 조회 (ICE 제공)
+    
+    API: /uapi/overseas-price/v1/quotations/rights-by-ice
+    TR_ID: HHDFS78330900
+    HTS: [7833] 해외주식 권리(ICE제공)
+    
+    Args:
+        symb: 종목코드 (e.g., "AAPL", "INTL")
+        ncod: 국가코드 (CN:중국, HK:홍콩, US:미국, JP:일본, VN:베트남)
+        period_days: 조회 기간(일) - 기본 365일 (과거 6개월 + 미래 6개월)
+        
+    Returns:
+        Dict: {
+            "annual_dividend": float,     # 연간 배당금 (TTM)
+            "dividend_yield": float,      # 배당 수익률
+            "frequency": str,             # 배당 주기 (Q:분기, M:월, S:반기, A:연)
+            "next_ex_date": str,          # 다음 배당락일 (YYYYMMDD)
+            "payment_count": int,         # 연간 지급 횟수
+            "history": List[Dict]         # 배당 이력
+        }
+    """
+    try:
+        url = "/uapi/overseas-price/v1/quotations/rights-by-ice"
+        tr_id = "HHDFS78330900"
+        
+        # 조회 기간 설정 (과거 6개월 ~ 미래 6개월)
+        today = datetime.now()
+        start_date = (today - timedelta(days=180)).strftime("%Y%m%d")
+        end_date = (today + timedelta(days=180)).strftime("%Y%m%d")
+        
+        params = {
+            "NCOD": ncod,      # 국가코드
+            "SYMB": symb,      # 종목코드
+            "ST_YMD": start_date,  # 시작일
+            "ED_YMD": end_date     # 종료일
+        }
+        
+        resp = kc.invoke_api(url, tr_id, params, "GET")
+        
+        if not resp.isOK():
+            logger.warning(f"배당 정보 조회 실패: {symb}")
+            return _get_default_dividend_info()
+        
+        body = resp.getBody()
+        output1 = body.output1 if hasattr(body, 'output1') else []
+        
+        # 배당 데이터 필터링 (배당 관련만)
+        dividend_records = []
+        if isinstance(output1, list):
+            for record in output1:
+                # 배당 관련 레코드만 필터링
+                # KIS API response 필드명 확인 필요 (예: 'ca_type', 'event_type' 등)
+                event_type = record.get('ca_type', '').upper()
+                if 'DIV' in event_type or '배당' in event_type:
+                    dividend_records.append(record)
+        
+        if not dividend_records:
+            logger.info(f"배당 정보 없음: {symb}, 기본값 반환")
+            return _get_default_dividend_info()
+        
+        # TTM 배당금 계산 (과거 12개월)
+        one_year_ago = (today - timedelta(days=365)).strftime("%Y%m%d")
+        recent_dividends = []
+        next_ex_date = None
+        
+        for div in dividend_records:
+            ex_date = div.get('ex_dt', div.get('base_dt', ''))
+            amount = float(div.get('ca_amt', div.get('div_amt', 0)))
+            
+            # 과거 12개월 배당금
+            if ex_date >= one_year_ago and ex_date <= today.strftime("%Y%m%d"):
+                recent_dividends.append({
+                    'date': ex_date,
+                    'amount': amount
+                })
+            
+            # 다음 배당락일 (미래 날짜 중 가장 빠른 날짜)
+            if ex_date > today.strftime("%Y%m%d"):
+                if not next_ex_date or ex_date < next_ex_date:
+                    next_ex_date = ex_date
+        
+        # 연간 배당금 계산
+        annual_dividend = sum(d['amount'] for d in recent_dividends)
+        payment_count = len(recent_dividends)
+        
+        # 배당 주기 추정
+        if payment_count >= 12:
+            frequency = "M"  # 월배당
+        elif payment_count >= 4:
+            frequency = "Q"  # 분기배당
+        elif payment_count >= 2:
+            frequency = "S"  # 반기배당
+        else:
+            frequency = "A"  # 연배당
+        
+        # 배당 수익률은 현재가 정보가 필요하므로 여기서는 0으로 설정
+        # (호출하는 곳에서 current_price로 계산)
+        
+        return {
+            "annual_dividend": round(annual_dividend, 4),
+            "dividend_yield": 0.0,  # 현재가로 나중에 계산
+            "frequency": frequency,
+            "next_ex_date": next_ex_date or "",
+            "payment_count": payment_count,
+            "history": recent_dividends
+        }
+        
+    except Exception as e:
+        logger.error(f"배당 정보 조회 오류 ({symb}): {e}")
+        return _get_default_dividend_info()
+
+
+def _get_default_dividend_info() -> Dict:
+    """배당 정보 조회 실패 시 기본값 반환"""
+    return {
+        "annual_dividend": 0.0,
+        "dividend_yield": 0.0,
+        "frequency": "Q",
+        "next_ex_date": "",
+        "payment_count": 0,
+        "history": []
+    }
+
+
+def get_period_dividend_rights(
+    start_date: str,
+    end_date: str,
+    ticker: str = "",
+    right_type: str = "03"  # 03: 배당
+) -> List[Dict]:
+    """
+    기간별 배당 권리 조회
+    
+    API: /uapi/overseas-price/v1/quotations/period-rights
+    TR_ID: CTRGT011R
+    HTS: [7520] 기간별해외증권권리조회
+    
+    Args:
+        start_date: 조회시작일 (YYYYMMDD)
+        end_date: 조회종료일 (YYYYMMDD)
+        ticker: 종목코드 (선택, 빈 문자열이면 전체)
+        right_type: 권리유형코드 (03:배당, 74:배당옵션, 75:특별배당)
+        
+    Returns:
+        List[Dict]: 배당 일정 목록
+    """
+    try:
+        url = "/uapi/overseas-price/v1/quotations/period-rights"
+        tr_id = "CTRGT011R"
+        
+        params = {
+            "RGHT_TYPE_CD": right_type,    # 03: 배당
+            "INQR_DVSN_CD": "02",          # 02: 현지기준일
+            "INQR_STRT_DT": start_date,
+            "INQR_END_DT": end_date,
+            "PDNO": ticker,                # 상품번호 (종목코드)
+            "PRDT_TYPE_CD": "",
+            "CTX_AREA_NK50": "",
+            "CTX_AREA_FK50": ""
+        }
+        
+        resp = kc.invoke_api(url, tr_id, params, "GET")
+        
+        if resp.isOK():
+            body = resp.getBody()
+            output = body.output if hasattr(body, 'output') else []
+            return output if isinstance(output, list) else []
+        else:
+            logger.warning(f"기간별 배당권리 조회 실패: {start_date} ~ {end_date}")
+            return []
+            
+    except Exception as e:
+        logger.error(f"기간별 배당권리 조회 오류: {e}")
+        return []

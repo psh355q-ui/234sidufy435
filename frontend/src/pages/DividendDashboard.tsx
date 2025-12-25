@@ -138,11 +138,15 @@ const DividendDashboard: React.FC = () => {
                         </thead>
                         <tbody>
                             {portfolio.positions.map((position: any) => {
-                                const annualDividend = position.market_value * 0.03;
-                                // 실제 포지션 손익 계산: (현재가 - 평균매수가) / 평균매수가
-                                const positionPnLPct = ((position.current_price - position.avg_price) / position.avg_price) * 100;
-                                const positionPnL = (position.current_price - position.avg_price) * position.quantity;
+                                // 백엔드에서 계산된 값 사용
+                                const annual_dividend = position.annual_dividend || 0;
+                                const dividend_yield = position.dividend_yield || 0;
+                                const positionPnLPct = position.profit_loss_pct || 0;
+                                const positionPnL = position.profit_loss || 0;
                                 const totalValueKRW = position.market_value * exchangeRate;
+                                const nextDivDate = position.next_dividend_date || "정보없음";
+                                const divFreq = position.dividend_frequency || "Q";
+                                const freqText = divFreq === "Q" ? "분기배당" : divFreq === "M" ? "월배당" : divFreq === "S" ? "반기배당" : "연배당";
 
                                 return (
                                     <tr key={position.symbol} className="border-b border-gray-100 hover:bg-gray-50">
@@ -158,23 +162,23 @@ const DividendDashboard: React.FC = () => {
                                             <div className="text-xs text-gray-500">₩{totalValueKRW.toLocaleString('ko-KR', { maximumFractionDigits: 0 })}</div>
                                         </td>
                                         <td className="text-right py-3 px-4">
-                                            <div className={`font-semibold text-sm ${positionPnLPct >= 0 ? 'text-red-600' : 'text-blue-600'}`}>
+                                            <div className={`font-semibold text-sm ${positionPnLPct >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                                 {positionPnLPct >= 0 ? '+' : ''}{positionPnLPct.toFixed(2)}%
                                             </div>
-                                            <div className={`text-xs font-mono ${positionPnLPct >= 0 ? 'text-red-600' : 'text-blue-600'}`}>
+                                            <div className={`text-xs font-mono ${positionPnLPct >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                                 {positionPnLPct >= 0 ? '+' : ''}₩{(positionPnL * exchangeRate).toLocaleString('ko-KR', { maximumFractionDigits: 0 })}
                                             </div>
                                         </td>
                                         <td className="text-right py-3 px-4">
-                                            <div className="font-mono text-sm text-blue-600">3.0%</div>
-                                            <div className="text-xs text-gray-500">분기배당</div>
+                                            <div className="font-mono text-sm text-blue-600">{dividend_yield.toFixed(1)}%</div>
+                                            <div className="text-xs text-gray-500">{freqText}</div>
                                         </td>
                                         <td className="text-right py-3 px-4 text-sm text-gray-600">
-                                            2025-03-15
+                                            {nextDivDate}
                                         </td>
                                         <td className="text-right py-3 px-4">
-                                            <div className="font-mono text-sm font-semibold text-green-600">${annualDividend.toFixed(2)}</div>
-                                            <div className="text-xs text-gray-500">₩{(annualDividend * exchangeRate).toLocaleString('ko-KR', { maximumFractionDigits: 0 })}</div>
+                                            <div className="font-mono text-sm font-semibold text-green-600">${annual_dividend.toFixed(2)}</div>
+                                            <div className="text-xs text-gray-500">₩{(annual_dividend * exchangeRate).toLocaleString('ko-KR', { maximumFractionDigits: 0 })}</div>
                                         </td>
                                     </tr>
                                 );

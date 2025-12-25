@@ -33,6 +33,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
       items: [
         { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
         { path: '/portfolio', icon: PieChart, label: 'Portfolio' },
+        { path: '/dividend', icon: DollarSign, label: 'Dividend Intelligence' },
       ]
     },
     {

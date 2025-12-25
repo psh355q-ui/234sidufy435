@@ -1,5 +1,47 @@
 """
-Overseas Stock Functions for KIS API
+overseas_stock.py - KIS 해외주식 API 함수
+
+📊 Data Sources:
+    - KIS Open Trading API: 해외주식 거래 및 시세
+        - 현재가 조회 (HHDFS00000300): /uapi/overseas-price/v1/quotations/price
+        - 일봉 조회 (HHDFS76240000): /uapi/overseas-price/v1/quotations/inquire-daily-chartprice
+        - 현재가 상세 (HHDFS76200200): /uapi/overseas-price/v1/quotations/price-detail
+        - 잔고 조회 (TTTS3012R): /uapi/overseas-stock/v1/trading/inquire-balance
+        - 예수금 조회 (CTRP6504R/VTRP6504R): /uapi/overseas-stock/v1/trading/inquire-present-balance
+        - 매수 주문 (JTTT1002U): /uapi/overseas-stock/v1/trading/order
+        - 매도 주문 (JTTT1006U): /uapi/overseas-stock/v1/trading/order
+        - 배당 정보 (HHDFS78330900): /uapi/overseas-price/v1/quotations/rights-by-ice
+    - backend.trading.kis_client: KIS API 클라이언트
+        - invoke_api: API 호출 래퍼
+        - getTREnv: 환경 설정 (계좌번호, 토큰)
+
+🔗 External Dependencies:
+    - backend.trading.kis_client: KIS API 인증 및 요청
+    - logging: 로깅
+    - datetime: 날짜 처리
+
+📤 Trading Functions:
+    - get_price(excd, symb): 현재가 조회
+    - get_price_detail(excd, symb): 상세 시세 (일일 등락)
+    - get_daily_price(excd, symb, period): 일/주/월봉
+    - get_balance(cano, acnt_prdt_cd, ovrs_excg_cd): 잔고 조회
+    - get_present_balance(cano, acnt_prdt_cd): 예수금 조회
+    - buy_order(cano, acnt_prdt_cd, excg, symb, qty, price): 매수
+    - sell_order(cano, acnt_prdt_cd, excg, symb, qty, price): 매도
+    - get_dividend_by_ticker(symb, ncod): 배당 정보
+    - get_period_dividend_rights(start_date, end_date): 기간별 배당 권리
+
+🔄 Called By:
+    - backend/brokers/kis_broker.py
+    - backend/api/portfolio_router.py
+    - backend/services/auto_trading_service.py
+
+📝 Notes:
+    - 거래소 코드: NASD (NASDAQ), NYSE, AMEX, SEHK (홍콩), TKSE (도쿄)
+    - 통화 코드: USD (미국), HKD (홍콩), JPY (일본), CNY (중국)
+    - 주문구분: 00 (지정가), 01 (시장가)
+    - TTM (Trailing Twelve Months) 배당 계산 지원
+    
 Replaces functionality of overseas_stock_functions.py using backend.trading.kis_client.
 """
 

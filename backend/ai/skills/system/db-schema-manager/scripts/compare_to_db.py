@@ -31,16 +31,21 @@ def get_database_url() -> str:
     if db_url:
         return db_url
     
-    # .env 파일 찾기 (프로젝트 루트)
-    env_file = Path(__file__).parent.parent.parent.parent.parent / '.env'
-    if env_file.exists():
-        with open(env_file, 'r', encoding='utf-8') as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith('DATABASE_URL'):
-                    if '=' in line:
-                        value = line.split('=', 1)[1].strip()
-                        return value.strip('"').strip("'")
+    # .env 파일 찾기 (프로젝트 루트 - 5단계 위)
+    # scripts -> db-schema-manager -> system -> skills -> ai -> backend -> project_root
+    current_dir = Path(__file__).parent
+    for _ in range(7):  # Go up 7 levels
+        current_dir = current_dir.parent
+        env_file = current_dir / '.env'
+        if env_file.exists():
+            with open(env_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith('DATABASE_URL'):
+                        if '=' in line:
+                            value = line.split('=', 1)[1].strip()
+                            return value.strip('"').strip("'")
+            break
     
     raise ValueError("DATABASE_URL not found in environment or .env file")
 

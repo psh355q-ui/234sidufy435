@@ -29,6 +29,7 @@ import DataBackfill from './pages/DataBackfill';
 import Orders from './pages/Orders';  // 🆕 Phase 27
 import Portfolio from './pages/Portfolio';  // 🆕 Phase 27 (new portfolio page)
 import Performance from './pages/Performance';  // 🆕 Phase 25.2 (performance dashboard)
+import DividendDashboard from './pages/DividendDashboard';  // 🆕 Phase 21 (dividend intelligence)
 // import { AIChatButton } from './components/AIChat/AIChatButton';
 // import { GeminiFreeButton } from './components/GeminiFree/GeminiFreeButton';
 
@@ -58,6 +59,7 @@ const App: React.FC = () => {
             <Route path="/portfolio" element={<Portfolio />} />  {/* 🆕 Phase 27 New Portfolio Dashboard */}
             <Route path="/orders" element={<Orders />} />  {/* 🆕 Phase 27 Orders Page */}
             <Route path="/performance" element={<Performance />} />  {/* 🆕 Phase 25.2 Performance Dashboard */}
+            <Route path="/dividend" element={<DividendDashboard />} />  {/* 🆕 Phase 21 Dividend Intelligence */}
             <Route path="/global-macro" element={<GlobalMacro />} />
             <Route path="/war-room" element={<WarRoomPage />} />
             <Route path="/signal-consolidation" element={<SignalConsolidationPage />} />

@@ -35,13 +35,23 @@ def get_dividend_info(symbol: str) -> Dict:
         ticker = yf.Ticker(symbol)
         
         # Get dividend history (last 2 years)
+        import pandas as pd
         today = datetime.now()
-        start_date = today - timedelta(days=730)
         dividends = ticker.dividends
         
         if dividends.empty:
             logger.warning(f"No dividend data found for {symbol} on Yahoo Finance")
             return _get_default_dividend_info()
+        
+        # Make today timezone-aware to match dividends.index
+        if dividends.index.tz is not None:
+            # dividends.index is timezone-aware, convert today
+            today_tz = pd.Timestamp(today).tz_localize(dividends.index.tz)
+        else:
+            # dividends.index is naive
+            today_tz = pd.Timestamp(today)
+        
+        start_date = today_tz - timedelta(days=730)
         
         # Filter to last 2 years
         recent_divs = dividends[dividends.index >= start_date]
@@ -51,7 +61,7 @@ def get_dividend_info(symbol: str) -> Dict:
             return _get_default_dividend_info()
         
         # Calculate TTM (Trailing Twelve Months) dividend
-        one_year_ago = today - timedelta(days=365)
+        one_year_ago = today_tz - timedelta(days=365)
         ttm_divs = dividends[dividends.index >= one_year_ago]
         annual_dividend = float(ttm_divs.sum())
         
@@ -133,7 +143,14 @@ def _estimate_next_ex_date(dividends, frequency: str) -> str:
         next_date = last_date + timedelta(days=interval_days)
         
         # Only return if it's in the future
-        if next_date > datetime.now():
+        # Make comparison timezone-aware if needed
+        import pandas as pd
+        if hasattr(next_date, 'tz') and next_date.tz is not None:
+            now_tz = pd.Timestamp.now(tz=next_date.tz)
+        else:
+            now_tz = pd.Timestamp.now()
+        
+        if next_date > now_tz:
             return next_date.strftime('%Y%m%d')
         
         return ""

@@ -19,9 +19,7 @@ from backend.database.models import (
     DataCollectionProgress,
     NewsSource,
     Order,
-    DividendAristocrat,
-    drop_all_tables,
-    setup_timescaledb_hypertables
+    DividendAristocrat
 )
 
 from backend.database.repository import (
@@ -51,9 +49,6 @@ __all__ = [
     'NewsSource',
     'Order',
     'DividendAristocrat',
-    'create_all_tables',
-    'drop_all_tables',
-    'setup_timescaledb_hypertables',
 
     # Repositories
     'NewsRepository',

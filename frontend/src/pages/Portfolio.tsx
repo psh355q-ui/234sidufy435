@@ -18,6 +18,7 @@ interface Position {
     profit_loss_pct: number;
     daily_pnl: number;
     daily_return_pct: number;
+    sector?: string; // From Yahoo Finance via backend
 }
 
 interface PortfolioData {
@@ -404,26 +405,47 @@ const Portfolio: React.FC = () => {
                                             </div>
 
                                             {/* Sector breakdown for stocks */}
-                                            {asset.key === 'stocks' && (
-                                                <div className="ml-8 text-xs text-gray-500">
-                                                    <div className="font-semibold text-gray-600 mb-2">섹터 구분:</div>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded border border-gray-200">
-                                                            <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                                                            <span>Technology</span>
+                                            {asset.key === 'stocks' && (() => {
+                                                // Get unique sectors from stock positions
+                                                const stockPositions = portfolio.positions.filter(p => getAssetType(p.symbol) === 'stocks');
+                                                const sectors = Array.from(new Set(stockPositions.map(p => p.sector).filter(Boolean)));
+
+                                                if (sectors.length === 0) return null;
+
+                                                const sectorColors: Record<string, string> = {
+                                                    'Technology': 'bg-blue-500',
+                                                    'Financial Services': 'bg-green-500',
+                                                    'Healthcare': 'bg-red-500',
+                                                    'Consumer Cyclical': 'bg-purple-500',
+                                                    'Consumer Defensive': 'bg-yellow-500',
+                                                    'Energy': 'bg-orange-500',
+                                                    'Industrials': 'bg-gray-600',
+                                                    'Communication Services': 'bg-pink-500',
+                                                    'Utilities': 'bg-teal-500',
+                                                    'Basic Materials': 'bg-indigo-500',
+                                                    'Real Estate': 'bg-cyan-500',
+                                                };
+
+                                                const displaySectors = sectors.slice(0, 3);
+                                                const moreCount = sectors.length - 3;
+
+                                                return (
+                                                    <div className="ml-8 text-xs text-gray-500">
+                                                        <div className="font-semibold text-gray-600 mb-2">섹터 구분:</div>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {displaySectors.map(sector => (
+                                                                <div key={sector} className="flex items-center gap-1.5 bg-white px-2 py-1 rounded border border-gray-200">
+                                                                    <div className={`w-3 h-3 ${sectorColors[sector!] || 'bg-gray-400'} rounded`}></div>
+                                                                    <span>{sector}</span>
+                                                                </div>
+                                                            ))}
+                                                            {moreCount > 0 && (
+                                                                <div className="text-gray-400 px-2 py-1">+ {moreCount} more</div>
+                                                            )}
                                                         </div>
-                                                        <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded border border-gray-200">
-                                                            <div className="w-3 h-3 bg-green-500 rounded"></div>
-                                                            <span>Finance</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded border border-gray-200">
-                                                            <div className="w-3 h-3 bg-red-500 rounded"></div>
-                                                            <span>Healthcare</span>
-                                                        </div>
-                                                        <div className="text-gray-400 px-2 py-1">+ 8 more</div>
                                                     </div>
-                                                </div>
-                                            )}
+                                                );
+                                            })()}
                                         </div>
                                     );
                                 })}

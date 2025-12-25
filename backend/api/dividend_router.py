@@ -282,67 +282,100 @@ async def get_dividend_risk(ticker: str):
 
 @router.get("/aristocrats")
 async def list_dividend_aristocrats(
-    min_years: int = Query(25, description="최소 연속 배당 증가 연수"),
-    sector: Optional[str] = Query(None, description="섹터 필터")
+    min_years: int = Query(5, description="최소 연속 배당 증가 연수 (기본 5년)"),
+    sector: Optional[str] = Query(None, description="섹터 필터"),
+    limit: int = Query(50, description="최대 결과 수")
 ):
     """
-    배당 귀족주 목록 (25년+ 연속 배당 증가)
+    배당 귀족주 목록 (연속 배당 증가 종목)
     
     Args:
-        min_years: 최소 연속 증가 연수 (기본 25년)
+        min_years: 최소 연속 증가 연수 (기본 5년, 전통적 기준 25년)
         sector: 섹터 필터 (예: "Healthcare")
+        limit: 최대 결과 수
     
     Returns:
-        [
-            {
-                "ticker": "JNJ",
-                "company_name": "Johnson & Johnson",
-                "sector": "Healthcare",
-                "consecutive_years": 61,
-                "current_yield": 2.85
-            },
-            ...
-        ]
-    """
-    
-    # TODO: DB에서 조회
-    # 현재는 하드코딩된 샘플 데이터 반환
-    
-    aristocrats = [
         {
-            "ticker": "JNJ",
-            "company_name": "Johnson & Johnson",
-            "sector": "Healthcare",
-            "consecutive_years": 61,
-            "current_yield": 2.85
-        },
-        {
-            "ticker": "PG",
-            "company_name": "Procter & Gamble",
-            "sector": "Consumer Staples",
-            "consecutive_years": 67,
-            "current_yield": 2.45
-        },
-        {
-            "ticker": "KO",
-            "company_name": "Coca-Cola",
-            "sector": "Consumer Staples",
-            "consecutive_years": 61,
-            "current_yield": 3.02
+            "count": int,
+            "min_years": int,
+            "aristocrats": [
+                {
+                    "ticker": "JNJ",
+                    "company_name": "Johnson & Johnson",
+                    "sector": "Healthcare",
+                    "consecutive_years": 61,
+                    "current_yield": 2.85,
+                    "growth_rate": 5.2
+                },
+                ...
+            ]
         }
+    """
+    from backend.data_sources.yahoo_finance import get_dividend_info, get_stock_sector, get_dividend_growth_streak
+    import asyncio
+    
+    # S&P 500 주요 배당주 리스트 (샘플)
+    # TODO: DB 또는 파일에서 전체 S&P 500 리스트 로드
+    candidate_tickers = [
+        "JNJ", "PG", "KO", "PEP", "MCD", "WMT", "CVX", "XOM", 
+        "ABBV", "MRK", "PFE", "UNH", "JPN", "VFC", "GPC",
+        "LOW", "HD", "TGT", "COST", "NKE", "SBUX", "DIS",
+        "MMM", "CAT", "EMR", "ITW", "GD", "LMT",
+        "T", "VZ", "SO", "DUK", "NEE", "D",
+        "O", "STAG", "WPC", "NNN",  # REITs
+        "AFL", "ALL", "CB", "TRV",  # Insurance
+        "APD", "ECL", "SHW",  # Industrials
+        "ABT", "MDT", "SYK", "BDX",  # Healthcare
+        "CL", "KMB", "CHD", "CLX"  # Consumer
     ]
     
-    # 필터링
-    results = [a for a in aristocrats if a['consecutive_years'] >= min_years]
+    aristocrats = []
     
+    # 각 ticker의 배당 증가 이력 확인
+    for ticker in candidate_tickers[:limit]:  # 제한된 수만큼만 조회
+        try:
+            # 배당 증가 이력 확인
+            streak_info = get_dividend_growth_streak(ticker)
+            
+            if streak_info["consecutive_years"] >= min_years:
+                # 배당 정보 조회
+                div_info = get_dividend_info(ticker)
+                sector_info = get_stock_sector(ticker)
+                
+                # 회사 이름 (간단히 ticker 사용, 실제로는 yfinance에서 가져올 수 있음)
+                import yfinance as yf
+                try:
+                    stock = yf.Ticker(ticker)
+                    company_name = stock.info.get("shortName", ticker)
+                except:
+                    company_name = ticker
+                
+                aristocrats.append({
+                    "ticker": ticker,
+                    "company_name": company_name,
+                    "sector": sector_info,
+                    "consecutive_years": streak_info["consecutive_years"],
+                    "current_yield": div_info.get("yield", 0.0),
+                    "growth_rate": streak_info["growth_rate"],
+                    "last_dividend": streak_info["last_dividend"]
+                })
+                
+        except Exception as e:
+            logger.warning(f"Failed to analyze {ticker}: {e}")
+            continue
+    
+    # 섹터 필터링
     if sector:
-        results = [a for a in results if a['sector'] == sector]
+        aristocrats = [a for a in aristocrats if a['sector'] == sector]
+    
+    # 연속 증가 연수로 정렬 (내림차순)
+    aristocrats.sort(key=lambda x: x['consecutive_years'], reverse=True)
     
     return {
-        "count": len(results),
+        "count": len(aristocrats),
         "min_years": min_years,
         "sector": sector,
-        "aristocrats": results
+        "aristocrats": aristocrats
     }
 
 

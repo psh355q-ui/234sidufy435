@@ -1,7 +1,38 @@
 """
-Portfolio API Router
+portfolio_router.py - 포트폴리오 조회 API
 
-Phase 27: Frontend UI Integration
+📊 Data Sources:
+    - KIS API: 해외주식 잔고 조회 (TTTS3012R)
+        - 포트폴리오 잔고, 포지션 정보
+        - endpoint: /uapi/overseas-stock/v1/trading/inquire-balance
+    - KIS API: 배당 정보 (JTTT3036R)
+        - 배당금, 배당일
+        - endpoint: /uapi/overseas-stock/v1/trading/inquire-dividend
+    - Yahoo Finance: 배당 및 섹터 정보 (Fallback)
+        - yfinance.Ticker.info: sector, dividendYield
+        - yfinance.Ticker.dividends: 배당 히스토리
+
+🔗 External Dependencies:
+    - fastapi: API 라우팅 및 응답 모델
+    - pydantic: 데이터 검증 (PositionResponse, PortfolioResponse)
+    - yfinance: Yahoo Finance 데이터 조회
+    - backend.brokers.kis_broker: KIS API 클라이언트
+    - backend.data_sources.yahoo_finance: 배당/섹터 정보
+
+📤 API Endpoints:
+    - GET /api/portfolio: 전체 포트폴리오 조회
+        Response: {total_value, cash, positions[], daily_pnl, ...}
+
+🔄 Called By:
+    - frontend/src/pages/Portfolio.tsx
+    - frontend/src/pages/Dashboard.tsx
+    - frontend/src/components/Portfolio/InteractivePortfolio.tsx
+
+📝 Notes:
+    - KIS API 배당 정보가 없으면 Yahoo Finance로 Fallback
+    - 섹터 정보는 Yahoo Finance에서만 조회
+    - 30초마다 자동 갱신 (프론트엔드)
+"""
 Date: 2025-12-23
 
 API Endpoints:

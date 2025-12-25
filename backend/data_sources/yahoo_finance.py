@@ -1,6 +1,24 @@
 """
-Yahoo Finance Data Source for Dividend Information
-Provides fallback dividend data when KIS API doesn't have the information
+yahoo_finance.py - Yahoo Finance 데이터 소스
+
+📊 Provides:
+    - 배당 정보: annual_dividend, dividend_yield, frequency
+    - 섹터 정보: sector classification (GICS)
+    - 배당 히스토리: 최근 2년간 배당 지급 내역
+
+🔗 External APIs:
+    - Yahoo Finance API (via yfinance library)
+        - ticker.info: 기업 정보, 현재가, 섹터
+        - ticker.dividends: 배당 히스토리 (pandas Series)
+
+🔄 Used By:
+    - backend/api/portfolio_router.py: KIS API fallback
+    - backend/api/dividend_router.py: 배당 대시보드
+
+📝 Notes:
+    - KIS API에 배당 정보가 없을 때 사용
+    - TTM (Trailing Twelve Months) 기준 배당 계산
+    - 히스토리가 없으면 최근 2년 데이터로 추정
 """
 
 import logging

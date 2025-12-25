@@ -1,12 +1,55 @@
 """
-Trading Signals API Router
+signals_router.py - 트레이딩 시그널 API
 
-Features:
-- Generate signals from news
-- Get active/historical signals
-- Approve/Reject signals
-- Signal validation status
-- Backtest integration
+📊 Data Sources:
+    - PostgreSQL: trading_signals 테이블
+        - 시그널 생성/조회/업데이트 (CRUD)
+        - 필터링: status, ticker, confidence, timeframe
+    - SignalGenerator: AI 기반 시그널 생성
+        - News 분석 결과 → Trading signal 변환
+        - 포지션 사이즈, 컨피던스, 액션 결정
+    - SignalValidator: 리스크 검증 및 Kill Switch
+        - 일일 거래 한도, 손실 한도 검증
+        - 연속 손실, 포지션 사이즈 제한
+        - 시장 시간 체크
+    - NotificationManager: 실시간 WebSocket 알림
+        - 신규 시그널 브로드캐스트
+        - 승인/거절/실행 상태 업데이트
+
+🔗 External Dependencies:
+    - fastapi: API 라우팅, WebSocket
+    - pydantic: 요청/응답 모델 검증
+    - sqlalchemy: PostgreSQL ORM
+    - backend.ai.signal_generator: 시그널 생성 엔진
+    - backend.validation.signal_validator: 검증 엔진
+    - backend.notifications.notification_manager: 알림 관리
+
+📤 API Endpoints:
+    - WebSocket /signals/ws: 실시간 시그널 업데이트
+    - POST /signals/generate: News에서 시그널 생성
+    - GET /signals: 시그널 목록 (필터: status, ticker, confidence)
+    - GET /signals/{id}: 시그널 상세 (news, analysis 포함)
+    - POST /signals/{id}/approve: 시그널 승인
+    - POST /signals/{id}/reject: 시그널 거절
+    - GET /signals/pending/count: 대기 중 시그널 수
+    - GET /signals/validator/status: Kill Switch 상태
+    - POST /signals/validator/kill-switch: Kill Switch 토글
+    - GET /signals/generator/settings: 생성기 설정 조회
+    - PUT /signals/generator/settings: 생성기 설정 업데이트
+    - GET /signals/validator/settings: 검증기 설정 조회
+    - PUT /signals/validator/settings: 검증기 설정 업데이트
+    - GET /signals/stats: 시그널 통계
+
+🔄 Called By:
+    - frontend/src/pages/SignalConsolidation.tsx
+    - frontend/src/components/Signals/SignalCard.tsx
+    - frontend/src/hooks/useSignalWebSocket.ts
+
+📝 Notes:
+    - WebSocket을 통한 실시간 업데이트 지원
+    - Kill Switch로 리스크 관리
+    - 모든 시그널은 DB에 영구 저장
+    - Validator는 자동 실행 전 필수 검증
 
 Author: AI Trading System
 Date: 2025-11-15

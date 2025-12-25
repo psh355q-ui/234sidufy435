@@ -1,6 +1,32 @@
 """
-Ticker Autocomplete API Router
-Provides dynamic ticker lists for frontend autocomplete functionality
+tickers.py - 티커 자동완성 API
+
+📊 Data Sources:
+    - Static JSON File: backend/data/tickers.json
+        - S&P 500 티커 목록
+        - NASDAQ 100 티커 목록
+        - Russell 2000 샘플
+        - ETF 목록
+        - 한글명 → 티커 매핑
+
+🔗 External Dependencies:
+    - fastapi: API 라우팅
+    - json: JSON 파일 파싱
+    - pathlib: 파일 경로 처리
+
+📤 API Endpoints:
+    - GET /api/tickers/autocomplete: 전체 티커 데이터
+        Response: {version, tickers: {sp500[], nasdaq100[], etf[], korean_names{}}}
+    - GET /api/tickers/version: 데이터 버전 정보
+
+🔄 Called By:
+    - frontend/src/components/TickerSearch.tsx
+    - frontend/src/pages/Dashboard.tsx (search bar)
+
+📝 Notes:
+    - 데이터는 정적 JSON 파일 (업데이트 필요 시 수동)
+    - 버전 형식: YYYY.MM.DD
+    - 캐싱 전략: 프론트엔드에서 localStorage 사용 권장
 """
 
 from fastapi import APIRouter, HTTPException

@@ -303,112 +303,119 @@ const Portfolio: React.FC = () => {
                                         </tr>
                                     ))}
                                 </tbody>
+                            </table>
                         </div>
-                )}
+                    </>
+                ) : (
+                    <div className="text-center py-12">
+                        <p className="text-gray-500 text-lg">보유 종목이 없습니다</p>
+                        <p className="text-gray-400 text-sm mt-2">War Room에서 토론을 시작해보세요</p>
                     </div>
+                )}
+            </div>
 
-                {/* Allocation Chart */}
-                <div className="bg-white rounded-lg shadow-md p-6">
-                    <h2 className="text-xl font-bold text-gray-900 mb-6">📊 자산 배분</h2>
+            {/* Allocation Chart */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-6">📊 자산 배분</h2>
 
-                    {(() => {
-                        const total = portfolio.total_value || 1;
-                        const cash = portfolio.cash || (total - portfolio.positions.reduce((sum: number, p: any) => sum + p.market_value, 0));
+                {(() => {
+                    const total = portfolio.total_value || 1;
+                    const cash = portfolio.cash || (total - portfolio.positions.reduce((sum: number, p: any) => sum + p.market_value, 0));
 
-                        // 자산 유형 분류 함수
-                        const getAssetType = (symbol: string): string => {
-                            const upperSymbol = symbol.toUpperCase();
+                    // 자산 유형 분류 함수
+                    const getAssetType = (symbol: string): string => {
+                        const upperSymbol = symbol.toUpperCase();
 
-                            // ETF 리스트 (주요 ETF들)
-                            const etfs = ['SPY', 'QQQ', 'VOO', 'IVV', 'VTI', 'VEA', 'VWO', 'AGG', 'BND', 'TLT',
-                                'IEF', 'SHY', 'LQD', 'HYG', 'JNK', 'GLD', 'SLV', 'USO', 'DIA', 'IWM',
-                                'EEM', 'EFA', 'VNQ', 'XLF', 'XLE', 'XLK', 'XLV', 'XLI', 'XLP', 'XLY'];
+                        // ETF 리스트 (주요 ETF들)
+                        const etfs = ['SPY', 'QQQ', 'VOO', 'IVV', 'VTI', 'VEA', 'VWO', 'AGG', 'BND', 'TLT',
+                            'IEF', 'SHY', 'LQD', 'HYG', 'JNK', 'GLD', 'SLV', 'USO', 'DIA', 'IWM',
+                            'EEM', 'EFA', 'VNQ', 'XLF', 'XLE', 'XLK', 'XLV', 'XLI', 'XLP', 'XLY'];
 
-                            // 채권 ETF (더 구체적)
-                            const bonds = ['AGG', 'BND', 'TLT', 'IEF', 'SHY', 'LQD', 'HYG', 'JNK', 'MUB', 'TIP'];
+                        // 채권 ETF (더 구체적)
+                        const bonds = ['AGG', 'BND', 'TLT', 'IEF', 'SHY', 'LQD', 'HYG', 'JNK', 'MUB', 'TIP'];
 
-                            // 암호화폐 관련
-                            const crypto = ['BTC', 'ETH', 'COIN', 'MSTR', 'RIOT', 'MARA'];
+                        // 암호화폐 관련
+                        const crypto = ['BTC', 'ETH', 'COIN', 'MSTR', 'RIOT', 'MARA'];
 
-                            if (bonds.includes(upperSymbol)) return 'bonds';
-                            if (crypto.includes(upperSymbol)) return 'crypto';
-                            if (etfs.includes(upperSymbol)) return 'etf';
+                        if (bonds.includes(upperSymbol)) return 'bonds';
+                        if (crypto.includes(upperSymbol)) return 'crypto';
+                        if (etfs.includes(upperSymbol)) return 'etf';
 
-                            // 기본은 주식
-                            return 'stocks';
-                        };
+                        // 기본은 주식
+                        return 'stocks';
+                    };
 
-                        // 자산별 합계 계산
-                        const assetAllocation: Record<string, number> = {
-                            stocks: 0,
-                            etf: 0,
-                            bonds: 0,
-                            crypto: 0,
-                            cash: cash
-                        };
+                    // 자산별 합계 계산
+                    const assetAllocation: Record<string, number> = {
+                        stocks: 0,
+                        etf: 0,
+                        bonds: 0,
+                        crypto: 0,
+                        cash: cash
+                    };
 
-                        portfolio.positions.forEach((position: Position) => {
-                            const type = getAssetType(position.symbol);
-                            assetAllocation[type] += position.market_value;
-                        });
+                    portfolio.positions.forEach((position: Position) => {
+                        const type = getAssetType(position.symbol);
+                        assetAllocation[type] += position.market_value;
+                    });
 
-                        // 자산 유형 정의 (보유 중인 것만 필터링)
-                        const assetTypes = [
-                            { key: 'stocks', label: '주식', color: 'bg-blue-500', value: assetAllocation.stocks },
-                            { key: 'etf', label: 'ETF', color: 'bg-purple-500', value: assetAllocation.etf },
-                            { key: 'bonds', label: '채권', color: 'bg-green-500', value: assetAllocation.bonds },
-                            { key: 'crypto', label: '암호화폐', color: 'bg-orange-500', value: assetAllocation.crypto },
-                            { key: 'cash', label: '현금', color: 'bg-gray-400', value: assetAllocation.cash }
-                        ].filter(asset => asset.value > 0); // 보유 중인 자산만
+                    // 자산 유형 정의 (보유 중인 것만 필터링)
+                    const assetTypes = [
+                        { key: 'stocks', label: '주식', color: 'bg-blue-500', value: assetAllocation.stocks },
+                        { key: 'etf', label: 'ETF', color: 'bg-purple-500', value: assetAllocation.etf },
+                        { key: 'bonds', label: '채권', color: 'bg-green-500', value: assetAllocation.bonds },
+                        { key: 'crypto', label: '암호화폐', color: 'bg-orange-500', value: assetAllocation.crypto },
+                        { key: 'cash', label: '현금', color: 'bg-gray-400', value: assetAllocation.cash }
+                    ].filter(asset => asset.value > 0); // 보유 중인 자산만
 
-                        return (
-                            <>
-                                {/* Progress Bar */}
-                                <div className="h-8 bg-gray-100 rounded-full overflow-hidden flex mb-6 shadow-inner">
-                                    {assetTypes.map((asset, idx) => {
-                                        const percentage = (asset.value / total) * 100;
-                                        return (
-                                            <div
-                                                key={asset.key}
-                                                className={`${asset.color} flex items-center justify-center text-white font-semibold text-xs transition-all hover:opacity-80`}
-                                                style={{ width: `${percentage}%` }}
-                                                title={`${asset.label}: $${asset.value.toFixed(2)} (${percentage.toFixed(1)}%)`}
-                                            >
-                                                {percentage > 8 && `${percentage.toFixed(1)}%`}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                    return (
+                        <>
+                            {/* Progress Bar */}
+                            <div className="h-8 bg-gray-100 rounded-full overflow-hidden flex mb-6 shadow-inner">
+                                {assetTypes.map((asset, idx) => {
+                                    const percentage = (asset.value / total) * 100;
+                                    return (
+                                        <div
+                                            key={asset.key}
+                                            className={`${asset.color} flex items-center justify-center text-white font-semibold text-xs transition-all hover:opacity-80`}
+                                            style={{ width: `${percentage}%` }}
+                                            title={`${asset.label}: $${asset.value.toFixed(2)} (${percentage.toFixed(1)}%)`}
+                                        >
+                                            {percentage > 8 && `${percentage.toFixed(1)}%`}
+                                        </div>
+                                    );
+                                })}
+                            </div>
 
-                                {/* Legend - Responsive Grid */}
-                                <div className="grid grid-cols-2 md:grid-cols-3 lg:flex lg:flex-wrap gap-4">
-                                    {assetTypes.map(asset => {
-                                        const percentage = (asset.value / total) * 100;
-                                        return (
-                                            <div key={asset.key} className="flex items-center gap-3 bg-gray-50 rounded-lg p-3 hover:shadow-md transition-shadow">
-                                                <div className={`w-5 h-5 ${asset.color} rounded shadow-sm`}></div>
-                                                <div className="flex-1">
-                                                    <div className="text-sm font-semibold text-gray-700">{asset.label}</div>
-                                                    <div className="text-xs text-gray-500 font-mono">
-                                                        ${asset.value.toFixed(2)} ({percentage.toFixed(1)}%)
-                                                    </div>
+                            {/* Legend - Responsive Grid */}
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:flex lg:flex-wrap gap-4">
+                                {assetTypes.map(asset => {
+                                    const percentage = (asset.value / total) * 100;
+                                    return (
+                                        <div key={asset.key} className="flex items-center gap-3 bg-gray-50 rounded-lg p-3 hover:shadow-md transition-shadow">
+                                            <div className={`w-5 h-5 ${asset.color} rounded shadow-sm`}></div>
+                                            <div className="flex-1">
+                                                <div className="text-sm font-semibold text-gray-700">{asset.label}</div>
+                                                <div className="text-xs text-gray-500 font-mono">
+                                                    ${asset.value.toFixed(2)} ({percentage.toFixed(1)}%)
                                                 </div>
                                             </div>
-                                        );
-                                    })}
-                                </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
 
-                                {/* Total Summary */}
-                                <div className="mt-6 pt-4 border-t border-gray-200 flex justify-between items-center">
-                                    <span className="text-sm font-medium text-gray-600">총 자산</span>
-                                    <span className="text-xl font-bold text-gray-900 font-mono">${total.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                                </div>
-                            </>
-                        );
-                    })()}
-                </div>
+                            {/* Total Summary */}
+                            <div className="mt-6 pt-4 border-t border-gray-200 flex justify-between items-center">
+                                <span className="text-sm font-medium text-gray-600">총 자산</span>
+                                <span className="text-xl font-bold text-gray-900 font-mono">${total.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                        </>
+                    );
+                })()}
             </div>
-            );
+        </div>
+    );
 };
 
-            export default Portfolio;
+export default Portfolio;

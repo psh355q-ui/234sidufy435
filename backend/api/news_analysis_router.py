@@ -9,13 +9,24 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 import json
 import asyncio
+from datetime import datetime
+import traceback
 
 from backend.data.news_models import get_db
 from backend.data.rss_crawler import get_unanalyzed_articles
 from backend.data.news_analyzer import NewsDeepAnalyzer
 
+# Agent Logging
+from backend.ai.skills.common.agent_logger import AgentLogger
+from backend.ai.skills.common.log_schema import (
+    ExecutionLog,
+    ErrorLog,
+    ExecutionStatus,
+    ErrorImpact
+)
 
 router = APIRouter(prefix="/news", tags=["News Analysis"])
+agent_logger = AgentLogger("news-analyzer", "analysis")
 
 
 @router.get("/analyze-stream")

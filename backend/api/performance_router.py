@@ -21,6 +21,7 @@ from backend.database.repository import get_sync_session
 from sqlalchemy import text
 from backend.ai.learning.agent_weight_manager import AgentWeightManager
 from backend.ai.learning.alert_system import AgentAlertSystem
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +99,7 @@ class AgentActionPerformance(BaseModel):
 # ============================================================================
 
 @router.get("/summary", response_model=PerformanceSummary)
+@log_endpoint("performance", "system")
 async def get_performance_summary():
     """
     Get overall performance summary
@@ -176,6 +178,7 @@ async def get_performance_summary():
 
 
 @router.get("/by-action", response_model=List[ActionPerformance])
+@log_endpoint("performance", "system")
 async def get_performance_by_action():
     """
     Get performance metrics grouped by action (BUY/SELL/HOLD)
@@ -234,6 +237,7 @@ async def get_performance_by_action():
 
 
 @router.get("/history", response_model=List[DailyPerformance])
+@log_endpoint("performance", "system")
 async def get_performance_history(
     days: int = Query(30, ge=1, le=365, description="Number of days to fetch")
 ):
@@ -296,6 +300,7 @@ async def get_performance_history(
 
 
 @router.get("/top-sessions", response_model=List[SessionPerformance])
+@log_endpoint("performance", "system")
 async def get_top_sessions(
     order: str = Query("best", regex="^(best|worst)$", description="Sort order (best or worst)"),
     limit: int = Query(10, ge=1, le=50, description="Number of sessions to return")
@@ -363,6 +368,7 @@ async def get_top_sessions(
 
 
 @router.get("/by-agent", response_model=List[AgentPerformance])
+@log_endpoint("performance", "system")
 async def get_performance_by_agent():
     """
     Get performance metrics grouped by agent
@@ -423,6 +429,7 @@ async def get_performance_by_agent():
 
 
 @router.get("/by-agent-action", response_model=List[AgentActionPerformance])
+@log_endpoint("performance", "system")
 async def get_performance_by_agent_action(
     agent: Optional[str] = Query(None, description="Filter by specific agent")
 ):
@@ -496,6 +503,7 @@ async def get_performance_by_agent_action(
 
 
 @router.post("/calculate-weights")
+@log_endpoint("performance", "system")
 async def calculate_agent_weights(lookback_days: int = Query(30, ge=1, le=365)):
     """
     Calculate new agent weights based on performance
@@ -546,6 +554,7 @@ async def calculate_agent_weights(lookback_days: int = Query(30, ge=1, le=365)):
 
 
 @router.get("/agent-weights")
+@log_endpoint("performance", "system")
 async def get_agent_weights():
     """
     Get current agent weights
@@ -578,6 +587,7 @@ async def get_agent_weights():
 
 
 @router.get("/low-performers")
+@log_endpoint("performance", "system")
 async def get_low_performers(
     threshold: float = Query(0.50, ge=0.0, le=1.0),
     lookback_days: int = Query(30, ge=1, le=365)
@@ -620,6 +630,7 @@ async def get_low_performers(
 
 
 @router.get("/overconfident-agents")
+@log_endpoint("performance", "system")
 async def get_overconfident_agents(
     gap_threshold: float = Query(0.20, ge=0.0, le=1.0),
     lookback_days: int = Query(30, ge=1, le=365)

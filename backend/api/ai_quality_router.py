@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from typing import Dict, List, Optional
 from datetime import datetime
 import logging
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +103,7 @@ def set_ai_quality_instances(validator, optimizer, strategy_mgr):
 # =============================================================================
 
 @router.post("/signals/record")
+@log_endpoint("ai_quality", "system")
 async def record_signal(request: SignalRecordRequest):
     """
     Record an AI-generated signal for later validation.
@@ -137,6 +139,7 @@ async def record_signal(request: SignalRecordRequest):
 
 
 @router.post("/signals/update-outcomes")
+@log_endpoint("ai_quality", "system")
 async def update_signal_outcomes(current_prices: Optional[Dict[str, float]] = None):
     """
     Update outcomes for pending signals.
@@ -155,6 +158,7 @@ async def update_signal_outcomes(current_prices: Optional[Dict[str, float]] = No
 
 
 @router.get("/signals/accuracy", response_model=AccuracyMetricsResponse)
+@log_endpoint("ai_quality", "system")
 async def get_signal_accuracy(
     source: Optional[str] = Query(None, description="Filter by AI source"),
     ticker: Optional[str] = Query(None, description="Filter by ticker"),
@@ -178,6 +182,7 @@ async def get_signal_accuracy(
 
 
 @router.get("/signals/confidence-calibration")
+@log_endpoint("ai_quality", "system")
 async def get_confidence_calibration(
     source: Optional[str] = Query(None),
     lookback_days: int = Query(90),
@@ -199,6 +204,7 @@ async def get_confidence_calibration(
 
 
 @router.get("/signals/rag-impact")
+@log_endpoint("ai_quality", "system")
 async def get_rag_impact_analysis(lookback_days: int = Query(90)):
     """
     Analyze impact of RAG on signal quality.
@@ -214,6 +220,7 @@ async def get_rag_impact_analysis(lookback_days: int = Query(90)):
 
 
 @router.get("/signals/source-comparison")
+@log_endpoint("ai_quality", "system")
 async def get_source_comparison(lookback_days: int = Query(90)):
     """
     Compare performance across AI sources (Claude, Gemini, ChatGPT, Ensemble).
@@ -238,6 +245,7 @@ async def get_source_comparison(lookback_days: int = Query(90)):
 
 
 @router.get("/signals/summary-report")
+@log_endpoint("ai_quality", "system")
 async def get_summary_report(lookback_days: int = Query(30)):
     """
     Get comprehensive signal validation summary report.
@@ -255,6 +263,7 @@ async def get_summary_report(lookback_days: int = Query(30)):
 # =============================================================================
 
 @router.get("/ensemble/weights", response_model=EnsembleWeightsResponse)
+@log_endpoint("ai_quality", "system")
 async def get_ensemble_weights():
     """
     Get current ensemble weights.
@@ -277,6 +286,7 @@ async def get_ensemble_weights():
 
 
 @router.post("/ensemble/optimize")
+@log_endpoint("ai_quality", "system")
 async def optimize_ensemble_weights(
     lookback_days: int = Query(90),
     objective: str = Query("sharpe", description="Optimization objective: sharpe/win_rate/total_return"),
@@ -310,6 +320,7 @@ async def optimize_ensemble_weights(
 
 
 @router.get("/ensemble/optimization-report")
+@log_endpoint("ai_quality", "system")
 async def get_optimization_report():
     """
     Get ensemble optimization summary report.
@@ -327,6 +338,7 @@ async def get_optimization_report():
 # =============================================================================
 
 @router.get("/strategy/current", response_model=StrategyConfigResponse)
+@log_endpoint("ai_quality", "system")
 async def get_current_strategy():
     """
     Get current active strategy configuration.
@@ -352,6 +364,7 @@ async def get_current_strategy():
 
 
 @router.post("/strategy/update")
+@log_endpoint("ai_quality", "system")
 async def update_strategy(force: bool = Query(False)):
     """
     Update strategy based on current market regime.
@@ -386,6 +399,7 @@ async def update_strategy(force: bool = Query(False)):
 
 
 @router.get("/strategy/position-size")
+@log_endpoint("ai_quality", "system")
 async def calculate_position_size(
     ticker: str,
     signal_confidence: float,
@@ -414,6 +428,7 @@ async def calculate_position_size(
 
 
 @router.post("/strategy/validate-signal")
+@log_endpoint("ai_quality", "system")
 async def validate_signal(
     signal: str,
     confidence: float,
@@ -445,6 +460,7 @@ async def validate_signal(
 
 
 @router.get("/strategy/status")
+@log_endpoint("ai_quality", "system")
 async def get_strategy_status():
     """
     Get adaptive strategy manager status.
@@ -462,6 +478,7 @@ async def get_strategy_status():
 # =============================================================================
 
 @router.get("/dashboard")
+@log_endpoint("ai_quality", "system")
 async def get_ai_quality_dashboard():
     """
     Get comprehensive AI quality dashboard data.

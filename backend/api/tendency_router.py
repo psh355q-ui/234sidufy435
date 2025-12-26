@@ -14,6 +14,7 @@ from typing import List, Dict, Any
 from datetime import datetime
 
 from backend.metrics.trading_tendency_analyzer import (
+from backend.ai.skills.common.logging_decorator import log_endpoint
     get_tendency_analyzer,
     TradeAction,
     TendencyResult
@@ -58,6 +59,7 @@ class TendencyAnalysisResponse(BaseModel):
 
 
 @router.post("/analyze", response_model=TendencyAnalysisResponse)
+@log_endpoint("tendency", "system")
 async def analyze_tendency(request: TendencyAnalysisRequest):
     """
     거래 성향 분석
@@ -112,6 +114,7 @@ async def analyze_tendency(request: TendencyAnalysisRequest):
 
 
 @router.get("/sample")
+@log_endpoint("tendency", "system")
 async def get_sample_analysis():
     """
     샘플 성향 분석 결과

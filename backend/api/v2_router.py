@@ -20,6 +20,7 @@ from backend.services.market_scanner.massive_api_client import get_massive_clien
 from backend.ai.macro import MacroDataCollector
 from backend.ai.reasoning.macro_consistency_checker import MacroConsistencyChecker
 from backend.intelligence import DailyBriefingGenerator
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,7 @@ def get_briefing_generator() -> DailyBriefingGenerator:
 # ==================== Macro Endpoints ====================
 
 @router.get("/macro/snapshot")
+@log_endpoint("v2", "system")
 async def get_macro_snapshot():
     """
     현재 매크로 스냅샷 조회
@@ -83,6 +85,7 @@ async def get_macro_snapshot():
 
 
 @router.get("/macro/consistency")
+@log_endpoint("v2", "system")
 async def check_macro_consistency():
     """
     매크로 정합성 체크
@@ -124,6 +127,7 @@ async def check_macro_consistency():
 # ==================== Analysis Endpoints ====================
 
 @router.post("/analyze/{ticker}")
+@log_endpoint("v2", "system")
 async def analyze_enhanced(ticker: str):
     """
     강화된 종목 분석
@@ -155,6 +159,7 @@ async def analyze_enhanced(ticker: str):
 # ==================== Briefing Endpoints ====================
 
 @router.get("/briefing/daily")
+@log_endpoint("v2", "system")
 async def get_daily_briefing():
     """
     일일 시황 브리핑 생성 (한국어)
@@ -177,6 +182,7 @@ async def get_daily_briefing():
 # ==================== Workflow Endpoints ====================
 
 @router.post("/workflow/daily")
+@log_endpoint("v2", "system")
 async def run_daily_workflow(background_tasks: BackgroundTasks):
     """
     일일 워크플로우 전체 실행
@@ -197,6 +203,7 @@ async def run_daily_workflow(background_tasks: BackgroundTasks):
 
 
 @router.get("/metrics")
+@log_endpoint("v2", "system")
 async def get_v2_metrics():
     """
     V2 시스템 메트릭스 조회

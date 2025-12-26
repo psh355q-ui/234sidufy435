@@ -16,6 +16,7 @@ from typing import Dict, List, Optional
 from datetime import datetime
 import sys
 import os
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -64,6 +65,7 @@ class ThemeRisk(BaseModel):
 # ============================================
 
 @router.get("/market-map")
+@log_endpoint("global_macro", "system")
 async def get_market_map() -> Dict:
     """글로벌 시장 상관관계 그래프 데이터 반환"""
     try:
@@ -121,6 +123,7 @@ async def get_market_map() -> Dict:
 
 
 @router.get("/country-risks")
+@log_endpoint("global_macro", "system")
 async def get_country_risks() -> Dict:
     """국가별 리스크 점수 반환"""
     try:
@@ -166,6 +169,7 @@ async def get_country_risks() -> Dict:
 
 
 @router.post("/analyze-event")
+@log_endpoint("global_macro", "system")
 async def analyze_event(request: EventAnalysisRequest) -> Dict:
     """이벤트 나비효과 분석"""
     try:
@@ -221,6 +225,7 @@ async def analyze_event(request: EventAnalysisRequest) -> Dict:
 
 
 @router.get("/theme-risks/{ticker}")
+@log_endpoint("global_macro", "system")
 async def get_theme_risks(ticker: str) -> Dict:
     """특정 종목의 테마주 리스크 분석"""
     try:
@@ -250,6 +255,7 @@ async def get_theme_risks(ticker: str) -> Dict:
 
 
 @router.get("/subscription-status")
+@log_endpoint("global_macro", "system")
 async def get_subscription_status() -> Dict:
     """AI 구독 상태 및 비용 최적화 현황"""
     try:

@@ -19,6 +19,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 from pydantic import BaseModel
 import logging
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -120,6 +121,7 @@ forensics_cache = ForensicsCache()
 # ============================================================================
 
 @router.post("/analyze/{ticker}", response_model=ForensicsReportResponse)
+@log_endpoint("forensics", "system")
 async def analyze_ticker(ticker: str, force_refresh: bool = False):
     """
     종목 재무 포렌식 분석
@@ -170,6 +172,7 @@ async def analyze_ticker(ticker: str, force_refresh: bool = False):
 
 
 @router.get("/report/{ticker}", response_model=ForensicsReportResponse)
+@log_endpoint("forensics", "system")
 async def get_report(ticker: str):
     """
     최근 분석 리포트 조회 (캐시만)
@@ -194,6 +197,7 @@ async def get_report(ticker: str):
 
 
 @router.post("/batch")
+@log_endpoint("forensics", "system")
 async def analyze_batch(
     request: BatchForensicsRequest,
     background_tasks: BackgroundTasks
@@ -228,6 +232,7 @@ async def analyze_batch(
 
 
 @router.get("/alerts")
+@log_endpoint("forensics", "system")
 async def get_forensics_alerts(
     limit: int = 20,
     severity: Optional[str] = None
@@ -259,6 +264,7 @@ async def get_forensics_alerts(
 
 
 @router.get("/summary")
+@log_endpoint("forensics", "system")
 async def get_portfolio_forensics_summary(tickers: str):
     """
     포트폴리오 전체 재무 건강도 요약
@@ -313,6 +319,7 @@ async def get_portfolio_forensics_summary(tickers: str):
 
 
 @router.get("/compare")
+@log_endpoint("forensics", "system")
 async def compare_tickers(tickers: str):
     """
     종목 간 재무 건강도 비교

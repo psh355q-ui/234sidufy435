@@ -9,11 +9,13 @@ from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.orm import Session
 from backend.data.news_models import NewsArticle, NewsTickerRelevance, get_db
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 router = APIRouter(prefix="/news", tags=["News Processing"])
 
 
 @router.post("/process/{article_id}")
+@log_endpoint("news", "analysis")
 async def process_article(
     article_id: int,
     db: Session = Depends(get_db)
@@ -34,6 +36,7 @@ async def process_article(
 
 
 @router.post("/batch-process")
+@log_endpoint("news", "analysis")
 async def batch_process_articles(
     limit: int = Query(10, ge=1, le=50),
     db: Session = Depends(get_db)
@@ -50,6 +53,7 @@ async def batch_process_articles(
 
 
 @router.get("/search/ticker/{ticker}")
+@log_endpoint("news", "analysis")
 async def search_by_ticker(
     ticker: str,
     limit: int = Query(20, ge=1, le=100),
@@ -111,6 +115,7 @@ async def search_by_ticker(
 
 
 @router.get("/search/tag/{tag}")
+@log_endpoint("news", "analysis")
 async def search_by_tag(
     tag: str,
     limit: int = Query(20, ge=1, le=100),
@@ -147,6 +152,7 @@ async def search_by_tag(
 
 
 @router.get("/articles/{article_id}/tags")
+@log_endpoint("news", "analysis")
 async def get_article_tags(
     article_id: int,
     db: Session = Depends(get_db)
@@ -166,6 +172,7 @@ async def get_article_tags(
 
 
 @router.get("/articles/{article_id}/similar")
+@log_endpoint("news", "analysis")
 async def find_similar_articles(
     article_id: int,
     limit: int = Query(10, ge=1, le=50),
@@ -194,6 +201,7 @@ async def find_similar_articles(
 
 
 @router.get("/articles/{article_id}/status")
+@log_endpoint("news", "analysis")
 async def get_processing_status(
     article_id: int,
     db: Session = Depends(get_db)

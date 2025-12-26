@@ -10,6 +10,7 @@ from backend.database.repository import get_sync_session
 from backend.constitution.constitution import Constitution
 from datetime import datetime, timedelta
 import logging
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 router = APIRouter(prefix="/emergency", tags=["Emergency Detection"])
 logger = logging.getLogger(__name__)
@@ -25,6 +26,7 @@ def get_db():
 
 
 @router.get("/status")
+@log_endpoint("emergency", "system")
 async def get_emergency_status(db: Session = Depends(get_db)):
     """
     Check if emergency conditions are active (Constitution-based + real data)
@@ -129,6 +131,7 @@ async def get_grounding_count_today(db: Session) -> int:
 
 
 @router.post("/grounding/track")
+@log_endpoint("emergency", "system")
 async def track_grounding_search(
     ticker: str,
     results_count: int = 0,
@@ -176,6 +179,7 @@ async def track_grounding_search(
 
 
 @router.get("/grounding/usage")
+@log_endpoint("emergency", "system")
 async def get_grounding_usage(db: Session = Depends(get_db)):
     """
     Get Grounding API usage statistics
@@ -235,6 +239,7 @@ async def get_grounding_usage(db: Session = Depends(get_db)):
 
 
 @router.get("/grounding/report/monthly")
+@log_endpoint("emergency", "system")
 async def get_monthly_cost_report(
     year: int = None,
     month: int = None,

@@ -18,6 +18,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import httpx
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 # Anthropic SDK
 try:
@@ -379,6 +380,7 @@ async def chat_with_gemini(
 # ============================================================================
 
 @router.post("/chat", response_model=ChatResponse)
+@log_endpoint("ai_chat", "system")
 async def chat(request: ChatRequest):
     """
     AI와 대화
@@ -471,12 +473,14 @@ async def chat(request: ChatRequest):
 
 
 @router.get("/history")
+@log_endpoint("ai_chat", "system")
 async def get_chat_history_list(limit: int = 20):
     """채팅 히스토리 목록 조회"""
     return list_chat_histories(limit=limit)
 
 
 @router.get("/history/{chat_id}")
+@log_endpoint("ai_chat", "system")
 async def get_chat_history(chat_id: str):
     """특정 채팅 히스토리 조회"""
     history = load_chat_history(chat_id)
@@ -486,12 +490,14 @@ async def get_chat_history(chat_id: str):
 
 
 @router.get("/pricing")
+@log_endpoint("ai_chat", "system")
 async def get_pricing():
     """모델별 가격표 조회"""
     return PRICING
 
 
 @router.get("/models")
+@log_endpoint("ai_chat", "system")
 async def get_available_models():
     """사용 가능한 모델 목록"""
     return {

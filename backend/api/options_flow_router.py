@@ -21,6 +21,7 @@ from datetime import datetime
 from pydantic import BaseModel
 import logging
 import asyncio
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +104,7 @@ monitor_state = OptionsMonitorState()
 # ============================================================================
 
 @router.get("/flow/{ticker}", response_model=OptionsFlowResponse)
+@log_endpoint("options", "system")
 async def get_options_flow(ticker: str, force_refresh: bool = False):
     """
     옵션 흐름 데이터 조회
@@ -137,6 +139,7 @@ async def get_options_flow(ticker: str, force_refresh: bool = False):
 
 
 @router.get("/pcr/{ticker}", response_model=PCRAnalysisResponse)
+@log_endpoint("options", "system")
 async def analyze_put_call_ratio(ticker: str):
     """
     Put/Call Ratio 분석
@@ -178,6 +181,7 @@ async def analyze_put_call_ratio(ticker: str):
 
 
 @router.get("/unusual/{ticker}", response_model=List[UnusualActivityResponse])
+@log_endpoint("options", "system")
 async def get_unusual_activity(ticker: str):
     """
     Unusual Options Activity 조회
@@ -227,6 +231,7 @@ async def get_unusual_activity(ticker: str):
 
 
 @router.get("/screener")
+@log_endpoint("options", "system")
 async def options_screener(
     min_pcr: Optional[float] = None,
     max_pcr: Optional[float] = None,
@@ -308,6 +313,7 @@ async def options_screener(
 
 
 @router.post("/alerts/start")
+@log_endpoint("options", "system")
 async def start_options_alerts(
     request: WatchlistRequest,
     background_tasks: BackgroundTasks
@@ -340,6 +346,7 @@ async def start_options_alerts(
 
 
 @router.post("/alerts/stop")
+@log_endpoint("options", "system")
 async def stop_options_alerts():
     """옵션 알림 모니터링 중지"""
     monitor_state.is_running = False
@@ -351,6 +358,7 @@ async def stop_options_alerts():
 
 
 @router.get("/alerts")
+@log_endpoint("options", "system")
 async def get_options_alerts(limit: int = 20):
     """
     최근 옵션 알림 조회

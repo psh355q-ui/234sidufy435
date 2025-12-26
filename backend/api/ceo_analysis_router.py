@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from backend.ai.sec_analyzer import SECAnalyzer
 from backend.data.vector_store.store import VectorStore
 from backend.config import settings
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 
 router = APIRouter(prefix="/ceo-analysis", tags=["CEO Analysis"])
@@ -73,6 +74,7 @@ class ManagementAnalysisResponse(BaseModel):
 # ============================================
 
 @router.get("/{ticker}/quotes", response_model=List[CEOQuoteResponse])
+@log_endpoint("ceo_analysis", "analysis")
 async def get_ceo_quotes(
     ticker: str,
     source: str = Query("all", regex="^(all|sec|news)$"),
@@ -109,6 +111,7 @@ async def get_ceo_quotes(
 
 
 @router.post("/similar-statements", response_model=List[SimilarStatementResponse])
+@log_endpoint("ceo_analysis", "analysis")
 async def find_similar_statements(request: SimilarStatementRequest):
     """
     Find similar CEO statements from the past
@@ -140,6 +143,7 @@ async def find_similar_statements(request: SimilarStatementRequest):
 
 
 @router.get("/{ticker}/management-analysis", response_model=ManagementAnalysisResponse)
+@log_endpoint("ceo_analysis", "analysis")
 async def get_management_analysis(
     ticker: str,
     fiscal_period: Optional[str] = None
@@ -166,6 +170,7 @@ async def get_management_analysis(
 
 
 @router.get("/{ticker}/tone-shift", response_model=ToneShiftResponse)
+@log_endpoint("ceo_analysis", "analysis")
 async def get_tone_shift(
     ticker: str,
     current_period: str,
@@ -191,6 +196,7 @@ async def get_tone_shift(
 
 
 @router.get("/{ticker}/cross-validate")
+@log_endpoint("ceo_analysis", "analysis")
 async def cross_validate_ceo_statements(ticker: str):
     """
     Cross-validate news statements vs SEC filings
@@ -215,6 +221,7 @@ async def cross_validate_ceo_statements(ticker: str):
 # ============================================
 
 @router.get("/health")
+@log_endpoint("ceo_analysis", "analysis")
 async def health_check():
     """Health check endpoint"""
     return {

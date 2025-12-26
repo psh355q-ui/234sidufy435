@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 from typing import Dict, Any, Optional
 from datetime import datetime
 import logging
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +98,7 @@ class QuickExecuteRequest(BaseModel):
 # ============================================
 
 @router.post("/start")
+@log_endpoint("auto_trade", "trading")
 async def start_auto_trade(request: StartAutoTradeRequest = None) -> Dict:
     """
     자동 거래 시작
@@ -121,6 +123,7 @@ async def start_auto_trade(request: StartAutoTradeRequest = None) -> Dict:
 
 
 @router.post("/stop")
+@log_endpoint("auto_trade", "trading")
 async def stop_auto_trade() -> Dict:
     """자동 거래 중지"""
     from backend.services.auto_trade_service import get_auto_trade_service
@@ -135,6 +138,7 @@ async def stop_auto_trade() -> Dict:
 
 
 @router.get("/status")
+@log_endpoint("auto_trade", "trading")
 async def get_auto_trade_status() -> Dict:
     """현재 자동 거래 상태 조회"""
     from backend.services.auto_trade_service import get_auto_trade_service
@@ -144,6 +148,7 @@ async def get_auto_trade_status() -> Dict:
 
 
 @router.post("/execute")
+@log_endpoint("auto_trade", "trading")
 async def execute_trade(request: ExecuteTradeRequest) -> Dict:
     """
     Consensus 결과를 바탕으로 거래 실행
@@ -181,6 +186,7 @@ async def execute_trade(request: ExecuteTradeRequest) -> Dict:
 
 
 @router.post("/quick-execute")
+@log_endpoint("auto_trade", "trading")
 async def quick_execute_trade(request: QuickExecuteRequest) -> Dict:
     """
     뉴스 기반 빠른 거래 실행
@@ -247,6 +253,7 @@ async def quick_execute_trade(request: QuickExecuteRequest) -> Dict:
 
 
 @router.post("/reset-kill-switch")
+@log_endpoint("auto_trade", "trading")
 async def reset_kill_switch() -> Dict:
     """Kill Switch 리셋"""
     from backend.services.auto_trade_service import get_auto_trade_service
@@ -261,6 +268,7 @@ async def reset_kill_switch() -> Dict:
 
 
 @router.get("/stats")
+@log_endpoint("auto_trade", "trading")
 async def get_daily_stats() -> Dict:
     """일일 거래 통계 조회"""
     from backend.services.auto_trade_service import get_auto_trade_service
@@ -275,6 +283,7 @@ async def get_daily_stats() -> Dict:
 
 
 @router.post("/reset-stats")
+@log_endpoint("auto_trade", "trading")
 async def reset_daily_stats() -> Dict:
     """일일 통계 리셋"""
     from backend.services.auto_trade_service import get_auto_trade_service

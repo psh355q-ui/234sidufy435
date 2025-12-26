@@ -18,6 +18,7 @@ from backend.database.models import TradingSignal, NewsArticle, AnalysisResult
 from backend.database.repository import get_sync_session
 from backend.trading.kis_client import auth, inquire_oversea_balance
 import os
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +134,7 @@ def sync_kis_portfolio_task(db: Session) -> Dict[str, Any]:
 
 
 @router.post("/sync")
+@log_endpoint("kis", "system")
 async def manual_sync(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
@@ -157,6 +159,7 @@ async def manual_sync(
 
 
 @router.post("/sync/immediate")
+@log_endpoint("kis", "system")
 async def immediate_sync(db: Session = Depends(get_db)):
     """
     즉시 KIS 계좌 동기화 (동기 방식)
@@ -176,6 +179,7 @@ async def immediate_sync(db: Session = Depends(get_db)):
 
 
 @router.post("/webhook/trade")
+@log_endpoint("kis", "system")
 async def trade_webhook(
     trade_data: Dict[str, Any],
     background_tasks: BackgroundTasks,
@@ -209,6 +213,7 @@ async def trade_webhook(
 
 
 @router.get("/sync/status")
+@log_endpoint("kis", "system")
 async def sync_status(db: Session = Depends(get_db)):
     """
     현재 동기화 상태 조회

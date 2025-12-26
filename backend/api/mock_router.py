@@ -15,6 +15,7 @@ import os
 from sqlalchemy.orm import Session
 from backend.database.repository import get_sync_session
 from backend.database.models import TradingSignal
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -38,6 +39,7 @@ def get_db():
 # ==========================================
 
 @router.get("/api/risk/status")
+@log_endpoint("unknown", "system")
 async def get_risk_status(db: Session = Depends(get_db)):
     """
     Get real risk status from portfolio positions
@@ -96,6 +98,7 @@ async def get_risk_status(db: Session = Depends(get_db)):
 # ==========================================
 
 @router.get("/api/system/info")
+@log_endpoint("unknown", "system")
 async def get_system_info():
     """
     Get real system information
@@ -140,6 +143,7 @@ async def get_system_info():
 # ==========================================
 
 @router.get("/api/alerts")
+@log_endpoint("unknown", "system")
 async def get_alerts(limit: int = 20, db: Session = Depends(get_db)):
     """
     Get real alerts from system monitoring
@@ -207,6 +211,7 @@ async def get_alerts(limit: int = 20, db: Session = Depends(get_db)):
 # ==========================================
 
 @router.post("/api/analyze")
+@log_endpoint("unknown", "system")
 async def analyze_ticker(request: Dict[str, Any]):
     """
     Analyze a ticker - returns mock data matching frontend AIDecision interface
@@ -286,6 +291,7 @@ async def analyze_ticker(request: Dict[str, Any]):
 
 
 @router.get("/api/history/{ticker}")
+@log_endpoint("unknown", "system")
 async def get_analysis_history(ticker: str, limit: int = 10):
     """
     Get analysis history for a specific ticker.
@@ -301,6 +307,7 @@ async def get_analysis_history(ticker: str, limit: int = 10):
 
 
 @router.get("/api/analysis/history")
+@log_endpoint("unknown", "system")
 async def get_global_analysis_history(limit: int = 50, ticker: Optional[str] = None):
     """
     Get global analysis history (all tickers).
@@ -316,6 +323,7 @@ async def get_global_analysis_history(limit: int = 50, ticker: Optional[str] = N
 
 
 @router.post("/api/analyze/batch")
+@log_endpoint("unknown", "system")
 async def analyze_batch(request: Dict[str, Any]):
     """
     Batch analyze multiple tickers
@@ -345,6 +353,7 @@ async def analyze_batch(request: Dict[str, Any]):
 # ==========================================
 
 @router.post("/api/reasoning/analyze")
+@log_endpoint("unknown", "system")
 async def reasoning_analyze(request: Dict[str, Any]):
     """
     Deep reasoning analysis using AI
@@ -379,6 +388,7 @@ async def reasoning_analyze(request: Dict[str, Any]):
 
 
 @router.get("/api/reasoning/knowledge/{ticker}")
+@log_endpoint("unknown", "system")
 async def get_knowledge(ticker: str):
     """
     Get knowledge base information for ticker
@@ -416,6 +426,7 @@ async def get_knowledge(ticker: str):
 # ==========================================
 
 @router.get("/api/reports/advanced/performance-attribution")
+@log_endpoint("unknown", "system")
 async def get_performance_attribution(
     start_date: str,
     end_date: str,
@@ -473,6 +484,7 @@ async def get_performance_attribution(
 
 
 @router.get("/api/reports/advanced/risk-metrics")
+@log_endpoint("unknown", "system")
 async def get_risk_metrics(
     start_date: str,
     end_date: str,
@@ -518,6 +530,7 @@ async def get_risk_metrics(
 
 
 @router.get("/api/reports/advanced/trade-insights")
+@log_endpoint("unknown", "system")
 async def get_trade_insights(
     start_date: str,
     end_date: str,

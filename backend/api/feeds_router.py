@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 
 # Import your models and dependencies
 from backend.data.news_models import RSSFeed, get_db
+from backend.ai.skills.common.logging_decorator import log_endpoint
 # Uncomment if you have auth system:
 # from backend.auth import require_read, require_write
 
@@ -161,6 +162,7 @@ async def get_all_feeds(
 
 
 @router.get("/statistics", response_model=RSSFeedStatistics)
+@log_endpoint("feeds", "system")
 async def get_feed_statistics(
     db: Session = Depends(get_db),
     # api_key: str = Depends(require_read),
@@ -206,6 +208,7 @@ async def get_feed_statistics(
 
 
 @router.get("/{feed_id}", response_model=RSSFeedResponse)
+@log_endpoint("feeds", "system")
 async def get_feed_by_id(
     feed_id: int,
     db: Session = Depends(get_db),
@@ -295,6 +298,7 @@ async def create_feed(
 
 
 @router.put("/{feed_id}", response_model=RSSFeedResponse)
+@log_endpoint("feeds", "system")
 async def update_feed(
     feed_id: int,
     feed_update: RSSFeedUpdate,
@@ -359,6 +363,7 @@ async def update_feed(
 
 
 @router.delete("/{feed_id}")
+@log_endpoint("feeds", "system")
 async def delete_feed(
     feed_id: int,
     db: Session = Depends(get_db),
@@ -386,6 +391,7 @@ async def delete_feed(
 
 
 @router.patch("/{feed_id}/toggle")
+@log_endpoint("feeds", "system")
 async def toggle_feed(
     feed_id: int,
     db: Session = Depends(get_db),
@@ -413,6 +419,7 @@ async def toggle_feed(
 
 
 @router.post("/apply-diagnosis")
+@log_endpoint("feeds", "system")
 async def apply_gemini_diagnosis(
     request: ApplyDiagnosisRequest,
     db: Session = Depends(get_db),
@@ -480,6 +487,7 @@ async def apply_gemini_diagnosis(
 
 
 @router.post("/reset-counters/{feed_id}")
+@log_endpoint("feeds", "system")
 async def reset_feed_counters(
     feed_id: int,
     db: Session = Depends(get_db),
@@ -516,6 +524,7 @@ async def reset_feed_counters(
 
 
 @router.get("/health/summary")
+@log_endpoint("feeds", "system")
 async def get_health_summary(
     db: Session = Depends(get_db),
 ):
@@ -567,6 +576,7 @@ async def get_health_summary(
 
 
 @router.get("/categories/list")
+@log_endpoint("feeds", "system")
 async def get_categories(
     db: Session = Depends(get_db),
     # api_key: str = Depends(require_read),
@@ -585,6 +595,7 @@ async def get_categories(
 
 
 @router.get("/problematic")
+@log_endpoint("feeds", "system")
 async def get_problematic_feeds(
     error_rate_threshold: float = Query(0.3, description="Error rate threshold (0-1)"),
     db: Session = Depends(get_db),
@@ -625,6 +636,7 @@ async def get_problematic_feeds(
 
 
 @router.post("/test-url")
+@log_endpoint("feeds", "system")
 async def test_rss_url(request: dict):
     """
     Test if a URL is a valid RSS feed
@@ -691,6 +703,7 @@ async def test_rss_url(request: dict):
 # =============================================================================
 
 @router.post("/discover")
+@log_endpoint("feeds", "system")
 async def discover_rss_feeds(db: Session = Depends(get_db)):
     """
     Auto-discover RSS feeds from Finviz sources
@@ -726,6 +739,7 @@ async def discover_rss_feeds(db: Session = Depends(get_db)):
 
 
 @router.get("/discover/available")
+@log_endpoint("feeds", "system")
 async def get_available_feeds():
     """
     Get list of known RSS feed mappings

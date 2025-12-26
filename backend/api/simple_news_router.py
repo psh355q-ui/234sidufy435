@@ -18,6 +18,7 @@ import html
 
 from backend.database.repository import get_sync_session
 from backend.database.models import NewsArticle, AnalysisResult
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 
 router = APIRouter(prefix="/news", tags=["News"])
@@ -87,6 +88,7 @@ def get_db():
 # ============================================================================
 
 @router.get("/articles", response_model=List[NewsArticleResponse])
+@log_endpoint("news", "analysis")
 async def get_news_articles(
     limit: int = Query(50, ge=1, le=200),
     hours: int = Query(24, ge=1, le=168),
@@ -140,6 +142,7 @@ async def get_news_articles(
 
 
 @router.get("/articles/{article_id}", response_model=NewsArticleResponse)
+@log_endpoint("news", "analysis")
 async def get_news_article(
     article_id: int,
     db: Session = Depends(get_db)
@@ -173,6 +176,7 @@ async def get_news_article(
 
 
 @router.get("/stats", response_model=NewsStatsResponse)
+@log_endpoint("news", "analysis")
 async def get_news_stats(db: Session = Depends(get_db)):
     """뉴스 통계 조회"""
     from datetime import date
@@ -244,6 +248,7 @@ async def get_news_stats(db: Session = Depends(get_db)):
 
 
 @router.get("/health")
+@log_endpoint("news", "analysis")
 async def news_health():
     """Health check endpoint"""
     return {"status": "ok", "service": "news"}
@@ -433,6 +438,7 @@ async def crawl_rss_feeds_with_progress():
 
 
 @router.get("/crawl/stream")
+@log_endpoint("news", "analysis")
 async def crawl_rss_stream(extract_content: bool = True):
     """
     RSS 피드 크롤링 (Server-Sent Events)

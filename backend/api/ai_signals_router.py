@@ -19,6 +19,7 @@ from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks
 from pydantic import BaseModel
 import asyncio
 import logging
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -134,6 +135,7 @@ class RouterStatusResponse(BaseModel):
 # ============================================================================
 
 @router.get("/status", response_model=RouterStatusResponse)
+@log_endpoint("ai_signals", "trading")
 async def get_router_status():
     """
     AI Signals Router 상태 확인
@@ -161,6 +163,7 @@ async def get_router_status():
 
 
 @router.get("/skills", response_model=SkillRegistryInfo)
+@log_endpoint("ai_signals", "trading")
 async def get_skills_info():
     """
     등록된 Skill 정보 조회
@@ -183,6 +186,7 @@ async def get_skills_info():
 
 
 @router.post("/generate", response_model=SignalGenerationResponse)
+@log_endpoint("ai_signals", "trading")
 async def generate_signal(request: SignalGenerationRequest):
     """
     AI 기반 거래 신호 생성
@@ -258,6 +262,7 @@ async def generate_signal(request: SignalGenerationRequest):
 
 
 @router.post("/analyze-news")
+@log_endpoint("ai_signals", "trading")
 async def analyze_news_for_signal(
     ticker: str,
     max_news: int = Query(default=10, ge=1, le=50)
@@ -333,6 +338,7 @@ async def analyze_news_for_signal(
 
 
 @router.get("/routing-demo")
+@log_endpoint("ai_signals", "trading")
 async def routing_demo(user_input: str):
     """
     Semantic Router 데모
@@ -378,6 +384,7 @@ async def routing_demo(user_input: str):
 
 
 @router.get("/health")
+@log_endpoint("ai_signals", "trading")
 async def health_check():
     """Health Check"""
     return {
@@ -392,6 +399,7 @@ async def health_check():
 # ============================================================================
 
 @router.get("/metrics/cost-summary")
+@log_endpoint("ai_signals", "trading")
 async def get_cost_summary(period_hours: int = Query(default=24, ge=1, le=168)):
     """
     비용 요약 조회
@@ -437,6 +445,7 @@ async def get_cost_summary(period_hours: int = Query(default=24, ge=1, le=168)):
 
 
 @router.get("/metrics/real-time")
+@log_endpoint("ai_signals", "trading")
 async def get_real_time_metrics():
     """
     실시간 메트릭 조회
@@ -459,6 +468,7 @@ async def get_real_time_metrics():
 
 
 @router.get("/metrics/prometheus")
+@log_endpoint("ai_signals", "trading")
 async def get_prometheus_metrics():
     """
     Prometheus 메트릭 export

@@ -17,6 +17,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 # Google Generative AI SDK
 try:
@@ -235,6 +236,7 @@ async def chat_with_gemini(
 # ============================================================================
 
 @router.post("/chat", response_model=GeminiResponse)
+@log_endpoint("gemini_free", "system")
 async def chat(request: GeminiRequest):
     """
     Gemini 무료 API로 대화
@@ -299,6 +301,7 @@ async def chat(request: GeminiRequest):
 
 
 @router.get("/usage")
+@log_endpoint("gemini_free", "system")
 async def get_usage():
     """오늘의 사용량 조회"""
     usage = get_daily_usage()
@@ -320,12 +323,14 @@ async def get_usage():
 
 
 @router.get("/history")
+@log_endpoint("gemini_free", "system")
 async def get_history(limit: int = 20):
     """최근 채팅 히스토리"""
     return list_recent_chats(limit=limit)
 
 
 @router.get("/status")
+@log_endpoint("gemini_free", "system")
 async def get_status():
     """API 상태 확인"""
     return {
@@ -342,6 +347,7 @@ async def get_status():
 
 
 @router.post("/analyze-news")
+@log_endpoint("gemini_free", "system")
 async def analyze_news(news_content: str, ticker: str = ""):
     """
     뉴스 자동 분석 (무료)

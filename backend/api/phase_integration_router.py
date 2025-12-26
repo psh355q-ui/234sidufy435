@@ -39,6 +39,7 @@ from backend.security.webhook_security import WebhookSecurityValidator
 
 # Schemas
 from backend.schemas.base_schema import MarketContext, SignalAction
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +119,7 @@ class BacktestResponse(BaseModel):
 
 
 @router.post("/analyze", response_model=FullPipelineResponse)
+@log_endpoint("phase", "system")
 async def full_pipeline_analysis(request: NewsAnalysisRequest):
     """
     전체 파이프라인 실행
@@ -259,6 +261,7 @@ async def full_pipeline_analysis(request: NewsAnalysisRequest):
 
 
 @router.post("/backtest", response_model=BacktestResponse)
+@log_endpoint("phase", "system")
 async def run_backtest(request: BacktestRequest):
     """
     백테스트 실행 (Phase C)
@@ -312,6 +315,7 @@ async def run_backtest(request: BacktestRequest):
 
 
 @router.get("/health")
+@log_endpoint("phase", "system")
 async def health_check():
     """모듈 상태 체크"""
     return {
@@ -328,6 +332,7 @@ async def health_check():
 
 
 @router.get("/stats")
+@log_endpoint("phase", "system")
 async def system_stats():
     """시스템 통계"""
     return {

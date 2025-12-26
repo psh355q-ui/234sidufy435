@@ -82,6 +82,7 @@ from backend.notifications.notification_manager import (
 # Import database models
 from backend.database.models import TradingSignal as DBTradingSignal, AnalysisResult, NewsArticle
 from backend.database.repository import get_sync_session
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 # Import auth if available
 # from auth import require_read, require_write, require_execute
@@ -285,6 +286,7 @@ async def websocket_endpoint(websocket: WebSocket):
 # ============================================================================
 
 @router.post("/generate", response_model=Optional[SignalResponse])
+@log_endpoint("signals", "trading")
 async def generate_signal_from_news(
     request: GenerateSignalRequest,
     background_tasks: BackgroundTasks,
@@ -445,6 +447,7 @@ async def get_signals(
 
 
 @router.get("/active", response_model=List[SignalResponse])
+@log_endpoint("signals", "trading")
 async def get_active_signals(
     # api_key: str = Depends(require_read),
 ):
@@ -490,6 +493,7 @@ async def get_active_signals(
 
 
 @router.get("/history", response_model=List[SignalResponse])
+@log_endpoint("signals", "trading")
 async def get_signal_history(
     limit: int = Query(50, ge=1, le=500),
     action_filter: Optional[str] = None,
@@ -538,6 +542,7 @@ async def get_signal_history(
 
 
 @router.get("/{signal_id}", response_model=SignalDetailResponse)
+@log_endpoint("signals", "trading")
 async def get_signal_by_id(
     signal_id: int,
     # api_key: str = Depends(require_read),
@@ -621,6 +626,7 @@ async def get_signal_by_id(
 # ============================================================================
 
 @router.put("/{signal_id}/approve")
+@log_endpoint("signals", "trading")
 async def approve_signal(
     signal_id: int,
     request: ApproveSignalRequest,
@@ -666,6 +672,7 @@ async def approve_signal(
 
 
 @router.delete("/{signal_id}/reject")
+@log_endpoint("signals", "trading")
 async def reject_signal(
     signal_id: int,
     reason: str = Query("Manual rejection"),
@@ -703,6 +710,7 @@ async def reject_signal(
 
 
 @router.post("/{signal_id}/execute")
+@log_endpoint("signals", "trading")
 async def execute_signal(
     signal_id: int,
     # api_key: str = Depends(require_execute),
@@ -762,6 +770,7 @@ async def execute_signal(
 # ============================================================================
 
 @router.get("/validator/status", response_model=ValidatorStatusResponse)
+@log_endpoint("signals", "trading")
 async def get_validator_status(
     # api_key: str = Depends(require_read),
 ):
@@ -773,6 +782,7 @@ async def get_validator_status(
 
 
 @router.post("/validator/reset-kill-switch")
+@log_endpoint("signals", "trading")
 async def reset_kill_switch(
     # api_key: str = Depends(require_execute),
 ):
@@ -792,6 +802,7 @@ async def reset_kill_switch(
 
 
 @router.post("/validator/reset-daily")
+@log_endpoint("signals", "trading")
 async def reset_daily_stats(
     # api_key: str = Depends(require_write),
 ):
@@ -809,6 +820,7 @@ async def reset_daily_stats(
 
 
 @router.put("/generator/settings")
+@log_endpoint("signals", "trading")
 async def update_generator_settings(
     settings: GeneratorSettingsRequest,
     # api_key: str = Depends(require_write),
@@ -834,6 +846,7 @@ async def update_generator_settings(
 
 
 @router.put("/validator/settings")
+@log_endpoint("signals", "trading")
 async def update_validator_settings(
     settings: ValidatorSettingsRequest,
     # api_key: str = Depends(require_write),
@@ -853,6 +866,7 @@ async def update_validator_settings(
 
 
 @router.get("/stats/summary")
+@log_endpoint("signals", "trading")
 async def get_stats_summary(
     # api_key: str = Depends(require_read),
 ):
@@ -865,6 +879,7 @@ async def get_stats_summary(
 
 
 @router.get("/statistics")
+@log_endpoint("signals", "trading")
 async def get_signal_statistics(
     # api_key: str = Depends(require_read),
 ):
@@ -920,6 +935,7 @@ async def get_signal_statistics(
 
 
 @router.get("/health")
+@log_endpoint("signals", "trading")
 async def signals_health():
     """
     Check signals system health.

@@ -41,6 +41,7 @@ import logging
 import os
 
 from backend.brokers.kis_broker import KISBroker
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -313,6 +314,7 @@ async def get_portfolio():
 
 
 @router.get("/positions", response_model=List[PositionResponse])
+@log_endpoint("portfolio", "system")
 async def get_positions():
     """
     Get current positions only

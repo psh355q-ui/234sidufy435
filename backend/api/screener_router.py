@@ -17,11 +17,13 @@ from backend.services.market_scanner import (
 )
 from backend.services.market_scanner.scheduler import get_scheduler
 from backend.services.market_scanner.massive_api_client import get_massive_client
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 router = APIRouter(prefix="/api/screener", tags=["screener"])
 
 
 @router.get("/candidates")
+@log_endpoint("screener", "system")
 async def get_candidates(
     limit: int = Query(20, ge=1, le=50),
     min_score: float = Query(0, ge=0, le=100),
@@ -85,6 +87,7 @@ async def get_candidates(
 
 
 @router.post("/scan")
+@log_endpoint("screener", "system")
 async def run_scan(
     background_tasks: BackgroundTasks,
     tickers: Optional[List[str]] = None,
@@ -224,6 +227,7 @@ async def _run_scan_background(screener: DynamicScreener, tickers: Optional[List
 
 
 @router.get("/history")
+@log_endpoint("screener", "system")
 async def get_scan_history(
     days: int = Query(7, ge=1, le=30),
 ):
@@ -245,6 +249,7 @@ async def get_scan_history(
 
 
 @router.get("/universe")
+@log_endpoint("screener", "system")
 async def get_universe_tickers(
     type: str = Query("combined", regex="^(sp500|nasdaq100|combined)$"),
 ):
@@ -269,6 +274,7 @@ async def get_universe_tickers(
 
 
 @router.get("/status")
+@log_endpoint("screener", "system")
 async def get_scheduler_status():
     """
     스케줄러 상태 조회
@@ -293,6 +299,7 @@ async def get_scheduler_status():
 
 
 @router.post("/scheduler/start")
+@log_endpoint("screener", "system")
 async def start_scheduler():
     """스케줄러 시작"""
     scheduler = get_scheduler()
@@ -304,6 +311,7 @@ async def start_scheduler():
 
 
 @router.post("/scheduler/stop")
+@log_endpoint("screener", "system")
 async def stop_scheduler():
     """스케줄러 중지"""
     scheduler = get_scheduler()
@@ -315,6 +323,7 @@ async def stop_scheduler():
 
 
 @router.get("/analyze/{ticker}")
+@log_endpoint("screener", "system")
 async def analyze_single_ticker(ticker: str):
     """
     단일 종목 분석

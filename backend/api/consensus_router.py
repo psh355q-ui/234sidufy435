@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 
 from backend.schemas.base_schema import MarketContext, SignalAction
 from backend.ai.consensus import (
+from backend.ai.skills.common.logging_decorator import log_endpoint
     get_consensus_engine,
     ConsensusResult,
     ConsensusStats,
@@ -87,6 +88,7 @@ class VotingRulesResponse(BaseModel):
 # ============================================================================
 
 @router.post("/vote", response_model=ConsensusResult)
+@log_endpoint("consensus", "system")
 async def vote_on_signal(request: VoteOnSignalRequest):
     """
     특정 액션에 대해 3-AI 투표 실행
@@ -117,6 +119,7 @@ async def vote_on_signal(request: VoteOnSignalRequest):
 
 
 @router.get("/rules", response_model=VotingRulesResponse)
+@log_endpoint("consensus", "system")
 async def get_voting_rules():
     """
     투표 규칙 조회
@@ -141,6 +144,7 @@ async def get_voting_rules():
 
 
 @router.get("/stats", response_model=ConsensusStats)
+@log_endpoint("consensus", "system")
 async def get_consensus_stats():
     """
     Consensus Engine 통계 조회
@@ -159,6 +163,7 @@ async def get_consensus_stats():
 
 
 @router.get("/recent-votes")
+@log_endpoint("consensus", "system")
 async def get_recent_votes(limit: int = Query(default=10, ge=1, le=100)):
     """
     최근 투표 결과 조회
@@ -194,6 +199,7 @@ async def get_recent_votes(limit: int = Query(default=10, ge=1, le=100)):
 
 
 @router.post("/test-vote")
+@log_endpoint("consensus", "system")
 async def test_consensus_vote(
     action: str = Query(..., description="투표 대상 액션"),
     ticker: str = Query(default="NVDA", description="테스트 종목")
@@ -276,6 +282,7 @@ class DCAEvaluationRequest(BaseModel):
 
 
 @router.post("/dca/evaluate")
+@log_endpoint("consensus", "system")
 async def evaluate_dca(request: DCAEvaluationRequest):
     """
     DCA 실행 종합 평가
@@ -335,6 +342,7 @@ async def evaluate_dca(request: DCAEvaluationRequest):
 
 
 @router.post("/dca/test")
+@log_endpoint("consensus", "system")
 async def test_dca_evaluation(
     ticker: str = Query(default="NVDA", description="테스트 종목"),
     current_price: float = Query(default=130.0, gt=0, description="현재 가격"),

@@ -25,6 +25,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from ai.learning.agent_weight_adjuster import AgentWeightAdjuster
 from ai.learning.agent_alert_system import AgentAlertSystem
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +76,7 @@ class AlertSummary(BaseModel):
 # ============================================================================
 
 @router.get("/current", response_model=List[AgentWeight])
+@log_endpoint("weights", "system")
 async def get_current_weights():
     """
     현재 에이전트 가중치 조회
@@ -97,6 +99,7 @@ async def get_current_weights():
 
 
 @router.post("/recalculate", response_model=List[WeightRecalculationResult])
+@log_endpoint("weights", "system")
 async def recalculate_weights(
     lookback_days: int = Query(30, ge=1, le=365, description="Lookback period in days"),
     save_to_db: bool = Query(True, description="Save results to database")
@@ -132,6 +135,7 @@ async def recalculate_weights(
 
 
 @router.get("/history")
+@log_endpoint("weights", "system")
 async def get_weight_history(
     agent: Optional[str] = Query(None, description="Filter by agent name"),
     days: int = Query(30, ge=1, le=365, description="Number of days")

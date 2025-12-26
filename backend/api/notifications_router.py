@@ -18,6 +18,7 @@ from pydantic import BaseModel
 
 # Import notification manager
 from backend.notifications.notification_manager import (
+from backend.ai.skills.common.logging_decorator import log_endpoint
     create_notification_manager,
     NotificationChannel,
 )
@@ -97,6 +98,7 @@ class NotificationStatsResponse(BaseModel):
 # ============================================================================
 
 @router.get("/settings", response_model=NotificationSettingsResponse)
+@log_endpoint("notifications", "system")
 async def get_notification_settings(
     # api_key: str = Depends(require_read),
 ):
@@ -109,6 +111,7 @@ async def get_notification_settings(
 
 
 @router.put("/settings", response_model=NotificationSettingsResponse)
+@log_endpoint("notifications", "system")
 async def update_notification_settings(
     settings: NotificationSettingsRequest,
     # api_key: str = Depends(require_write),
@@ -149,6 +152,7 @@ async def update_notification_settings(
 
 
 @router.post("/test", response_model=TestNotificationResponse)
+@log_endpoint("notifications", "system")
 async def send_test_notification(
     request: TestNotificationRequest,
     # api_key: str = Depends(require_write),
@@ -192,6 +196,7 @@ async def send_test_notification(
 
 
 @router.get("/history", response_model=List[AlertHistoryResponse])
+@log_endpoint("notifications", "system")
 async def get_notification_history(
     limit: int = 50,
     alert_type: Optional[str] = None,
@@ -219,6 +224,7 @@ async def get_notification_history(
 
 
 @router.get("/statistics", response_model=NotificationStatsResponse)
+@log_endpoint("notifications", "system")
 async def get_notification_statistics(
     # api_key: str = Depends(require_read),
 ):
@@ -231,6 +237,7 @@ async def get_notification_statistics(
 
 
 @router.delete("/history")
+@log_endpoint("notifications", "system")
 async def clear_notification_history(
     # api_key: str = Depends(require_write),
 ):
@@ -250,6 +257,7 @@ async def clear_notification_history(
 
 
 @router.get("/health")
+@log_endpoint("notifications", "system")
 async def notifications_health():
     """
     Check notification system health.
@@ -297,6 +305,7 @@ class ManualNewsAlertRequest(BaseModel):
 
 
 @router.post("/manual/news")
+@log_endpoint("notifications", "system")
 async def send_manual_news_alert(
     request: ManualNewsAlertRequest,
     # api_key: str = Depends(require_write),
@@ -350,6 +359,7 @@ class ManualSignalAlertRequest(BaseModel):
 
 
 @router.post("/manual/signal")
+@log_endpoint("notifications", "system")
 async def send_manual_signal_alert(
     request: ManualSignalAlertRequest,
     # api_key: str = Depends(require_write),
@@ -395,6 +405,7 @@ class ManualRiskWarningRequest(BaseModel):
 
 
 @router.post("/manual/risk-warning")
+@log_endpoint("notifications", "system")
 async def send_manual_risk_warning(
     request: ManualRiskWarningRequest,
     # api_key: str = Depends(require_write),

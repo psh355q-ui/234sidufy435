@@ -36,6 +36,7 @@ from backend.data.news_analyzer import (
     get_daily_usage,
 )
 from backend.ai.gemini_client import GeminiClient
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 
 router = APIRouter(prefix="/news", tags=["News Aggregation"])
@@ -130,6 +131,7 @@ async def startup():
 # ============================================================================
 
 @router.get("/crawl/stream")
+@log_endpoint("news", "analysis")
 async def crawl_rss_feeds_stream(
     extract_content: bool = True,
     use_gemini_diagnosis: bool = True,
@@ -246,6 +248,7 @@ async def crawl_rss_feeds_stream(
 
 
 @router.post("/crawl", response_model=CrawlResponse)
+@log_endpoint("news", "analysis")
 async def crawl_rss_feeds(
     extract_content: bool = True,
     db: Session = Depends(get_db)
@@ -271,6 +274,7 @@ async def crawl_rss_feeds(
 
 
 @router.post("/crawl/ticker/{ticker}")
+@log_endpoint("news", "analysis")
 async def crawl_ticker_news(
     ticker: str,
     db: Session = Depends(get_db)
@@ -301,6 +305,7 @@ async def crawl_ticker_news(
 # ============================================================================
 
 @router.post("/analyze", response_model=AnalyzeResponse)
+@log_endpoint("news", "analysis")
 async def analyze_unanalyzed_articles(
     max_count: int = Query(default=10, ge=1, le=100),
     db: Session = Depends(get_db)
@@ -337,6 +342,7 @@ async def analyze_unanalyzed_articles(
 
 
 @router.post("/analyze/{article_id}")
+@log_endpoint("news", "analysis")
 async def analyze_single_article(
     article_id: int,
     db: Session = Depends(get_db)
@@ -373,6 +379,7 @@ async def analyze_single_article(
 # ============================================================================
 
 @router.get("/articles", response_model=List[NewsArticleResponse])
+@log_endpoint("news", "analysis")
 async def get_news_articles(
     limit: int = Query(default=50, ge=1, le=200),
     hours: int = Query(default=24, ge=1, le=168),
@@ -417,6 +424,7 @@ async def get_news_articles(
 
 
 @router.get("/articles/{article_id}", response_model=NewsDetailResponse)
+@log_endpoint("news", "analysis")
 async def get_news_detail(
     article_id: int,
     db: Session = Depends(get_db)
@@ -473,6 +481,7 @@ async def get_news_detail(
 
 
 @router.get("/ticker/{ticker}")
+@log_endpoint("news", "analysis")
 async def get_news_by_ticker(
     ticker: str,
     limit: int = Query(default=20, ge=1, le=100),
@@ -488,6 +497,7 @@ async def get_news_by_ticker(
 
 
 @router.get("/high-impact")
+@log_endpoint("news", "analysis")
 async def get_high_impact_articles(
     min_magnitude: float = Query(default=0.6, ge=0.0, le=1.0),
     db: Session = Depends(get_db)
@@ -512,6 +522,7 @@ async def get_high_impact_articles(
 
 
 @router.get("/warnings")
+@log_endpoint("news", "analysis")
 async def get_warning_articles(db: Session = Depends(get_db)):
     """경고 신호가 있는 뉴스"""
     articles = get_warning_news(db)
@@ -537,6 +548,7 @@ async def get_warning_articles(db: Session = Depends(get_db)):
 # ============================================================================
 
 @router.get("/stats")
+@log_endpoint("news", "analysis")
 async def get_news_statistics(db: Session = Depends(get_db)):
     """뉴스 통계"""
     total_articles = db.query(NewsArticle).count()
@@ -575,12 +587,14 @@ async def get_news_statistics(db: Session = Depends(get_db)):
 
 
 @router.get("/feeds")
+@log_endpoint("news", "analysis")
 async def get_rss_feeds(db: Session = Depends(get_db)):
     """RSS 피드 목록 및 통계"""
     return get_feed_stats(db)
 
 
 @router.post("/feeds")
+@log_endpoint("news", "analysis")
 async def add_rss_feed(
     name: str,
     url: str,
@@ -606,6 +620,7 @@ async def add_rss_feed(
 
 
 @router.put("/feeds/{feed_id}/toggle")
+@log_endpoint("news", "analysis")
 async def toggle_feed(
     feed_id: int,
     db: Session = Depends(get_db)

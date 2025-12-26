@@ -23,6 +23,7 @@ from backend.core.database import get_db
 from backend.core.models.stock_price_models import StockPrice, PriceSyncStatus
 from backend.config.storage_config import get_storage_config, StorageLocation
 from backend.services.stock_price_scheduler import get_stock_price_scheduler
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,7 @@ router = APIRouter(prefix="/incremental", tags=["Incremental Updates"])
 
 
 @router.get("/stats")
+@log_endpoint("incremental", "system")
 async def get_incremental_stats(
     db: AsyncSession = Depends(get_db)
 ) -> Dict[str, Any]:
@@ -86,6 +88,7 @@ async def get_incremental_stats(
 
 
 @router.get("/storage")
+@log_endpoint("incremental", "system")
 async def get_storage_usage() -> Dict[str, Any]:
     """
     Get storage usage statistics for all locations.
@@ -122,6 +125,7 @@ async def get_storage_usage() -> Dict[str, Any]:
 
 
 @router.get("/cost-savings")
+@log_endpoint("incremental", "system")
 async def calculate_cost_savings(
     tickers: int = 100,
     db: AsyncSession = Depends(get_db)
@@ -204,6 +208,7 @@ async def calculate_cost_savings(
 
 
 @router.get("/scheduler-status")
+@log_endpoint("incremental", "system")
 async def get_scheduler_status() -> Dict[str, Any]:
     """
     Get stock price scheduler status.
@@ -241,6 +246,7 @@ async def get_scheduler_status() -> Dict[str, Any]:
 
 
 @router.post("/scheduler/start")
+@log_endpoint("incremental", "system")
 async def start_scheduler() -> Dict[str, str]:
     """
     Start the stock price scheduler.
@@ -264,6 +270,7 @@ async def start_scheduler() -> Dict[str, str]:
 
 
 @router.post("/scheduler/stop")
+@log_endpoint("incremental", "system")
 async def stop_scheduler() -> Dict[str, str]:
     """
     Stop the stock price scheduler.
@@ -287,6 +294,7 @@ async def stop_scheduler() -> Dict[str, str]:
 
 
 @router.post("/scheduler/run-now")
+@log_endpoint("incremental", "system")
 async def run_scheduler_now() -> Dict[str, Any]:
     """
     Trigger manual stock price update immediately.

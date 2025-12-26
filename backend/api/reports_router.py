@@ -41,6 +41,7 @@ from backend.core.models.analytics_models import DailyAnalytics, WeeklyAnalytics
 from backend.analytics.performance_attribution import PerformanceAttributionAnalyzer
 from backend.analytics.risk_analytics import RiskAnalyzer
 from backend.analytics.trade_analytics import TradeAnalyzer
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +87,7 @@ class AnalyticsQuery(BaseModel):
 # =============================================================================
 
 @router.get("/daily")
+@log_endpoint("reports", "system")
 async def get_daily_report(
     target_date: Optional[date] = Query(None, description="Report date (defaults to yesterday)"),
     format: str = Query("json", description="Response format: json or pdf"),
@@ -129,6 +131,7 @@ async def get_daily_report(
 
 
 @router.get("/daily/summary")
+@log_endpoint("reports", "system")
 async def get_daily_summaries(
     start_date: date = Query(..., description="Start date"),
     end_date: date = Query(..., description="End date"),
@@ -153,6 +156,7 @@ async def get_daily_summaries(
 # =============================================================================
 
 @router.get("/weekly")
+@log_endpoint("reports", "system")
 async def get_weekly_report(
     year: int = Query(..., description="Year"),
     week: int = Query(..., description="ISO week number (1-53)"),
@@ -192,6 +196,7 @@ async def get_weekly_report(
 
 
 @router.get("/weekly/list")
+@log_endpoint("reports", "system")
 async def list_weekly_reports(
     year: Optional[int] = Query(None, description="Filter by year"),
     limit: int = Query(20, description="Maximum number of reports"),
@@ -229,6 +234,7 @@ async def list_weekly_reports(
 # =============================================================================
 
 @router.get("/monthly")
+@log_endpoint("reports", "system")
 async def get_monthly_report(
     year: int = Query(..., description="Year"),
     month: int = Query(..., description="Month (1-12)"),
@@ -269,6 +275,7 @@ async def get_monthly_report(
 
 
 @router.get("/monthly/list")
+@log_endpoint("reports", "system")
 async def list_monthly_reports(
     year: Optional[int] = Query(None, description="Filter by year"),
     db: Session = Depends(get_db),
@@ -304,6 +311,7 @@ async def list_monthly_reports(
 # =============================================================================
 
 @router.get("/analytics/performance-summary")
+@log_endpoint("reports", "system")
 async def get_performance_summary(
     lookback_days: int = Query(30, description="Days to look back"),
     db: Session = Depends(get_db),
@@ -357,6 +365,7 @@ async def get_performance_summary(
 
 
 @router.get("/analytics/time-series")
+@log_endpoint("reports", "system")
 async def get_time_series_data(
     metric: str = Query(..., description="Metric name (portfolio_value/daily_pnl/sharpe_ratio/etc)"),
     start_date: date = Query(..., description="Start date"),
@@ -421,6 +430,7 @@ async def get_time_series_data(
 # =============================================================================
 
 @router.post("/export/csv")
+@log_endpoint("reports", "system")
 async def export_to_csv(
     start_date: date = Query(..., description="Start date"),
     end_date: date = Query(..., description="End date"),
@@ -475,6 +485,7 @@ async def export_to_csv(
 # =============================================================================
 
 @router.get("/health")
+@log_endpoint("reports", "system")
 async def reports_health_check(db: Session = Depends(get_db)):
     """
     Health check for reports service.
@@ -496,6 +507,7 @@ async def reports_health_check(db: Session = Depends(get_db)):
 # =============================================================================
 
 @router.get("/advanced/performance-attribution")
+@log_endpoint("reports", "system")
 async def get_performance_attribution(
     start_date: date = Query(..., description="Start date"),
     end_date: date = Query(..., description="End date"),
@@ -533,6 +545,7 @@ async def get_performance_attribution(
 
 
 @router.get("/advanced/risk-dashboard")
+@log_endpoint("reports", "system")
 async def get_risk_dashboard(
     db: Session = Depends(get_db),
 ):
@@ -553,6 +566,7 @@ async def get_risk_dashboard(
 
 
 @router.get("/advanced/risk-metrics")
+@log_endpoint("reports", "system")
 async def get_risk_metrics(
     start_date: date = Query(..., description="Start date for analysis"),
     end_date: date = Query(..., description="End date for analysis"),
@@ -601,6 +615,7 @@ async def get_risk_metrics(
 
 
 @router.get("/advanced/risk/var")
+@log_endpoint("reports", "system")
 async def get_var_metrics(
     lookback_days: int = Query(90, description="Days of historical data"),
     db: Session = Depends(get_db),
@@ -623,6 +638,7 @@ async def get_var_metrics(
 
 
 @router.get("/advanced/risk/drawdown")
+@log_endpoint("reports", "system")
 async def get_drawdown_analysis(
     lookback_days: int = Query(180, description="Days of historical data"),
     db: Session = Depends(get_db),
@@ -642,6 +658,7 @@ async def get_drawdown_analysis(
 
 
 @router.get("/advanced/risk/concentration")
+@log_endpoint("reports", "system")
 async def get_concentration_risk(
     target_date: Optional[date] = Query(None, description="Date to analyze"),
     db: Session = Depends(get_db),
@@ -661,6 +678,7 @@ async def get_concentration_risk(
 
 
 @router.get("/advanced/risk/correlation")
+@log_endpoint("reports", "system")
 async def get_correlation_analysis(
     lookback_days: int = Query(60, description="Days of historical data"),
     db: Session = Depends(get_db),
@@ -680,6 +698,7 @@ async def get_correlation_analysis(
 
 
 @router.post("/advanced/risk/stress-test")
+@log_endpoint("reports", "system")
 async def run_stress_test(
     scenarios: Optional[List[Dict]] = None,
     db: Session = Depends(get_db),
@@ -699,6 +718,7 @@ async def run_stress_test(
 
 
 @router.get("/advanced/trade-insights")
+@log_endpoint("reports", "system")
 async def get_trade_insights(
     start_date: date = Query(..., description="Start date"),
     end_date: date = Query(..., description="End date"),
@@ -721,6 +741,7 @@ async def get_trade_insights(
 
 
 @router.get("/advanced/trade/win-loss")
+@log_endpoint("reports", "system")
 async def get_win_loss_patterns(
     start_date: date = Query(..., description="Start date"),
     end_date: date = Query(..., description="End date"),
@@ -741,6 +762,7 @@ async def get_win_loss_patterns(
 
 
 @router.get("/advanced/trade/execution-quality")
+@log_endpoint("reports", "system")
 async def get_execution_quality(
     start_date: date = Query(..., description="Start date"),
     end_date: date = Query(..., description="End date"),
@@ -761,6 +783,7 @@ async def get_execution_quality(
 
 
 @router.get("/advanced/trade/confidence-impact")
+@log_endpoint("reports", "system")
 async def get_confidence_impact(
     start_date: date = Query(..., description="Start date"),
     end_date: date = Query(..., description="End date"),
@@ -812,6 +835,7 @@ class PortfolioAnalyzeRequest(BaseModel):
 
 
 @router.post("/portfolio/analyze")
+@log_endpoint("reports", "system")
 async def analyze_portfolio(request: PortfolioAnalyzeRequest):
     """
     포트폴리오 종합 분석
@@ -851,6 +875,7 @@ async def analyze_portfolio(request: PortfolioAnalyzeRequest):
 
 
 @router.post("/portfolio/rebalance")
+@log_endpoint("reports", "system")
 async def get_rebalancing_suggestions(request: PortfolioAnalyzeRequest):
     """
     포트폴리오 리밸런싱 제안
@@ -884,6 +909,7 @@ async def get_rebalancing_suggestions(request: PortfolioAnalyzeRequest):
 
 
 @router.get("/portfolio/health")
+@log_endpoint("reports", "system")
 async def get_portfolio_health():
     """
     포트폴리오 헬스 체크 (샘플 데이터)

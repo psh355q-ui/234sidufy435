@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from typing import Dict, List, Optional
 from datetime import datetime
 import logging
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 # Import monitoring components
 try:
@@ -103,6 +104,7 @@ def set_monitoring_instances(
 # =============================================================================
 
 @router.get("/health", response_model=HealthCheckResponse)
+@log_endpoint("monitoring", "system")
 async def get_detailed_health():
     """
     Get detailed system health status.
@@ -125,6 +127,7 @@ async def get_detailed_health():
 
 
 @router.get("/health/summary")
+@log_endpoint("monitoring", "system")
 async def get_health_summary():
     """Get health check summary and statistics."""
     if not health_monitor:
@@ -134,6 +137,7 @@ async def get_health_summary():
 
 
 @router.get("/health/component/{component_name}")
+@log_endpoint("monitoring", "system")
 async def get_component_health(component_name: str):
     """Get health status for a specific component."""
     if not health_monitor:
@@ -148,6 +152,7 @@ async def get_component_health(component_name: str):
 # =============================================================================
 
 @router.get("/metrics/summary")
+@log_endpoint("monitoring", "system")
 async def get_metrics_summary():
     """Get summary of key metrics."""
     if not metrics_collector:
@@ -170,6 +175,7 @@ async def get_metrics_summary():
 
 
 @router.get("/metrics/trading")
+@log_endpoint("monitoring", "system")
 async def get_trading_metrics():
     """Get trading-specific metrics."""
     # Return trading metrics summary
@@ -191,6 +197,7 @@ async def get_trading_metrics():
 # =============================================================================
 
 @router.get("/alerts/statistics")
+@log_endpoint("monitoring", "system")
 async def get_alert_statistics():
     """Get alert system statistics."""
     if not alert_manager:
@@ -200,6 +207,7 @@ async def get_alert_statistics():
 
 
 @router.get("/alerts/recent")
+@log_endpoint("monitoring", "system")
 async def get_recent_alerts(limit: int = 50):
     """Get recent alerts."""
     if not alert_manager:
@@ -220,6 +228,7 @@ async def get_recent_alerts(limit: int = 50):
 
 
 @router.post("/alerts/test")
+@log_endpoint("monitoring", "system")
 async def test_alert(
     category: str = "SYSTEM_ERROR",
     priority: str = "MEDIUM",
@@ -255,6 +264,7 @@ async def test_alert(
 # =============================================================================
 
 @router.get("/circuit-breakers")
+@log_endpoint("monitoring", "system")
 async def get_all_circuit_breakers():
     """Get status of all circuit breakers."""
     if not circuit_breaker_manager:
@@ -270,6 +280,7 @@ async def get_all_circuit_breakers():
 
 
 @router.get("/circuit-breakers/{name}")
+@log_endpoint("monitoring", "system")
 async def get_circuit_breaker(name: str):
     """Get status of a specific circuit breaker."""
     if not circuit_breaker_manager:
@@ -283,6 +294,7 @@ async def get_circuit_breaker(name: str):
 
 
 @router.post("/circuit-breakers/{name}/reset")
+@log_endpoint("monitoring", "system")
 async def reset_circuit_breaker(name: str):
     """Manually reset a circuit breaker."""
     if not circuit_breaker_manager:
@@ -301,6 +313,7 @@ async def reset_circuit_breaker(name: str):
 
 
 @router.post("/circuit-breakers/reset-all")
+@log_endpoint("monitoring", "system")
 async def reset_all_circuit_breakers():
     """Reset all circuit breakers."""
     if not circuit_breaker_manager:
@@ -320,6 +333,7 @@ async def reset_all_circuit_breakers():
 # =============================================================================
 
 @router.get("/kill-switch", response_model=KillSwitchResponse)
+@log_endpoint("monitoring", "system")
 async def get_kill_switch_status():
     """Get kill switch status."""
     if not kill_switch:
@@ -329,6 +343,7 @@ async def get_kill_switch_status():
 
 
 @router.post("/kill-switch/activate")
+@log_endpoint("monitoring", "system")
 async def activate_kill_switch(request: KillSwitchActivateRequest):
     """
     Activate kill switch.
@@ -360,6 +375,7 @@ async def activate_kill_switch(request: KillSwitchActivateRequest):
 
 
 @router.post("/kill-switch/deactivate")
+@log_endpoint("monitoring", "system")
 async def deactivate_kill_switch(message: Optional[str] = None):
     """
     Deactivate kill switch and resume trading operations.
@@ -384,6 +400,7 @@ async def deactivate_kill_switch(message: Optional[str] = None):
 # =============================================================================
 
 @router.get("/system/info")
+@log_endpoint("monitoring", "system")
 async def get_system_info():
     """Get comprehensive system information."""
     info = {
@@ -409,6 +426,7 @@ async def get_system_info():
 
 
 @router.get("/system/status")
+@log_endpoint("monitoring", "system")
 async def get_system_status():
     """Get quick system status (healthy/degraded/unhealthy)."""
     if not health_monitor:

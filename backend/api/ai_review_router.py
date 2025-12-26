@@ -15,6 +15,7 @@ from backend.ai.ai_review_models import (
     AIReviewRecord
 )
 from backend.ai.trading_terms_parser import TradingTermsParser
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 router = APIRouter(prefix="/ai-reviews", tags=["AI Review"])
 
@@ -129,6 +130,7 @@ async def get_ai_reviews(
 
 
 @router.get("/statistics", response_model=StatisticsResponse)
+@log_endpoint("ai_reviews", "system")
 async def get_statistics():
     """
     Get AI review statistics
@@ -138,6 +140,7 @@ async def get_statistics():
 
 
 @router.get("/search")
+@log_endpoint("ai_reviews", "system")
 async def search_reviews(
     ticker: Optional[str] = None,
     action: Optional[str] = None,
@@ -164,6 +167,7 @@ async def search_reviews(
 
 
 @router.get("/{analysis_id}", response_model=AIReviewDetailResponse)
+@log_endpoint("ai_reviews", "system")
 async def get_ai_review_detail(analysis_id: str):
     """
     Get detailed AI review by ID
@@ -185,6 +189,7 @@ async def get_ai_review_detail(analysis_id: str):
 
 
 @router.get("/ticker/{ticker}/history")
+@log_endpoint("ai_reviews", "system")
 async def get_ticker_history(
     ticker: str,
     limit: int = Query(10, ge=1, le=50)
@@ -202,6 +207,7 @@ async def get_ticker_history(
 
 
 @router.get("/ticker/{ticker}/latest")
+@log_endpoint("ai_reviews", "system")
 async def get_latest_for_ticker(ticker: str):
     """
     Get latest analysis for a specific ticker
@@ -241,6 +247,7 @@ async def create_ai_review(request: CreateAIReviewRequest):
 
 
 @router.delete("/{analysis_id}")
+@log_endpoint("ai_reviews", "system")
 async def delete_ai_review(analysis_id: str):
     """
     Delete an AI review record
@@ -261,6 +268,7 @@ async def delete_ai_review(analysis_id: str):
 # ============================================================================
 
 @router.get("/terms/all", response_model=TradingTermsResponse)
+@log_endpoint("ai_reviews", "system")
 async def get_trading_terms():
     """
     Get all trading terms from MASTER_GUIDE.md
@@ -276,6 +284,7 @@ async def get_trading_terms():
 
 
 @router.get("/terms/search")
+@log_endpoint("ai_reviews", "system")
 async def search_trading_terms(
     query: str = Query(..., min_length=1),
     category: Optional[str] = None
@@ -294,6 +303,7 @@ async def search_trading_terms(
 
 
 @router.get("/terms/categories")
+@log_endpoint("ai_reviews", "system")
 async def get_term_categories():
     """
     Get all term categories
@@ -311,6 +321,7 @@ async def get_term_categories():
 # ============================================================================
 
 @router.post("/from-agent")
+@log_endpoint("ai_reviews", "system")
 async def save_from_trading_agent(
     ticker: str,
     agent_response: dict

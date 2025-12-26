@@ -60,6 +60,7 @@ from pathlib import Path
 
 # Import backtest engine
 from backend.backtesting.signal_backtest_engine import (
+from backend.ai.skills.common.logging_decorator import log_endpoint
     SignalBacktestEngine,
     NewsAnalysis,
     BacktestResult
@@ -436,6 +437,7 @@ async def run_backtest_async(job_id: str, config: BacktestConfig, use_real_data:
 # =============================================================================
 
 @router.post("/run", response_model=BacktestRunResponse)
+@log_endpoint("backtest", "system")
 async def run_backtest(
     request: BacktestRunRequest,
     background_tasks: BackgroundTasks
@@ -480,6 +482,7 @@ async def run_backtest(
 
 
 @router.get("/results", response_model=List[BacktestResultSummary])
+@log_endpoint("backtest", "system")
 async def get_backtest_results():
     """
     모든 백테스트 결과 목록 조회
@@ -519,6 +522,7 @@ async def get_backtest_results():
 
 
 @router.get("/results/{job_id}")
+@log_endpoint("backtest", "system")
 async def get_backtest_result(job_id: str):
     """
     특정 백테스트 결과 상세 조회
@@ -561,6 +565,7 @@ async def get_backtest_result(job_id: str):
 
 
 @router.post("/optimize", response_model=OptimizationResult)
+@log_endpoint("backtest", "system")
 async def optimize_parameters(request: OptimizationRequest):
     """
     파라미터 최적화 실행
@@ -645,6 +650,7 @@ async def optimize_parameters(request: OptimizationRequest):
 
 
 @router.post("/compare", response_model=ComparisonResult)
+@log_endpoint("backtest", "system")
 async def compare_backtests(request: ComparisonRequest):
     """
     여러 백테스트 결과 비교
@@ -725,6 +731,7 @@ async def compare_backtests(request: ComparisonRequest):
 
 
 @router.delete("/results/{job_id}")
+@log_endpoint("backtest", "system")
 async def delete_backtest_result(job_id: str):
     """
     백테스트 결과 삭제
@@ -749,6 +756,7 @@ async def delete_backtest_result(job_id: str):
 
 
 @router.get("/status/{job_id}")
+@log_endpoint("backtest", "system")
 async def get_backtest_status(job_id: str):
     """
     백테스트 작업 상태 확인
@@ -848,6 +856,7 @@ async def run_consensus_backtest_async(job_id: str, request: ConsensusBacktestRe
 
 
 @router.post("/consensus")
+@log_endpoint("backtest", "system")
 async def run_consensus_backtest(
     request: ConsensusBacktestRequest,
     background_tasks: BackgroundTasks
@@ -889,6 +898,7 @@ async def run_consensus_backtest(
 
 
 @router.get("/consensus/list")
+@log_endpoint("backtest", "system")
 async def list_consensus_backtests():
     """모든 Consensus 백테스트 결과 목록"""
     
@@ -914,6 +924,7 @@ async def list_consensus_backtests():
 
 
 @router.get("/consensus/{job_id}")
+@log_endpoint("backtest", "system")
 async def get_consensus_backtest_result(job_id: str):
     """특정 Consensus 백테스트 결과 상세"""
     
@@ -951,6 +962,7 @@ async def get_consensus_backtest_result(job_id: str):
 
 
 @router.get("/consensus/quick-test")
+@log_endpoint("backtest", "system")
 async def quick_consensus_test():
     """
     빠른 Consensus 백테스트 (동기 실행)

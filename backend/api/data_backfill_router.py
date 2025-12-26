@@ -20,6 +20,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 try:
     from backend.data.crawlers.multi_source_crawler import MultiSourceNewsCrawler
@@ -100,6 +101,7 @@ class JobStatusResponse(BaseModel):
 
 
 @router.post("/news", response_model=BackfillJobResponse)
+@log_endpoint("backfill", "system")
 async def start_news_backfill(
     request: NewsBackfillRequest,
     background_tasks: BackgroundTasks
@@ -180,6 +182,7 @@ async def start_news_backfill(
 
 
 @router.post("/prices", response_model=BackfillJobResponse)
+@log_endpoint("backfill", "system")
 async def start_price_backfill(
     request: PriceBackfillRequest,
     background_tasks: BackgroundTasks
@@ -258,6 +261,7 @@ async def start_price_backfill(
 
 
 @router.get("/status/{job_id}", response_model=JobStatusResponse)
+@log_endpoint("backfill", "system")
 async def get_job_status(job_id: str):
     """Get status of a backfill job."""
     if job_id not in active_jobs:
@@ -278,6 +282,7 @@ async def get_job_status(job_id: str):
 
 
 @router.get("/jobs")
+@log_endpoint("backfill", "system")
 async def list_jobs(
     status: Optional[str] = None,
     job_type: Optional[str] = None,
@@ -307,6 +312,7 @@ async def list_jobs(
 
 
 @router.delete("/jobs/{job_id}")
+@log_endpoint("backfill", "system")
 async def cancel_job(job_id: str):
     """Cancel a running job (marks as cancelled, actual stop may take time)."""
     if job_id not in active_jobs:
@@ -575,6 +581,7 @@ async def run_price_backfill(
 
 
 @router.delete("/jobs/{job_id}", response_model=Dict)
+@log_endpoint("backfill", "system")
 async def cancel_job(job_id: str):
     """Cancel a running job."""
     if job_id not in active_jobs:
@@ -606,6 +613,7 @@ async def cancel_job(job_id: str):
 
 
 @router.get("/data/news")
+@log_endpoint("backfill", "system")
 async def get_backfilled_news(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,

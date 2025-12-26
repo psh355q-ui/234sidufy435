@@ -22,6 +22,7 @@ from backend.data.sp500_universe import (
     get_sector, get_all_sectors, TOTAL_STOCKS
 )
 from backend.data.stock_price_storage import StockPriceStorage
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,7 @@ router = APIRouter(prefix="/api/stock-prices", tags=["Stock Prices"])
 
 
 @router.get("/list")
+@log_endpoint("stock_prices", "system")
 async def get_stock_list(
     sector: Optional[str] = None,
     db: AsyncSession = Depends(get_db)
@@ -68,6 +70,7 @@ async def get_stock_list(
 
 
 @router.get("/stats")
+@log_endpoint("stock_prices", "system")
 async def get_stock_stats(db: AsyncSession = Depends(get_db)):
     """
     주가 DB 통계
@@ -107,6 +110,7 @@ async def get_stock_stats(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/sectors/top-movers")
+@log_endpoint("stock_prices", "system")
 async def get_sector_top_movers(
     db: AsyncSession = Depends(get_db)
 ):
@@ -167,6 +171,7 @@ async def get_sector_top_movers(
 
 
 @router.get("/{ticker}")
+@log_endpoint("stock_prices", "system")
 async def get_stock_prices(
     ticker: str,
     days: int = Query(default=30, ge=1, le=365*5),
@@ -198,6 +203,7 @@ async def get_stock_prices(
 
 
 @router.post("/sync")
+@log_endpoint("stock_prices", "system")
 async def sync_stock_prices(
     tickers: Optional[List[str]] = None,
     sector: Optional[str] = None,
@@ -258,6 +264,7 @@ async def sync_stock_prices(
 
 
 @router.get("/universe/info")
+@log_endpoint("stock_prices", "system")
 async def get_universe_info():
     """
     S&P500 유니버스 정보

@@ -14,6 +14,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from backend.data.position_tracker import (
+from backend.ai.skills.common.logging_decorator import log_endpoint
     get_position_tracker,
     Position,
     PositionStatus
@@ -87,6 +88,7 @@ class ClosePositionRequest(BaseModel):
 # ============================================================================
 
 @router.post("/create")
+@log_endpoint("positions", "system")
 async def create_position(request: CreatePositionRequest):
     """
     새 포지션 생성 (초기 매수)
@@ -120,6 +122,7 @@ async def create_position(request: CreatePositionRequest):
 
 
 @router.post("/add-dca")
+@log_endpoint("positions", "system")
 async def add_dca(request: AddDCARequest):
     """
     DCA 진입 추가
@@ -152,6 +155,7 @@ async def add_dca(request: AddDCARequest):
 
 
 @router.post("/close")
+@log_endpoint("positions", "system")
 async def close_position(request: ClosePositionRequest):
     """
     포지션 청산
@@ -186,6 +190,7 @@ async def close_position(request: ClosePositionRequest):
 
 
 @router.get("/{ticker}")
+@log_endpoint("positions", "system")
 async def get_position(ticker: str, current_price: Optional[float] = Query(None)):
     """
     특정 포지션 조회
@@ -221,6 +226,7 @@ async def get_position(ticker: str, current_price: Optional[float] = Query(None)
 
 
 @router.get("/")
+@log_endpoint("positions", "system")
 async def list_positions(
     status: Optional[str] = Query(None, description="Filter by status (open/closed/stopped)"),
     current_prices: Optional[str] = Query(None, description="Current prices as JSON: {\"NVDA\":150.0}")
@@ -278,6 +284,7 @@ async def list_positions(
 
 
 @router.get("/portfolio/summary")
+@log_endpoint("positions", "system")
 async def get_portfolio_summary(current_prices: str = Query(..., description="Current prices as JSON")):
     """
     포트폴리오 전체 요약

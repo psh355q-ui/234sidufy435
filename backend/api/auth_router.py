@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from backend.auth import (
+from backend.ai.skills.common.logging_decorator import log_endpoint
     get_api_key,
     verify_readonly_access,
     verify_trading_access,
@@ -74,6 +75,7 @@ class TestAuthResponse(BaseModel):
 # ============================================================================
 
 @router.get("/status", response_model=AuthStatusResponse)
+@log_endpoint("auth", "system")
 async def get_authentication_status(
     api_key: str = Depends(verify_readonly_access)
 ):
@@ -94,6 +96,7 @@ async def get_authentication_status(
 
 
 @router.get("/me", response_model=ApiKeyInfoResponse)
+@log_endpoint("auth", "system")
 async def get_my_api_key_info(
     api_key: str = Depends(get_api_key)
 ):
@@ -124,6 +127,7 @@ async def get_my_api_key_info(
 
 
 @router.get("/audit-logs", response_model=List[AuditLogEntry])
+@log_endpoint("auth", "system")
 async def get_audit_logs(
     limit: int = 100,
     api_key: str = Depends(verify_trading_access)
@@ -152,6 +156,7 @@ async def get_audit_logs(
 
 
 @router.get("/failed-attempts", response_model=List[AuditLogEntry])
+@log_endpoint("auth", "system")
 async def get_failed_attempts(
     hours: int = 24,
     api_key: str = Depends(verify_trading_access)
@@ -186,6 +191,7 @@ async def get_failed_attempts(
 
 
 @router.get("/test/read", response_model=TestAuthResponse)
+@log_endpoint("auth", "system")
 async def test_read_permission(
     api_key: str = Depends(verify_readonly_access)
 ):
@@ -210,6 +216,7 @@ async def test_read_permission(
 
 
 @router.get("/test/write", response_model=TestAuthResponse)
+@log_endpoint("auth", "system")
 async def test_write_permission(
     api_key: str = Depends(verify_trading_access)
 ):
@@ -230,6 +237,7 @@ async def test_write_permission(
 
 
 @router.get("/test/execute", response_model=TestAuthResponse)
+@log_endpoint("auth", "system")
 async def test_execute_permission(
     api_key: str = Depends(verify_master_access)
 ):
@@ -252,6 +260,7 @@ async def test_execute_permission(
 
 
 @router.get("/health")
+@log_endpoint("auth", "system")
 async def auth_health_check():
     """
     Public health check endpoint (no auth required).

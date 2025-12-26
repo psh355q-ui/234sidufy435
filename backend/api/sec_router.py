@@ -19,6 +19,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 from pydantic import BaseModel
 import logging
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +96,7 @@ monitor_state = SECMonitorState()
 # ============================================================================
 
 @router.get("/status", response_model=MonitorStatus)
+@log_endpoint("sec", "system")
 async def get_monitor_status():
     """
     SEC 모니터 상태 조회
@@ -112,6 +114,7 @@ async def get_monitor_status():
 
 
 @router.post("/start")
+@log_endpoint("sec", "system")
 async def start_monitor(background_tasks: BackgroundTasks):
     """
     SEC 모니터 시작
@@ -134,6 +137,7 @@ async def start_monitor(background_tasks: BackgroundTasks):
 
 
 @router.post("/stop")
+@log_endpoint("sec", "system")
 async def stop_monitor():
     """SEC 모니터 중지"""
     if not monitor_state.is_running:
@@ -148,6 +152,7 @@ async def stop_monitor():
 
 
 @router.post("/watchlist")
+@log_endpoint("sec", "system")
 async def update_watchlist(request: WatchlistUpdate):
     """
     Watchlist 업데이트
@@ -173,6 +178,7 @@ async def update_watchlist(request: WatchlistUpdate):
 
 
 @router.get("/alerts", response_model=List[SECAlertResponse])
+@log_endpoint("sec", "system")
 async def get_recent_alerts(
     limit: int = 20,
     severity: Optional[str] = None,
@@ -218,6 +224,7 @@ async def get_recent_alerts(
 
 
 @router.get("/insider/{ticker}")
+@log_endpoint("sec", "system")
 async def get_insider_trades(ticker: str, days: int = 30):
     """
     특정 종목의 내부자 거래 조회
@@ -258,6 +265,7 @@ async def get_insider_trades(ticker: str, days: int = 30):
 
 
 @router.get("/test")
+@log_endpoint("sec", "system")
 async def test_sec_api():
     """SEC API 연결 테스트"""
     from sec_monitor import load_company_tickers

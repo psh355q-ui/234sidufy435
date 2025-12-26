@@ -17,6 +17,7 @@ from uuid import UUID
 from pydantic import BaseModel
 
 from backend.approval import (
+from backend.ai.skills.common.logging_decorator import log_endpoint
     get_approval_manager,
     ApprovalRequest,
     ApprovalStatus
@@ -72,6 +73,7 @@ class RejectRequest(BaseModel):
 
 # Endpoints
 @router.get("/pending", response_model=List[ApprovalRequestResponse])
+@log_endpoint("approvals", "system")
 async def get_pending_approvals(ticker: Optional[str] = None):
     """
     대기 중 승인 요청 조회
@@ -153,6 +155,7 @@ async def get_pending_approvals(ticker: Optional[str] = None):
 
 
 @router.post("/{request_id}/approve", response_model=ApprovalRequestResponse)
+@log_endpoint("approvals", "system")
 async def approve_request(
     request_id: str,
     body: ApproveRequest
@@ -189,6 +192,7 @@ async def approve_request(
 
 
 @router.post("/{request_id}/reject", response_model=ApprovalRequestResponse)
+@log_endpoint("approvals", "system")
 async def reject_request(
     request_id: str,
     body: RejectRequest
@@ -225,6 +229,7 @@ async def reject_request(
 
 
 @router.get("/{request_id}", response_model=ApprovalRequestResponse)
+@log_endpoint("approvals", "system")
 async def get_approval_request(request_id: str):
     """
     특정 승인 요청 조회

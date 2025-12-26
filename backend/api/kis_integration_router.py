@@ -23,6 +23,7 @@ from backend.api.phase_integration_router import (
 
 # Load .env explicitly
 from dotenv import load_dotenv
+from backend.ai.skills.common.logging_decorator import log_endpoint
 load_dotenv()
 
 # KIS Broker
@@ -152,6 +153,7 @@ def get_kis_broker(account_no: Optional[str] = None, is_virtual: Optional[bool] 
 # ============================================================================
 
 @router.post("/auto-trade", response_model=KISAutoTradeResponse)
+@log_endpoint("kis", "system")
 async def kis_auto_trade(request: KISAutoTradeRequest):
     """
     전체 파이프라인 + KIS 자동매매
@@ -250,6 +252,7 @@ async def kis_auto_trade(request: KISAutoTradeRequest):
 
 
 @router.get("/balance", response_model=KISBalanceResponse)
+@log_endpoint("kis", "system")
 async def get_kis_balance(
     account_no: Optional[str] = None,
     is_virtual: Optional[bool] = None
@@ -283,6 +286,7 @@ async def get_kis_balance(
 
 
 @router.get("/price/{symbol}")
+@log_endpoint("kis", "system")
 async def get_kis_price(
     symbol: str,
     exchange: str = "NASDAQ",
@@ -309,6 +313,7 @@ async def get_kis_price(
 
 
 @router.get("/health")
+@log_endpoint("kis", "system")
 async def kis_health_check():
     """KIS 연동 상태 확인"""
     return {
@@ -320,6 +325,7 @@ async def kis_health_check():
 
 
 @router.post("/manual-order")
+@log_endpoint("kis", "system")
 async def manual_order(
     symbol: str,
     side: str,  # "BUY" or "SELL"
@@ -367,6 +373,7 @@ async def manual_order(
 # ============================================================================
 
 @router.get("/stats")
+@log_endpoint("kis", "system")
 async def kis_stats():
     """KIS 통합 통계"""
     return {

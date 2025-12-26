@@ -5,6 +5,7 @@ import logging
 
 from backend.ai.reasoning.engine import reasoning_engine
 from backend.ai.reasoning.models import MarketThesis
+from backend.ai.skills.common.logging_decorator import log_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ class AnalyzeRequest(BaseModel):
     enable_skeptic: bool = False  # 반박논리추가
 
 @router.post("/analyze")
+@log_endpoint("reasoning", "system")
 async def analyze_ticker_manually(request: AnalyzeRequest):
     """
     Trigger Deep Reasoning on a ticker with provided context (Manual/Dev Mode).
@@ -206,5 +208,6 @@ async def analyze_ticker_manually(request: AnalyzeRequest):
     return response
 
 @router.get("/health")
+@log_endpoint("reasoning", "system")
 def health_check():
     return {"status": "active", "engine": "ready" if reasoning_engine else "disabled"}

@@ -632,20 +632,15 @@ async def run_war_room_debate(request: DebateRequest, execute_trade: bool = Fals
 
     try:
         # AIDebateSession에 저장
+        # Generate unique debate_id
+        debate_id = f"debate-{ticker}-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+        
         session = AIDebateSession(
             ticker=ticker,
-            consensus_action=pm_decision["consensus_action"],
+            debate_id=debate_id,
+            votes=json.dumps(votes, ensure_ascii=False),  # Store all votes as JSONB
+            weighted_result=pm_decision["consensus_action"],
             consensus_confidence=pm_decision["consensus_confidence"],
-            trader_vote=next((v["action"] for v in votes if v["agent"] == "trader"), None),
-            risk_vote=next((v["action"] for v in votes if v["agent"] == "risk"), None),
-            analyst_vote=next((v["action"] for v in votes if v["agent"] == "analyst"), None),
-            macro_vote=next((v["action"] for v in votes if v["agent"] == "macro"), None),
-            institutional_vote=next((v["action"] for v in votes if v["agent"] == "institutional"), None),
-            news_vote=next((v["action"] for v in votes if v["agent"] == "news"), None),
-            chip_war_vote=next((v["action"] for v in votes if v["agent"] == "chip_war"), None),  # 🆕 Phase 24
-            pm_vote=pm_decision["consensus_action"],
-            debate_transcript=json.dumps(votes, ensure_ascii=False),
-            constitutional_valid=is_valid,  # 🆕 실제 Constitutional 검증 결과
             created_at=datetime.now(),
             completed_at=datetime.now()
         )
@@ -685,15 +680,11 @@ async def run_war_room_debate(request: DebateRequest, execute_trade: bool = Fals
             db.commit()
             db.refresh(signal)
 
-            # signal_id 연결
-            session.signal_id = signal.id
-            db.commit()
-
             signal_id = signal.id
             logger.info(f"📊 Trading signal created: ID {signal_id}")
 
             # 4. 🆕 REAL MODE: Execute KIS Order
-            if execute_trade and session.constitutional_valid:
+            if execute_trade and is_valid:
                 logger.info(f"💼 Executing trade for {ticker}: {pm_decision['consensus_action']}")
                 order_result = await execute_kis_order(
                     ticker=ticker,
@@ -721,7 +712,7 @@ async def run_war_room_debate(request: DebateRequest, execute_trade: bool = Fals
                 "summary": pm_decision.get("summary", "")
             },
             signal_id=signal_id,
-            constitutional_valid=session.constitutional_valid,
+            constitutional_valid=is_valid,  # Use local variable instead of session attribute
             order_id=order_id  # 🆕 REAL MODE
         )
 

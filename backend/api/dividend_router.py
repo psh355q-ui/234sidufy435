@@ -50,6 +50,7 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict
 from datetime import datetime
 import sys
+import traceback
 from pathlib import Path
 
 # Add backend to path
@@ -61,7 +62,17 @@ from backend.analytics.dividend_analyzer import DividendAnalyzer
 from backend.intelligence.dividend_risk_agent import DividendRiskAgent
 from backend.analytics.tax_engine import TaxEngine
 
+# Agent Logging
+from backend.ai.skills.common.agent_logger import AgentLogger
+from backend.ai.skills.common.log_schema import (
+    ExecutionLog,
+    ErrorLog,
+    ExecutionStatus,
+    ErrorImpact
+)
+
 router = APIRouter(prefix="/api/dividend", tags=["dividend"])
+agent_logger = AgentLogger("dividend-intelligence", "analysis")
 
 # ============================================================================
 # Request/Response Models
@@ -453,14 +464,46 @@ async def get_ttm_yield(ticker: str):
             "payment_count": 4
         }
     """
+    start_time = datetime.now()
+    task_id = f"ttm-{ticker}-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
     
     collector = DividendCollector()
     
     try:
         result = await collector.calculate_ttm_yield(ticker.upper())
+        
+        # Log successful execution
+        agent_logger.log_execution(ExecutionLog(
+            timestamp=datetime.now(),
+            agent="analysis/dividend-intelligence",
+            task_id=task_id,
+            status=ExecutionStatus.SUCCESS,
+            duration_ms=int((datetime.now() - start_time).total_seconds() * 1000),
+            input={"ticker": ticker.upper()},
+            output={
+                "ttm_yield": result.get("ttm_yield"),
+                "payment_count": result.get("payment_count")
+            }
+        ))
+        
         return result
     
     except Exception as e:
+        # Log error
+        agent_logger.log_error(ErrorLog(
+            timestamp=datetime.now(),
+            agent="analysis/dividend-intelligence",
+            task_id=task_id,
+            error={
+                "type": type(e).__name__,
+                "message": str(e),
+                "stack": traceback.format_exc(),
+                "context": {"ticker": ticker}
+            },
+            impact=ErrorImpact.MEDIUM,
+            recovery_attempted=False
+        ))
+        
         raise HTTPException(status_code=500, detail=str(e))
 
 

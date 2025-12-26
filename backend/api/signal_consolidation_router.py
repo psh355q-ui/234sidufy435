@@ -98,7 +98,7 @@ async def get_consolidated_signals(
         
         # Build query
         query = db.query(TradingSignal)\
-            .filter(TradingSignal.generated_at >= cutoff)
+            .filter(TradingSignal.created_at >= cutoff)
         
         if ticker:
             query = query.filter(TradingSignal.ticker == ticker.upper())

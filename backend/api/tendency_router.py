@@ -14,12 +14,13 @@ from typing import List, Dict, Any
 from datetime import datetime
 
 from backend.metrics.trading_tendency_analyzer import (
-from backend.ai.skills.common.logging_decorator import log_endpoint
     get_tendency_analyzer,
     TradeAction,
     TendencyResult
 )
 
+
+from backend.ai.skills.common.logging_decorator import log_endpoint
 router = APIRouter(prefix="/api/tendency", tags=["tendency"])
 
 

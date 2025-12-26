@@ -26,33 +26,21 @@
       "errors": 3,
       "priority": "HIGH",
       "details": "Error rate 50.0% (3/6)"
-    },
-    {
-      "type": "performance_degradation",
-      "agent": "system/log-manager",
-      "baseline_ms": 0,
-      "recent_avg_ms": 0,
-      "degradation_factor": 0,
-      "priority": "MEDIUM",
-      "details": "Performance degraded from 0ms to 0ms"
     }
   ],
   "summary": {
-    "total_patterns": 4,
+    "total_patterns": 3,
     "by_type": {
-      "high_error_rate": 3,
-      "performance_degradation": 1
+      "high_error_rate": 3
     },
     "by_priority": {
       "CRITICAL": 1,
-      "HIGH": 2,
-      "MEDIUM": 1
+      "HIGH": 2
     },
     "agents_affected": [
-      "system/signal-generator-agent",
       "war-room/war-room-debate",
-      "system/signal-consolidation",
-      "system/log-manager"
+      "system/signal-generator-agent",
+      "system/signal-consolidation"
     ]
   }
 }

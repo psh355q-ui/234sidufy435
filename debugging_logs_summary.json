@@ -1,0 +1,292 @@
+{
+  "agents": [
+    "analysis/ceo_analysis",
+    "analysis/dividend-intelligence",
+    "analysis/gemini-news",
+    "analysis/news",
+    "analysis/news-analyzer",
+    "debugging-agent/proposals",
+    "system/ai_chat",
+    "system/ai_reviews",
+    "system/auth",
+    "system/backfill",
+    "system/backtest",
+    "system/consensus",
+    "system/debugging-agent",
+    "system/emergency",
+    "system/feeds",
+    "system/fle-calculator",
+    "system/gemini_free",
+    "system/global_macro",
+    "system/incremental",
+    "system/kis",
+    "system/log-manager",
+    "system/notifications",
+    "system/orders",
+    "system/performance",
+    "system/phase",
+    "system/portfolio",
+    "system/positions",
+    "system/reports",
+    "system/signal-consolidation",
+    "system/signal-generator-agent",
+    "system/weights",
+    "trading/ai_signals",
+    "trading/auto_trade",
+    "trading/signals",
+    "war-room/war-room-debate"
+  ],
+  "total_executions": 8,
+  "total_errors": 6,
+  "total_performance": 1,
+  "time_range": "2025-12-19 to 2025-12-26",
+  "executions": [
+    {
+      "timestamp": "2025-12-26T13:10:57.262579",
+      "agent": "analysis/dividend-intelligence",
+      "task_id": "ttm-AAPL-20251226-131055",
+      "status": "SUCCESS",
+      "duration_ms": 1725,
+      "input": {
+        "ticker": "AAPL"
+      },
+      "output": {
+        "ttm_yield": 0.0,
+        "payment_count": 0
+      }
+    },
+    {
+      "timestamp": "2025-12-26T13:10:58.026109",
+      "agent": "analysis/gemini-news",
+      "task_id": "gemini-news-NVDA-20251226-131057",
+      "status": "SUCCESS",
+      "duration_ms": 760,
+      "input": {
+        "ticker": "NVDA",
+        "max_articles": 3
+      },
+      "output": {
+        "article_count": 0
+      }
+    },
+    {
+      "timestamp": "2025-12-26T13:10:58.029097",
+      "agent": "system/log-manager",
+      "task_id": "log-stats-20251226-131058",
+      "status": "SUCCESS",
+      "duration_ms": 0,
+      "input": {
+        "days": 7
+      },
+      "output": {
+        "total_logs": 0,
+        "errors_count": 0
+      }
+    },
+    {
+      "timestamp": "2025-12-25T18:19:57.689561",
+      "agent": "system/signal-consolidation",
+      "task_id": "task-test-20251225-181957-0",
+      "status": "SUCCESS",
+      "duration_ms": 800,
+      "input": {
+        "ticker": "AAPL",
+        "hours": 24,
+        "limit": 10
+      },
+      "output": {
+        "total_count": 5,
+        "sources": [
+          "war_room",
+          "deep_reasoning"
+        ]
+      }
+    },
+    {
+      "timestamp": "2025-12-25T18:19:57.690382",
+      "agent": "system/signal-consolidation",
+      "task_id": "task-test-20251225-181957-1",
+      "status": "SUCCESS",
+      "duration_ms": 1000,
+      "input": {
+        "ticker": "MSFT",
+        "hours": 24,
+        "limit": 10
+      },
+      "output": {
+        "total_count": 6,
+        "sources": [
+          "war_room",
+          "deep_reasoning"
+        ]
+      }
+    },
+    {
+      "timestamp": "2025-12-25T18:19:57.690836",
+      "agent": "system/signal-consolidation",
+      "task_id": "task-test-20251225-181957-2",
+      "status": "SUCCESS",
+      "duration_ms": 1200,
+      "input": {
+        "ticker": "GOOGL",
+        "hours": 24,
+        "limit": 10
+      },
+      "output": {
+        "total_count": 7,
+        "sources": [
+          "war_room",
+          "deep_reasoning"
+        ]
+      }
+    },
+    {
+      "timestamp": "2025-12-25T18:13:55.458542",
+      "agent": "system/signal-generator-agent",
+      "task_id": "task-test-001",
+      "status": "SUCCESS",
+      "duration_ms": 1200,
+      "input": {
+        "ticker": "AAPL"
+      },
+      "output": {
+        "action": "BUY",
+        "confidence": 0.85
+      }
+    },
+    {
+      "timestamp": "2025-12-26T13:10:58.583436",
+      "agent": "trading/auto_trade",
+      "task_id": "auto_trade-20251226-131058-5831",
+      "status": "SUCCESS",
+      "duration_ms": 0,
+      "input": {
+        "args_count": 0,
+        "kwargs_count": 1
+      },
+      "output": {
+        "ticker": "AAPL",
+        "action": "BUY",
+        "approved": true,
+        "executed": true,
+        "dry_run": true,
+        "kis_result": {
+          "mode": "dry_run",
+          "message": "Would execute BUY for AAPL",
+          "consensus": {
+            "final_decision": "APPROVED"
+          }
+        },
+        "error": null,
+        "timestamp": "2025-12-26T13:10:58.583317"
+      }
+    }
+  ],
+  "errors": [
+    {
+      "timestamp": "2025-12-25T18:19:57.691596",
+      "agent": "system/signal-consolidation",
+      "task_id": "task-error-20251225-181957",
+      "error": {
+        "type": "DatabaseError",
+        "message": "Connection timeout",
+        "stack": "Traceback (simulated)...",
+        "context": {
+          "database": "postgresql",
+          "timeout": "30s"
+        }
+      },
+      "impact": "HIGH",
+      "recovery_attempted": false
+    },
+    {
+      "timestamp": "2025-12-25T18:23:58.110987",
+      "agent": "system/signal-consolidation",
+      "task_id": "consolidate-20251225-182358",
+      "error": {
+        "type": "AttributeError",
+        "message": "type object 'TradingSignal' has no attribute 'generated_at'",
+        "stack": "Traceback (most recent call last):\n  File \"D:\\code\\ai-trading-system\\backend\\api\\signal_consolidation_router.py\", line 101, in get_consolidated_signals\n    .filter(TradingSignal.generated_at >= cutoff)\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: type object 'TradingSignal' has no attribute 'generated_at'. Did you mean: 'created_at'?\n",
+        "context": {
+          "ticker": null,
+          "hours": 24
+        }
+      },
+      "impact": "HIGH",
+      "recovery_attempted": false
+    },
+    {
+      "timestamp": "2025-12-25T18:27:29.863750",
+      "agent": "system/signal-consolidation",
+      "task_id": "consolidate-20251225-182729",
+      "error": {
+        "type": "AttributeError",
+        "message": "type object 'TradingSignal' has no attribute 'generated_at'",
+        "stack": "Traceback (most recent call last):\n  File \"D:\\code\\ai-trading-system\\backend\\api\\signal_consolidation_router.py\", line 101, in get_consolidated_signals\n    .filter(TradingSignal.generated_at >= cutoff)\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: type object 'TradingSignal' has no attribute 'generated_at'. Did you mean: 'created_at'?\n",
+        "context": {
+          "ticker": null,
+          "hours": 24
+        }
+      },
+      "impact": "HIGH",
+      "recovery_attempted": false
+    },
+    {
+      "timestamp": "2025-12-25T18:13:55.460118",
+      "agent": "system/signal-generator-agent",
+      "task_id": "task-test-002",
+      "error": {
+        "type": "ValueError",
+        "message": "Invalid ticker",
+        "stack": "..."
+      },
+      "impact": "LOW",
+      "recovery_attempted": false
+    },
+    {
+      "timestamp": "2025-12-25T18:40:59.468931",
+      "agent": "war-room/war-room-debate",
+      "task_id": "war-room-AAPL-20251225-184058",
+      "error": {
+        "type": "TypeError",
+        "message": "'consensus_action' is an invalid keyword argument for AIDebateSession",
+        "stack": "Traceback (most recent call last):\n  File \"D:\\code\\ai-trading-system\\backend\\api\\war_room_router.py\", line 635, in run_war_room_debate\n    session = AIDebateSession(\n        ticker=ticker,\n    ...<13 lines>...\n        completed_at=datetime.now()\n    )\n  File \"<string>\", line 4, in __init__\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\state.py\", line 596, in _initialize_instance\n    with util.safe_reraise():\n         ~~~~~~~~~~~~~~~~~^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\util\\langhelpers.py\", line 224, in __exit__\n    raise exc_value.with_traceback(exc_tb)\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\state.py\", line 594, in _initialize_instance\n    manager.original_init(*mixed[1:], **kwargs)\n    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\decl_base.py\", line 2179, in _declarative_constructor\n    raise TypeError(\n        \"%r is an invalid keyword argument for %s\" % (k, cls_.__name__)\n    )\nTypeError: 'consensus_action' is an invalid keyword argument for AIDebateSession\n",
+        "context": {
+          "ticker": "AAPL",
+          "execute_trade": false
+        }
+      },
+      "impact": "CRITICAL",
+      "recovery_attempted": false
+    },
+    {
+      "timestamp": "2025-12-26T13:10:58.575471",
+      "agent": "war-room/war-room-debate",
+      "task_id": "war-room-NVDA-20251226-131058",
+      "error": {
+        "type": "ProgrammingError",
+        "message": "(psycopg2.errors.UndefinedColumn) 오류:  \"debate_id\" 칼럼은 \"ai_debate_sessions\" 릴레이션(relation)에 없음\nLINE 1: INSERT INTO ai_debate_sessions (ticker, debate_id, votes, we...\n                                                ^\n\n[SQL: INSERT INTO ai_debate_sessions (ticker, debate_id, votes, weighted_result, consensus_confidence, created_at, completed_at, duration_seconds) VALUES (%(ticker)s, %(debate_id)s, %(votes)s::JSONB, %(weighted_result)s, %(consensus_confidence)s, %(created_at)s, %(completed_at)s, %(duration_seconds)s) RETURNING ai_debate_sessions.id]\n[parameters: {'ticker': 'NVDA', 'debate_id': 'debate-NVDA-20251226-131058', 'votes': '\"[{\\\\\"agent\\\\\": \\\\\"risk\\\\\", \\\\\"action\\\\\": \\\\\"SELL\\\\\", \\\\\"confidence\\\\\": 0.85, \\\\\"reasoning\\\\\": \\\\\"\\\\uace0\\\\ubcc0\\\\ub3d9\\\\uc131 \\\\uacbd\\\\uace0 (45%),  ... (3295 characters truncated) ... \\\"description\\\\\": \\\\\"\\\\uc131\\\\uc7a5\\\\uc8fc \\\\uc131\\\\ud5a5 \\\\uac15\\\\ud568. \\\\ubc30\\\\ub2f9\\\\ub960 \\\\ub0ae\\\\uc74c\\\\\", \\\\\"sector\\\\\": \\\\\"Technology\\\\\"}}]\"', 'weighted_result': 'HOLD', 'consensus_confidence': 0.3911913554917248, 'created_at': datetime.datetime(2025, 12, 26, 13, 10, 58, 455487), 'completed_at': datetime.datetime(2025, 12, 26, 13, 10, 58, 455488), 'duration_seconds': None}]\n(Background on this error at: https://sqlalche.me/e/20/f405)",
+        "stack": "Traceback (most recent call last):\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\base.py\", line 1967, in _exec_single_context\n    self.dialect.do_execute(\n    ~~~~~~~~~~~~~~~~~~~~~~~^\n        cursor, str_statement, effective_parameters, context\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\default.py\", line 952, in do_execute\n    cursor.execute(statement, parameters)\n    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^\npsycopg2.errors.UndefinedColumn: 오류:  \"debate_id\" 칼럼은 \"ai_debate_sessions\" 릴레이션(relation)에 없음\nLINE 1: INSERT INTO ai_debate_sessions (ticker, debate_id, votes, we...\n                                                ^\n\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"D:\\code\\ai-trading-system\\backend\\api\\war_room_router.py\", line 649, in run_war_room_debate\n    db.commit()\n    ~~~~~~~~~^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\session.py\", line 2030, in commit\n    trans.commit(_to_root=True)\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^\n  File \"<string>\", line 2, in commit\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\state_changes.py\", line 137, in _go\n    ret_value = fn(self, *arg, **kw)\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\session.py\", line 1311, in commit\n    self._prepare_impl()\n    ~~~~~~~~~~~~~~~~~~^^\n  File \"<string>\", line 2, in _prepare_impl\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\state_changes.py\", line 137, in _go\n    ret_value = fn(self, *arg, **kw)\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\session.py\", line 1286, in _prepare_impl\n    self.session.flush()\n    ~~~~~~~~~~~~~~~~~~^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\session.py\", line 4331, in flush\n    self._flush(objects)\n    ~~~~~~~~~~~^^^^^^^^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\session.py\", line 4466, in _flush\n    with util.safe_reraise():\n         ~~~~~~~~~~~~~~~~~^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\util\\langhelpers.py\", line 224, in __exit__\n    raise exc_value.with_traceback(exc_tb)\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\session.py\", line 4427, in _flush\n    flush_context.execute()\n    ~~~~~~~~~~~~~~~~~~~~~^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\unitofwork.py\", line 466, in execute\n    rec.execute(self)\n    ~~~~~~~~~~~^^^^^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\unitofwork.py\", line 642, in execute\n    util.preloaded.orm_persistence.save_obj(\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        self.mapper,\n        ^^^^^^^^^^^^\n        uow.states_for_mapper_hierarchy(self.mapper, False, False),\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        uow,\n        ^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\persistence.py\", line 93, in save_obj\n    _emit_insert_statements(\n    ~~~~~~~~~~~~~~~~~~~~~~~^\n        base_mapper,\n        ^^^^^^^^^^^^\n    ...<3 lines>...\n        insert,\n        ^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\persistence.py\", line 1233, in _emit_insert_statements\n    result = connection.execute(\n        statement,\n        params,\n        execution_options=execution_options,\n    )\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\base.py\", line 1419, in execute\n    return meth(\n        self,\n        distilled_parameters,\n        execution_options or NO_OPTIONS,\n    )\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\sql\\elements.py\", line 527, in _execute_on_connection\n    return connection._execute_clauseelement(\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        self, distilled_params, execution_options\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\base.py\", line 1641, in _execute_clauseelement\n    ret = self._execute_context(\n        dialect,\n    ...<8 lines>...\n        cache_hit=cache_hit,\n    )\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\base.py\", line 1846, in _execute_context\n    return self._exec_single_context(\n           ~~~~~~~~~~~~~~~~~~~~~~~~~^\n        dialect, context, statement, parameters\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\base.py\", line 1986, in _exec_single_context\n    self._handle_dbapi_exception(\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        e, str_statement, effective_parameters, cursor, context\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\base.py\", line 2363, in _handle_dbapi_exception\n    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\base.py\", line 1967, in _exec_single_context\n    self.dialect.do_execute(\n    ~~~~~~~~~~~~~~~~~~~~~~~^\n        cursor, str_statement, effective_parameters, context\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\default.py\", line 952, in do_execute\n    cursor.execute(statement, parameters)\n    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^\nsqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedColumn) 오류:  \"debate_id\" 칼럼은 \"ai_debate_sessions\" 릴레이션(relation)에 없음\nLINE 1: INSERT INTO ai_debate_sessions (ticker, debate_id, votes, we...\n                                                ^\n\n[SQL: INSERT INTO ai_debate_sessions (ticker, debate_id, votes, weighted_result, consensus_confidence, created_at, completed_at, duration_seconds) VALUES (%(ticker)s, %(debate_id)s, %(votes)s::JSONB, %(weighted_result)s, %(consensus_confidence)s, %(created_at)s, %(completed_at)s, %(duration_seconds)s) RETURNING ai_debate_sessions.id]\n[parameters: {'ticker': 'NVDA', 'debate_id': 'debate-NVDA-20251226-131058', 'votes': '\"[{\\\\\"agent\\\\\": \\\\\"risk\\\\\", \\\\\"action\\\\\": \\\\\"SELL\\\\\", \\\\\"confidence\\\\\": 0.85, \\\\\"reasoning\\\\\": \\\\\"\\\\uace0\\\\ubcc0\\\\ub3d9\\\\uc131 \\\\uacbd\\\\uace0 (45%),  ... (3295 characters truncated) ... \\\"description\\\\\": \\\\\"\\\\uc131\\\\uc7a5\\\\uc8fc \\\\uc131\\\\ud5a5 \\\\uac15\\\\ud568. \\\\ubc30\\\\ub2f9\\\\ub960 \\\\ub0ae\\\\uc74c\\\\\", \\\\\"sector\\\\\": \\\\\"Technology\\\\\"}}]\"', 'weighted_result': 'HOLD', 'consensus_confidence': 0.3911913554917248, 'created_at': datetime.datetime(2025, 12, 26, 13, 10, 58, 455487), 'completed_at': datetime.datetime(2025, 12, 26, 13, 10, 58, 455488), 'duration_seconds': None}]\n(Background on this error at: https://sqlalche.me/e/20/f405)\n",
+        "context": {
+          "ticker": "NVDA",
+          "execute_trade": false
+        }
+      },
+      "impact": "CRITICAL",
+      "recovery_attempted": false
+    }
+  ],
+  "performance": [
+    {
+      "timestamp": "2025-12-25T18:19:57.692682",
+      "agent": "system/signal-consolidation",
+      "metrics": {
+        "cpu_percent": 35.2,
+        "memory_mb": 256.0,
+        "api_calls": 2.0,
+        "db_queries": 3.0,
+        "avg_response_time_ms": 850.0
+      }
+    }
+  ]
+}

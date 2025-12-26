@@ -12,7 +12,11 @@ from datetime import datetime
 
 def get_db_url():
     """DB 연결 문자열 가져오기"""
-    return os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/ai_trading')
+    db_url = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/ai_trading')
+    # Convert asyncpg to psycopg2 for sync migration
+    if 'postgresql+asyncpg://' in db_url:
+        db_url = db_url.replace('postgresql+asyncpg://', 'postgresql://')
+    return db_url
 
 def check_column_exists(engine):
     """debate_id 칼럼이 이미 있는지 확인"""

@@ -114,6 +114,7 @@ class ApplyDiagnosisRequest(BaseModel):
 # ============================================================================
 
 @router.get("", response_model=List[RSSFeedResponse])
+@log_endpoint("feeds", "system")
 async def get_all_feeds(
     enabled_only: bool = Query(False, description="Show only enabled feeds"),
     category: Optional[str] = Query(None, description="Filter by category"),

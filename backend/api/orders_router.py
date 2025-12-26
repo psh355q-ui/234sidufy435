@@ -53,6 +53,7 @@ class OrderResponse(BaseModel):
 # ============================================================================
 
 @router.get("", response_model=List[OrderResponse])
+@log_endpoint("orders", "system")
 async def get_orders(
     status: Optional[str] = Query(None, description="Filter by status (PENDING, FILLED, CANCELLED)"),
     ticker: Optional[str] = Query(None, description="Filter by ticker"),

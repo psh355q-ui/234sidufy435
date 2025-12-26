@@ -25,11 +25,14 @@ from backend.ai.skills.common.log_schema import (
     ErrorImpact
 )
 
+from backend.ai.skills.common.logging_decorator import log_endpoint
+
 router = APIRouter(prefix="/news", tags=["News Analysis"])
 agent_logger = AgentLogger("news-analyzer", "analysis")
 
 
 @router.get("/analyze-stream")
+@log_endpoint("news-analyzer", "analysis")
 async def analyze_articles_stream(
     max_count: int = Query(default=50, ge=1, le=100),
     db: Session = Depends(get_db)

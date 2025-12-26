@@ -13,6 +13,8 @@ ChatGPT Feature 3 API Integration
 from fastapi import APIRouter, HTTPException
 from typing import List, Optional
 from pydantic import BaseModel
+from datetime import datetime
+import traceback
 
 from backend.metrics import (
     get_fle_calculator,
@@ -21,7 +23,17 @@ from backend.metrics import (
     FLEResult
 )
 
+# Agent Logging
+from backend.ai.skills.common.agent_logger import AgentLogger
+from backend.ai.skills.common.log_schema import (
+    ExecutionLog,
+    ErrorLog,
+    ExecutionStatus,
+    ErrorImpact
+)
+
 router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
+agent_logger = AgentLogger("fle-calculator", "system")
 
 
 # Request/Response Models
@@ -101,6 +113,9 @@ async def calculate_fle(portfolio_input: PortfolioInput):
             "cash": 10000
         }
     """
+    start_time = datetime.now()
+    task_id = f"fle-{portfolio_input.user_id}-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+    
     try:
         # Portfolio 객체 생성
         positions = [
@@ -126,9 +141,45 @@ async def calculate_fle(portfolio_input: PortfolioInput):
         # 안전 메시지 생성
         safety_message = calculator.get_safety_message(result)
         
-        return FLEResponse.from_fle_result(result, safety_message)
+        response = FLEResponse.from_fle_result(result, safety_message)
+        
+        # Log successful execution
+        agent_logger.log_execution(ExecutionLog(
+            timestamp=datetime.now(),
+            agent="system/fle-calculator",
+            task_id=task_id,
+            status=ExecutionStatus.SUCCESS,
+            duration_ms=int((datetime.now() - start_time).total_seconds() * 1000),
+            input={
+                "user_id": portfolio_input.user_id,
+                "position_count": len(portfolio_input.positions),
+                "cash": portfolio_input.cash
+            },
+            output={
+                "fle": result.fle,
+                "alert_level": result.alert_level,
+                "drawdown_pct": result.drawdown_pct
+            }
+        ))
+        
+        return response
     
     except Exception as e:
+        # Log error
+        agent_logger.log_error(ErrorLog(
+            timestamp=datetime.now(),
+            agent="system/fle-calculator",
+            task_id=task_id,
+            error={
+                "type": type(e).__name__,
+                "message": str(e),
+                "stack": traceback.format_exc(),
+                "context": {"user_id": portfolio_input.user_id}
+            },
+            impact=ErrorImpact.MEDIUM,
+            recovery_attempted=False
+        ))
+        
         raise HTTPException(status_code=500, detail=str(e))
 
 

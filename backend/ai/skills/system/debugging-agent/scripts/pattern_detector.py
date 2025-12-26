@@ -68,6 +68,11 @@ class PatternDetector:
         patterns.extend(rate_limits)
         print(f"✅ API rate limits: {len(rate_limits)}")
         
+        # Pattern E: Mock Data Usage 🆕
+        mock_usage = self.detect_mock_data_usage()
+        patterns.extend(mock_usage)
+        print(f"✅ Mock data usage: {len(mock_usage)}")
+        
         # Sort by priority
         priority_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
         patterns.sort(key=lambda p: priority_order.get(p["priority"], 99))
@@ -276,6 +281,66 @@ class PatternDetector:
                     "last_seen": timestamps[-1].isoformat(),
                     "sample_error": recent[0].get("error", {}),
                     "details": f"API rate limit hit {len(recent)} times in 24h"
+                })
+        
+        return patterns
+    
+    def detect_mock_data_usage(self) -> List[Dict[str, Any]]:
+        """
+        🆕 Detect usage of mock/test data instead of real production data
+        
+        This pattern helps agents avoid debugging with fake data.
+        
+        Returns:
+            List of pattern dictionaries
+        """
+        patterns = []
+        
+        # Check execution logs for mock data indicators
+        mock_by_agent = defaultdict(list)
+        
+        for execution in self.executions:
+            agent = execution.get("agent", "unknown")
+            input_data = execution.get("input", {})
+            
+            # Check for mock flags in input parameters
+            mock_indicators = [
+                ("use_mock", True),
+                ("mock_data", True),
+                ("use_mock_consensus", True),
+                ("use_real_data", False),  # False means using mock
+            ]
+            
+            for key, bad_value in mock_indicators:
+                if input_data.get(key) == bad_value:
+                    mock_by_agent[agent].append({
+                        "timestamp": execution.get("timestamp", ""),
+                        "task_id": execution.get("task_id"),
+                        "mock_flag": f"{key}={bad_value}",
+                        "input": input_data
+                    })
+                    break  # Don't count same execution multiple times
+        
+        # Create patterns for agents using mock data
+        for agent, mock_usages in mock_by_agent.items():
+            if len(mock_usages) > 0:
+                # Get total executions for this agent
+                agent_execs = [e for e in self.executions if e.get("agent") == agent]
+                total = len(agent_execs)
+                mock_count = len(mock_usages)
+                mock_pct = (mock_count / total * 100) if total > 0 else 0
+                
+                priority = "HIGH" if mock_count > 5 or mock_pct > 50 else "MEDIUM"
+                
+                patterns.append({
+                    "type": "mock_data_usage",
+                    "agent": agent,
+                    "mock_usage_count": mock_count,
+                    "total_executions": total,
+                    "mock_percentage": round(mock_pct, 1),
+                    "priority": priority,
+                    "sample_usages": mock_usages[:3],  # First 3 examples
+                    "details": f"Agent using mock/test data in {mock_count} executions ({mock_pct:.1f}%)"
                 })
         
         return patterns

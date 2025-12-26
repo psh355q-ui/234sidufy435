@@ -17,12 +17,13 @@ from uuid import UUID
 from pydantic import BaseModel
 
 from backend.approval import (
-from backend.ai.skills.common.logging_decorator import log_endpoint
     get_approval_manager,
     ApprovalRequest,
     ApprovalStatus
 )
 
+
+from backend.ai.skills.common.logging_decorator import log_endpoint
 router = APIRouter(prefix="/api/approvals", tags=["approvals"])
 
 

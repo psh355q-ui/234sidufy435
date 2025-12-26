@@ -14,12 +14,13 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from backend.data.position_tracker import (
-from backend.ai.skills.common.logging_decorator import log_endpoint
     get_position_tracker,
     Position,
     PositionStatus
 )
 
+
+from backend.ai.skills.common.logging_decorator import log_endpoint
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/positions", tags=["Positions"])

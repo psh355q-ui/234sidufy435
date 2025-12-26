@@ -18,11 +18,12 @@ from pydantic import BaseModel
 
 # Import notification manager
 from backend.notifications.notification_manager import (
-from backend.ai.skills.common.logging_decorator import log_endpoint
     create_notification_manager,
     NotificationChannel,
 )
 
+
+from backend.ai.skills.common.logging_decorator import log_endpoint
 # Import auth if available
 # from auth import require_read, require_write
 

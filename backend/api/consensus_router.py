@@ -15,13 +15,14 @@ from pydantic import BaseModel, Field
 
 from backend.schemas.base_schema import MarketContext, SignalAction
 from backend.ai.consensus import (
-from backend.ai.skills.common.logging_decorator import log_endpoint
     get_consensus_engine,
     ConsensusResult,
     ConsensusStats,
     VotingRules
 )
 
+
+from backend.ai.skills.common.logging_decorator import log_endpoint
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/consensus", tags=["Consensus"])

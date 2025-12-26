@@ -271,7 +271,7 @@ class AIDebateSession(Base):
     
     # Votes
     votes = Column(JSONB, nullable=False)
-    weighted_result = Column(String(10), nullable=True)
+    consensus_action = Column(String(10), nullable=True)  # BUY/SELL/HOLD
     consensus_confidence = Column(Float, nullable=True)
     
     # Metadata
@@ -286,7 +286,7 @@ class AIDebateSession(Base):
     )
 
     def __repr__(self):
-        return f"<AIDebateSession(id={self.id}, ticker='{self.ticker}', result='{self.weighted_result}')>"
+        return f"<AIDebateSession(id={self.id}, ticker='{self.ticker}', result='{self.consensus_action}')>"
 
 
 class GroundingSearchLog(Base):

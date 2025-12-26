@@ -2,45 +2,490 @@
   "patterns": [
     {
       "type": "high_error_rate",
-      "agent": "war-room/war-room-debate",
-      "error_rate": 1.0,
-      "executions": 0,
-      "errors": 1,
+      "agent": "system/notifications",
+      "error_rate": 0.657,
+      "executions": 12,
+      "errors": 23,
       "priority": "CRITICAL",
-      "details": "Error rate 100.0% (1/1)"
+      "details": "Error rate 65.7% (23/35)"
     },
     {
       "type": "high_error_rate",
-      "agent": "system/signal-generator-agent",
-      "error_rate": 0.5,
+      "agent": "war-room/war-room-debate",
+      "error_rate": 0.75,
+      "executions": 4,
+      "errors": 12,
+      "priority": "CRITICAL",
+      "details": "Error rate 75.0% (12/16)"
+    },
+    {
+      "type": "high_error_rate",
+      "agent": "system/reports",
+      "error_rate": 0.727,
+      "executions": 15,
+      "errors": 40,
+      "priority": "CRITICAL",
+      "details": "Error rate 72.7% (40/55)"
+    },
+    {
+      "type": "high_error_rate",
+      "agent": "system/backfill",
+      "error_rate": 0.6,
+      "executions": 10,
+      "errors": 15,
+      "priority": "CRITICAL",
+      "details": "Error rate 60.0% (15/25)"
+    },
+    {
+      "type": "high_error_rate",
+      "agent": "system/global_macro",
+      "error_rate": 0.95,
       "executions": 1,
+      "errors": 19,
+      "priority": "CRITICAL",
+      "details": "Error rate 95.0% (19/20)"
+    },
+    {
+      "type": "recurring_error",
+      "agent": "war-room/war-room-debate",
+      "error_type": "ProgrammingError",
+      "count": 11,
+      "impact": "CRITICAL",
+      "priority": "HIGH",
+      "first_seen": "2025-12-26T13:10:58.575471",
+      "last_seen": "2025-12-26T23:34:22.718826",
+      "sample_error": {
+        "type": "ProgrammingError",
+        "message": "(psycopg2.errors.UndefinedColumn) 오류:  \"debate_id\" 칼럼은 \"ai_debate_sessions\" 릴레이션(relation)에 없음\nLINE 1: INSERT INTO ai_debate_sessions (ticker, debate_id, votes, we...\n                                                ^\n\n[SQL: INSERT INTO ai_debate_sessions (ticker, debate_id, votes, weighted_result, consensus_confidence, created_at, completed_at, duration_seconds) VALUES (%(ticker)s, %(debate_id)s, %(votes)s::JSONB, %(weighted_result)s, %(consensus_confidence)s, %(created_at)s, %(completed_at)s, %(duration_seconds)s) RETURNING ai_debate_sessions.id]\n[parameters: {'ticker': 'NVDA', 'debate_id': 'debate-NVDA-20251226-131058', 'votes': '\"[{\\\\\"agent\\\\\": \\\\\"risk\\\\\", \\\\\"action\\\\\": \\\\\"SELL\\\\\", \\\\\"confidence\\\\\": 0.85, \\\\\"reasoning\\\\\": \\\\\"\\\\uace0\\\\ubcc0\\\\ub3d9\\\\uc131 \\\\uacbd\\\\uace0 (45%),  ... (3295 characters truncated) ... \\\"description\\\\\": \\\\\"\\\\uc131\\\\uc7a5\\\\uc8fc \\\\uc131\\\\ud5a5 \\\\uac15\\\\ud568. \\\\ubc30\\\\ub2f9\\\\ub960 \\\\ub0ae\\\\uc74c\\\\\", \\\\\"sector\\\\\": \\\\\"Technology\\\\\"}}]\"', 'weighted_result': 'HOLD', 'consensus_confidence': 0.3911913554917248, 'created_at': datetime.datetime(2025, 12, 26, 13, 10, 58, 455487), 'completed_at': datetime.datetime(2025, 12, 26, 13, 10, 58, 455488), 'duration_seconds': None}]\n(Background on this error at: https://sqlalche.me/e/20/f405)",
+        "stack": "Traceback (most recent call last):\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\base.py\", line 1967, in _exec_single_context\n    self.dialect.do_execute(\n    ~~~~~~~~~~~~~~~~~~~~~~~^\n        cursor, str_statement, effective_parameters, context\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\default.py\", line 952, in do_execute\n    cursor.execute(statement, parameters)\n    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^\npsycopg2.errors.UndefinedColumn: 오류:  \"debate_id\" 칼럼은 \"ai_debate_sessions\" 릴레이션(relation)에 없음\nLINE 1: INSERT INTO ai_debate_sessions (ticker, debate_id, votes, we...\n                                                ^\n\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"D:\\code\\ai-trading-system\\backend\\api\\war_room_router.py\", line 649, in run_war_room_debate\n    db.commit()\n    ~~~~~~~~~^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\session.py\", line 2030, in commit\n    trans.commit(_to_root=True)\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^\n  File \"<string>\", line 2, in commit\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\state_changes.py\", line 137, in _go\n    ret_value = fn(self, *arg, **kw)\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\session.py\", line 1311, in commit\n    self._prepare_impl()\n    ~~~~~~~~~~~~~~~~~~^^\n  File \"<string>\", line 2, in _prepare_impl\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\state_changes.py\", line 137, in _go\n    ret_value = fn(self, *arg, **kw)\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\session.py\", line 1286, in _prepare_impl\n    self.session.flush()\n    ~~~~~~~~~~~~~~~~~~^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\session.py\", line 4331, in flush\n    self._flush(objects)\n    ~~~~~~~~~~~^^^^^^^^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\session.py\", line 4466, in _flush\n    with util.safe_reraise():\n         ~~~~~~~~~~~~~~~~~^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\util\\langhelpers.py\", line 224, in __exit__\n    raise exc_value.with_traceback(exc_tb)\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\session.py\", line 4427, in _flush\n    flush_context.execute()\n    ~~~~~~~~~~~~~~~~~~~~~^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\unitofwork.py\", line 466, in execute\n    rec.execute(self)\n    ~~~~~~~~~~~^^^^^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\unitofwork.py\", line 642, in execute\n    util.preloaded.orm_persistence.save_obj(\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        self.mapper,\n        ^^^^^^^^^^^^\n        uow.states_for_mapper_hierarchy(self.mapper, False, False),\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        uow,\n        ^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\persistence.py\", line 93, in save_obj\n    _emit_insert_statements(\n    ~~~~~~~~~~~~~~~~~~~~~~~^\n        base_mapper,\n        ^^^^^^^^^^^^\n    ...<3 lines>...\n        insert,\n        ^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\persistence.py\", line 1233, in _emit_insert_statements\n    result = connection.execute(\n        statement,\n        params,\n        execution_options=execution_options,\n    )\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\base.py\", line 1419, in execute\n    return meth(\n        self,\n        distilled_parameters,\n        execution_options or NO_OPTIONS,\n    )\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\sql\\elements.py\", line 527, in _execute_on_connection\n    return connection._execute_clauseelement(\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        self, distilled_params, execution_options\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\base.py\", line 1641, in _execute_clauseelement\n    ret = self._execute_context(\n        dialect,\n    ...<8 lines>...\n        cache_hit=cache_hit,\n    )\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\base.py\", line 1846, in _execute_context\n    return self._exec_single_context(\n           ~~~~~~~~~~~~~~~~~~~~~~~~~^\n        dialect, context, statement, parameters\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\base.py\", line 1986, in _exec_single_context\n    self._handle_dbapi_exception(\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        e, str_statement, effective_parameters, cursor, context\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\base.py\", line 2363, in _handle_dbapi_exception\n    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\base.py\", line 1967, in _exec_single_context\n    self.dialect.do_execute(\n    ~~~~~~~~~~~~~~~~~~~~~~~^\n        cursor, str_statement, effective_parameters, context\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\default.py\", line 952, in do_execute\n    cursor.execute(statement, parameters)\n    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^\nsqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedColumn) 오류:  \"debate_id\" 칼럼은 \"ai_debate_sessions\" 릴레이션(relation)에 없음\nLINE 1: INSERT INTO ai_debate_sessions (ticker, debate_id, votes, we...\n                                                ^\n\n[SQL: INSERT INTO ai_debate_sessions (ticker, debate_id, votes, weighted_result, consensus_confidence, created_at, completed_at, duration_seconds) VALUES (%(ticker)s, %(debate_id)s, %(votes)s::JSONB, %(weighted_result)s, %(consensus_confidence)s, %(created_at)s, %(completed_at)s, %(duration_seconds)s) RETURNING ai_debate_sessions.id]\n[parameters: {'ticker': 'NVDA', 'debate_id': 'debate-NVDA-20251226-131058', 'votes': '\"[{\\\\\"agent\\\\\": \\\\\"risk\\\\\", \\\\\"action\\\\\": \\\\\"SELL\\\\\", \\\\\"confidence\\\\\": 0.85, \\\\\"reasoning\\\\\": \\\\\"\\\\uace0\\\\ubcc0\\\\ub3d9\\\\uc131 \\\\uacbd\\\\uace0 (45%),  ... (3295 characters truncated) ... \\\"description\\\\\": \\\\\"\\\\uc131\\\\uc7a5\\\\uc8fc \\\\uc131\\\\ud5a5 \\\\uac15\\\\ud568. \\\\ubc30\\\\ub2f9\\\\ub960 \\\\ub0ae\\\\uc74c\\\\\", \\\\\"sector\\\\\": \\\\\"Technology\\\\\"}}]\"', 'weighted_result': 'HOLD', 'consensus_confidence': 0.3911913554917248, 'created_at': datetime.datetime(2025, 12, 26, 13, 10, 58, 455487), 'completed_at': datetime.datetime(2025, 12, 26, 13, 10, 58, 455488), 'duration_seconds': None}]\n(Background on this error at: https://sqlalche.me/e/20/f405)\n",
+        "context": {
+          "ticker": "NVDA",
+          "execute_trade": false
+        }
+      },
+      "details": "ProgrammingError occurred 11 times in 24h"
+    },
+    {
+      "type": "high_error_rate",
+      "agent": "system/incremental",
+      "error_rate": 0.429,
+      "executions": 20,
+      "errors": 15,
+      "priority": "HIGH",
+      "details": "Error rate 42.9% (15/35)"
+    },
+    {
+      "type": "high_error_rate",
+      "agent": "system/weights",
+      "error_rate": 0.067,
+      "executions": 14,
       "errors": 1,
       "priority": "HIGH",
-      "details": "Error rate 50.0% (1/2)"
+      "details": "Error rate 6.7% (1/15)"
     },
     {
       "type": "high_error_rate",
-      "agent": "system/signal-consolidation",
-      "error_rate": 0.5,
-      "executions": 3,
-      "errors": 3,
+      "agent": "system/gemini_free",
+      "error_rate": 0.25,
+      "executions": 15,
+      "errors": 5,
       "priority": "HIGH",
-      "details": "Error rate 50.0% (3/6)"
+      "details": "Error rate 25.0% (5/20)"
+    },
+    {
+      "type": "high_error_rate",
+      "agent": "system/kis",
+      "error_rate": 0.25,
+      "executions": 15,
+      "errors": 5,
+      "priority": "HIGH",
+      "details": "Error rate 25.0% (5/20)"
+    },
+    {
+      "type": "high_error_rate",
+      "agent": "system/positions",
+      "error_rate": 0.5,
+      "executions": 5,
+      "errors": 5,
+      "priority": "HIGH",
+      "details": "Error rate 50.0% (5/10)"
+    },
+    {
+      "type": "high_error_rate",
+      "agent": "system/ai_reviews",
+      "error_rate": 0.375,
+      "executions": 25,
+      "errors": 15,
+      "priority": "HIGH",
+      "details": "Error rate 37.5% (15/40)"
+    },
+    {
+      "type": "high_error_rate",
+      "agent": "system/ai_chat",
+      "error_rate": 0.25,
+      "executions": 15,
+      "errors": 5,
+      "priority": "HIGH",
+      "details": "Error rate 25.0% (5/20)"
+    },
+    {
+      "type": "high_error_rate",
+      "agent": "analysis/ceo_analysis",
+      "error_rate": 0.5,
+      "executions": 10,
+      "errors": 10,
+      "priority": "HIGH",
+      "details": "Error rate 50.0% (10/20)"
+    },
+    {
+      "type": "recurring_error",
+      "agent": "analysis/ceo_analysis",
+      "error_type": "HTTPException",
+      "count": 10,
+      "impact": "MEDIUM",
+      "priority": "MEDIUM",
+      "first_seen": "2025-12-26T13:22:36.911897",
+      "last_seen": "2025-12-27T00:37:14.271158",
+      "sample_error": {
+        "type": "HTTPException",
+        "message": "500: 501: Not implemented yet - Tier 3",
+        "stack": "Traceback (most recent call last):\n  File \"D:\\code\\ai-trading-system\\backend\\api\\ceo_analysis_router.py\", line 213, in cross_validate_ceo_statements\n    raise HTTPException(status_code=501, detail=\"Not implemented yet - Tier 3\")\nfastapi.exceptions.HTTPException: 501: Not implemented yet - Tier 3\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"D:\\code\\ai-trading-system\\backend\\ai\\skills\\common\\logging_decorator.py\", line 66, in async_wrapper\n    result = await func(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\code\\ai-trading-system\\backend\\api\\ceo_analysis_router.py\", line 216, in cross_validate_ceo_statements\n    raise HTTPException(status_code=500, detail=str(e))\nfastapi.exceptions.HTTPException: 500: 501: Not implemented yet - Tier 3\n",
+        "context": {
+          "function": "cross_validate_ceo_statements"
+        }
+      },
+      "details": "HTTPException occurred 10 times in 24h"
+    },
+    {
+      "type": "recurring_error",
+      "agent": "system/ai_chat",
+      "error_type": "HTTPException",
+      "count": 5,
+      "impact": "MEDIUM",
+      "priority": "MEDIUM",
+      "first_seen": "2025-12-26T13:22:34.608412",
+      "last_seen": "2025-12-27T00:37:07.739894",
+      "sample_error": {
+        "type": "HTTPException",
+        "message": "404: Chat history not found",
+        "stack": "Traceback (most recent call last):\n  File \"D:\\code\\ai-trading-system\\backend\\ai\\skills\\common\\logging_decorator.py\", line 66, in async_wrapper\n    result = await func(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\code\\ai-trading-system\\backend\\api\\ai_chat_router.py\", line 488, in get_chat_history\n    raise HTTPException(status_code=404, detail=\"Chat history not found\")\nfastapi.exceptions.HTTPException: 404: Chat history not found\n",
+        "context": {
+          "function": "get_chat_history"
+        }
+      },
+      "details": "HTTPException occurred 5 times in 24h"
+    },
+    {
+      "type": "recurring_error",
+      "agent": "system/ai_reviews",
+      "error_type": "HTTPException",
+      "count": 15,
+      "impact": "MEDIUM",
+      "priority": "MEDIUM",
+      "first_seen": "2025-12-26T13:22:32.518258",
+      "last_seen": "2025-12-27T00:37:08.524573",
+      "sample_error": {
+        "type": "HTTPException",
+        "message": "404: Review {analysis_id} not found",
+        "stack": "Traceback (most recent call last):\n  File \"D:\\code\\ai-trading-system\\backend\\ai\\skills\\common\\logging_decorator.py\", line 66, in async_wrapper\n    result = await func(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\code\\ai-trading-system\\backend\\api\\ai_review_router.py\", line 258, in delete_ai_review\n    raise HTTPException(status_code=404, detail=f\"Review {analysis_id} not found\")\nfastapi.exceptions.HTTPException: 404: Review {analysis_id} not found\n",
+        "context": {
+          "function": "delete_ai_review"
+        }
+      },
+      "details": "HTTPException occurred 15 times in 24h"
+    },
+    {
+      "type": "recurring_error",
+      "agent": "system/backfill",
+      "error_type": "HTTPException",
+      "count": 15,
+      "impact": "MEDIUM",
+      "priority": "MEDIUM",
+      "first_seen": "2025-12-26T13:22:34.596187",
+      "last_seen": "2025-12-27T00:37:09.274298",
+      "sample_error": {
+        "type": "HTTPException",
+        "message": "404: Job {job_id} not found",
+        "stack": "Traceback (most recent call last):\n  File \"D:\\code\\ai-trading-system\\backend\\ai\\skills\\common\\logging_decorator.py\", line 66, in async_wrapper\n    result = await func(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\code\\ai-trading-system\\backend\\api\\data_backfill_router.py\", line 319, in cancel_job\n    raise HTTPException(404, f\"Job {job_id} not found\")\nfastapi.exceptions.HTTPException: 404: Job {job_id} not found\n",
+        "context": {
+          "function": "cancel_job"
+        }
+      },
+      "details": "HTTPException occurred 15 times in 24h"
+    },
+    {
+      "type": "recurring_error",
+      "agent": "system/gemini_free",
+      "error_type": "HTTPException",
+      "count": 5,
+      "impact": "MEDIUM",
+      "priority": "MEDIUM",
+      "first_seen": "2025-12-26T13:22:48.563453",
+      "last_seen": "2025-12-27T00:37:26.456006",
+      "sample_error": {
+        "type": "HTTPException",
+        "message": "500: Gemini API 오류: \n  No API_KEY or ADC found. Please either:\n    - Set the `GOOGLE_API_KEY` environment variable.\n    - Manually pass the key with `genai.configure(api_key=my_api_key)`.\n    - Or set up Application Default Credentials, see https://ai.google.dev/gemini-api/docs/oauth for more information.",
+        "stack": "Traceback (most recent call last):\n  File \"D:\\code\\ai-trading-system\\backend\\api\\gemini_free_router.py\", line 256, in chat\n    result = await chat_with_gemini(\n             ^^^^^^^^^^^^^^^^^^^^^^^\n    ...<4 lines>...\n    )\n    ^\n  File \"D:\\code\\ai-trading-system\\backend\\api\\gemini_free_router.py\", line 208, in chat_with_gemini\n    response = chat.send_message(message, generation_config=generation_config)\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\google\\generativeai\\generative_models.py\", line 578, in send_message\n    response = self.model.generate_content(\n        contents=history,\n    ...<5 lines>...\n        request_options=request_options,\n    )\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\google\\generativeai\\generative_models.py\", line 317, in generate_content\n    self._client = client.get_default_generative_client()\n                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\google\\generativeai\\client.py\", line 360, in get_default_generative_client\n    return _client_manager.get_default_client(\"generative\")\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\google\\generativeai\\client.py\", line 289, in get_default_client\n    client = self.make_client(name)\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\google\\generativeai\\client.py\", line 249, in make_client\n    raise e\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\google\\generativeai\\client.py\", line 241, in make_client\n    client = cls(**self.client_config)\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\google\\ai\\generativelanguage_v1beta\\services\\generative_service\\client.py\", line 667, in __init__\n    self._transport = transport_init(\n                      ~~~~~~~~~~~~~~^\n        credentials=credentials,\n        ^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<7 lines>...\n        api_audience=self._client_options.api_audience,\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\google\\ai\\generativelanguage_v1beta\\services\\generative_service\\transports\\grpc.py\", line 235, in __init__\n    super().__init__(\n    ~~~~~~~~~~~~~~~~^\n        host=host,\n        ^^^^^^^^^^\n    ...<6 lines>...\n        api_audience=api_audience,\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\google\\ai\\generativelanguage_v1beta\\services\\generative_service\\transports\\base.py\", line 100, in __init__\n    credentials, _ = google.auth.default(\n                     ~~~~~~~~~~~~~~~~~~~^\n        **scopes_kwargs, quota_project_id=quota_project_id\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\google\\auth\\_default.py\", line 739, in default\n    raise exceptions.DefaultCredentialsError(_CLOUD_SDK_MISSING_CREDENTIALS)\ngoogle.auth.exceptions.DefaultCredentialsError: \n  No API_KEY or ADC found. Please either:\n    - Set the `GOOGLE_API_KEY` environment variable.\n    - Manually pass the key with `genai.configure(api_key=my_api_key)`.\n    - Or set up Application Default Credentials, see https://ai.google.dev/gemini-api/docs/oauth for more information.\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"D:\\code\\ai-trading-system\\backend\\ai\\skills\\common\\logging_decorator.py\", line 66, in async_wrapper\n    result = await func(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\code\\ai-trading-system\\backend\\api\\gemini_free_router.py\", line 300, in chat\n    raise HTTPException(status_code=500, detail=f\"Gemini API 오류: {str(e)}\")\nfastapi.exceptions.HTTPException: 500: Gemini API 오류: \n  No API_KEY or ADC found. Please either:\n    - Set the `GOOGLE_API_KEY` environment variable.\n    - Manually pass the key with `genai.configure(api_key=my_api_key)`.\n    - Or set up Application Default Credentials, see https://ai.google.dev/gemini-api/docs/oauth for more information.\n",
+        "context": {
+          "function": "chat"
+        }
+      },
+      "details": "HTTPException occurred 5 times in 24h"
+    },
+    {
+      "type": "recurring_error",
+      "agent": "system/global_macro",
+      "error_type": "AttributeError",
+      "count": 14,
+      "impact": "MEDIUM",
+      "priority": "MEDIUM",
+      "first_seen": "2025-12-26T13:22:34.229090",
+      "last_seen": "2025-12-27T00:37:11.855761",
+      "sample_error": {
+        "type": "AttributeError",
+        "message": "'GlobalMarketMap' object has no attribute 'graph'",
+        "stack": "Traceback (most recent call last):\n  File \"D:\\code\\ai-trading-system\\backend\\ai\\skills\\common\\logging_decorator.py\", line 66, in async_wrapper\n    result = await func(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\code\\ai-trading-system\\backend\\api\\global_macro_router.py\", line 76, in get_market_map\n    for node_id, data in market_map.graph.nodes(data=True):\n                         ^^^^^^^^^^^^^^^^\nAttributeError: 'GlobalMarketMap' object has no attribute 'graph'\n",
+        "context": {
+          "function": "get_market_map"
+        }
+      },
+      "details": "AttributeError occurred 14 times in 24h"
+    },
+    {
+      "type": "recurring_error",
+      "agent": "system/global_macro",
+      "error_type": "TypeError",
+      "count": 5,
+      "impact": "MEDIUM",
+      "priority": "MEDIUM",
+      "first_seen": "2025-12-26T13:22:35.185717",
+      "last_seen": "2025-12-27T00:37:11.869159",
+      "sample_error": {
+        "type": "TypeError",
+        "message": "SubscriptionManager.get_status() missing 1 required positional argument: 'subscription_type'",
+        "stack": "Traceback (most recent call last):\n  File \"D:\\code\\ai-trading-system\\backend\\ai\\skills\\common\\logging_decorator.py\", line 66, in async_wrapper\n    result = await func(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\code\\ai-trading-system\\backend\\api\\global_macro_router.py\", line 265, in get_subscription_status\n    status = manager.get_status()\nTypeError: SubscriptionManager.get_status() missing 1 required positional argument: 'subscription_type'\n",
+        "context": {
+          "function": "get_subscription_status"
+        }
+      },
+      "details": "TypeError occurred 5 times in 24h"
+    },
+    {
+      "type": "recurring_error",
+      "agent": "system/incremental",
+      "error_type": "HTTPException",
+      "count": 15,
+      "impact": "MEDIUM",
+      "priority": "MEDIUM",
+      "first_seen": "2025-12-26T13:22:45.456818",
+      "last_seen": "2025-12-27T00:37:26.470306",
+      "sample_error": {
+        "type": "HTTPException",
+        "message": "500: Tickers required for first initialization",
+        "stack": "Traceback (most recent call last):\n  File \"D:\\code\\ai-trading-system\\backend\\api\\incremental_router.py\", line 282, in stop_scheduler\n    scheduler = get_stock_price_scheduler()\n  File \"D:\\code\\ai-trading-system\\backend\\services\\stock_price_scheduler.py\", line 285, in get_stock_price_scheduler\n    raise ValueError(\"Tickers required for first initialization\")\nValueError: Tickers required for first initialization\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"D:\\code\\ai-trading-system\\backend\\ai\\skills\\common\\logging_decorator.py\", line 66, in async_wrapper\n    result = await func(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\code\\ai-trading-system\\backend\\api\\incremental_router.py\", line 293, in stop_scheduler\n    raise HTTPException(status_code=500, detail=str(e))\nfastapi.exceptions.HTTPException: 500: Tickers required for first initialization\n",
+        "context": {
+          "function": "stop_scheduler"
+        }
+      },
+      "details": "HTTPException occurred 15 times in 24h"
+    },
+    {
+      "type": "recurring_error",
+      "agent": "system/kis",
+      "error_type": "HTTPException",
+      "count": 5,
+      "impact": "MEDIUM",
+      "priority": "MEDIUM",
+      "first_seen": "2025-12-26T13:22:37.702038",
+      "last_seen": "2025-12-27T00:37:15.178752",
+      "sample_error": {
+        "type": "HTTPException",
+        "message": "404: {symbol} 시세 조회 실패",
+        "stack": "Traceback (most recent call last):\n  File \"D:\\code\\ai-trading-system\\backend\\ai\\skills\\common\\logging_decorator.py\", line 66, in async_wrapper\n    result = await func(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\code\\ai-trading-system\\backend\\api\\kis_integration_router.py\", line 304, in get_kis_price\n    raise HTTPException(status_code=404, detail=f\"{symbol} 시세 조회 실패\")\nfastapi.exceptions.HTTPException: 404: {symbol} 시세 조회 실패\n",
+        "context": {
+          "function": "get_kis_price"
+        }
+      },
+      "details": "HTTPException occurred 5 times in 24h"
+    },
+    {
+      "type": "recurring_error",
+      "agent": "system/notifications",
+      "error_type": "AttributeError",
+      "count": 23,
+      "impact": "MEDIUM",
+      "priority": "MEDIUM",
+      "first_seen": "2025-12-26T13:22:39.336075",
+      "last_seen": "2025-12-27T00:37:27.610147",
+      "sample_error": {
+        "type": "AttributeError",
+        "message": "'TelegramNotifier' object has no attribute 'min_priority'",
+        "stack": "Traceback (most recent call last):\n  File \"D:\\code\\ai-trading-system\\backend\\ai\\skills\\common\\logging_decorator.py\", line 66, in async_wrapper\n    result = await func(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\code\\ai-trading-system\\backend\\api\\notifications_router.py\", line 267, in notifications_health\n    settings = manager.get_settings()\n  File \"D:\\code\\ai-trading-system\\backend\\notifications\\notification_manager.py\", line 362, in get_settings\n    \"min_priority\": self.telegram.min_priority.value,\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'TelegramNotifier' object has no attribute 'min_priority'\n",
+        "context": {
+          "function": "notifications_health"
+        }
+      },
+      "details": "AttributeError occurred 23 times in 24h"
+    },
+    {
+      "type": "recurring_error",
+      "agent": "system/positions",
+      "error_type": "HTTPException",
+      "count": 5,
+      "impact": "MEDIUM",
+      "priority": "MEDIUM",
+      "first_seen": "2025-12-26T13:22:40.132691",
+      "last_seen": "2025-12-27T00:37:17.663311",
+      "sample_error": {
+        "type": "HTTPException",
+        "message": "404: Position not found: AAPL",
+        "stack": "Traceback (most recent call last):\n  File \"D:\\code\\ai-trading-system\\backend\\ai\\skills\\common\\logging_decorator.py\", line 66, in async_wrapper\n    result = await func(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\code\\ai-trading-system\\backend\\api\\position_router.py\", line 211, in get_position\n    raise HTTPException(status_code=404, detail=f\"Position not found: {ticker}\")\nfastapi.exceptions.HTTPException: 404: Position not found: AAPL\n",
+        "context": {
+          "function": "get_position"
+        }
+      },
+      "details": "HTTPException occurred 5 times in 24h"
+    },
+    {
+      "type": "recurring_error",
+      "agent": "system/reports",
+      "error_type": "HTTPException",
+      "count": 25,
+      "impact": "MEDIUM",
+      "priority": "MEDIUM",
+      "first_seen": "2025-12-26T13:22:40.142065",
+      "last_seen": "2025-12-27T00:37:18.024719",
+      "sample_error": {
+        "type": "HTTPException",
+        "message": "500: 'Select' object has no attribute 'first'",
+        "stack": "Traceback (most recent call last):\n  File \"D:\\code\\ai-trading-system\\backend\\api\\reports_router.py\", line 672, in get_concentration_risk\n    result = await analyzer.analyze_concentration_risk(target_date=target_date)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\code\\ai-trading-system\\backend\\analytics\\risk_analytics.py\", line 284, in analyze_concentration_risk\n    ).first()\n      ^^^^^\nAttributeError: 'Select' object has no attribute 'first'\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"D:\\code\\ai-trading-system\\backend\\ai\\skills\\common\\logging_decorator.py\", line 66, in async_wrapper\n    result = await func(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\code\\ai-trading-system\\backend\\api\\reports_router.py\", line 677, in get_concentration_risk\n    raise HTTPException(status_code=500, detail=str(e))\nfastapi.exceptions.HTTPException: 500: 'Select' object has no attribute 'first'\n",
+        "context": {
+          "function": "get_concentration_risk"
+        }
+      },
+      "details": "HTTPException occurred 25 times in 24h"
+    },
+    {
+      "type": "recurring_error",
+      "agent": "system/reports",
+      "error_type": "AttributeError",
+      "count": 12,
+      "impact": "MEDIUM",
+      "priority": "MEDIUM",
+      "first_seen": "2025-12-26T13:22:40.983911",
+      "last_seen": "2025-12-26T13:26:07.572745",
+      "sample_error": {
+        "type": "AttributeError",
+        "message": "'AsyncSession' object has no attribute 'query'",
+        "stack": "Traceback (most recent call last):\n  File \"D:\\code\\ai-trading-system\\backend\\ai\\skills\\common\\logging_decorator.py\", line 66, in async_wrapper\n    result = await func(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\code\\ai-trading-system\\backend\\api\\reports_router.py\", line 494, in reports_health_check\n    latest_daily = db.query(DailyAnalytics).order_by(\n                   ^^^^^^^^\nAttributeError: 'AsyncSession' object has no attribute 'query'\n",
+        "context": {
+          "function": "reports_health_check"
+        }
+      },
+      "details": "AttributeError occurred 12 times in 24h"
+    },
+    {
+      "type": "recurring_error",
+      "agent": "system/reports",
+      "error_type": "ProgrammingError",
+      "count": 3,
+      "impact": "MEDIUM",
+      "priority": "MEDIUM",
+      "first_seen": "2025-12-27T00:37:18.700999",
+      "last_seen": "2025-12-27T00:37:18.713078",
+      "sample_error": {
+        "type": "ProgrammingError",
+        "message": "(sqlalchemy.dialects.postgresql.asyncpg.ProgrammingError) <class 'asyncpg.exceptions.UndefinedTableError'>: \"daily_analytics\" 이름의 릴레이션(relation)이 없습니다\n[SQL: SELECT daily_analytics.date, daily_analytics.portfolio_value_eod, daily_analytics.daily_pnl, daily_analytics.daily_return_pct, daily_analytics.cumulative_pnl, daily_analytics.total_trades, daily_analytics.buy_trades, daily_analytics.sell_trades, daily_analytics.total_volume_usd, daily_analytics.win_count, daily_analytics.loss_count, daily_analytics.win_rate, daily_analytics.avg_win_pct, daily_analytics.avg_loss_pct, daily_analytics.sharpe_ratio, daily_analytics.sortino_ratio, daily_analytics.max_drawdown_pct, daily_analytics.volatility_30d, daily_analytics.var_95, daily_analytics.ai_cost_usd, daily_analytics.ai_tokens_used, daily_analytics.signals_generated, daily_analytics.signal_avg_confidence, daily_analytics.signal_accuracy, daily_analytics.avg_slippage_bps, daily_analytics.avg_execution_time_ms, daily_analytics.positions_count, daily_analytics.avg_position_size_usd, daily_analytics.max_position_size_usd, daily_analytics.circuit_breaker_triggers, daily_analytics.kill_switch_active, daily_analytics.alerts_triggered, daily_analytics.created_at, daily_analytics.updated_at, daily_analytics.notes \nFROM daily_analytics ORDER BY daily_analytics.date DESC]\n(Background on this error at: https://sqlalche.me/e/20/f405)",
+        "stack": "Traceback (most recent call last):\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\dialects\\postgresql\\asyncpg.py\", line 526, in _prepare_and_execute\n    prepared_stmt, attributes = await adapt_connection._prepare(\n                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        operation, self._invalidate_schema_cache_asof\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\dialects\\postgresql\\asyncpg.py\", line 773, in _prepare\n    prepared_stmt = await self._connection.prepare(\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        operation, name=self._prepared_statement_name_func()\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\asyncpg\\connection.py\", line 638, in prepare\n    return await self._prepare(\n           ^^^^^^^^^^^^^^^^^^^^\n    ...<4 lines>...\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\asyncpg\\connection.py\", line 657, in _prepare\n    stmt = await self._get_statement(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<5 lines>...\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\asyncpg\\connection.py\", line 443, in _get_statement\n    statement = await self._protocol.prepare(\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<5 lines>...\n    )\n    ^\n  File \"asyncpg/protocol/protocol.pyx\", line 165, in prepare\nasyncpg.exceptions.UndefinedTableError: \"daily_analytics\" 이름의 릴레이션(relation)이 없습니다\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\base.py\", line 1967, in _exec_single_context\n    self.dialect.do_execute(\n    ~~~~~~~~~~~~~~~~~~~~~~~^\n        cursor, str_statement, effective_parameters, context\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\default.py\", line 952, in do_execute\n    cursor.execute(statement, parameters)\n    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\dialects\\postgresql\\asyncpg.py\", line 585, in execute\n    self._adapt_connection.await_(\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        self._prepare_and_execute(operation, parameters)\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\util\\_concurrency_py3k.py\", line 132, in await_only\n    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501\n           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\util\\_concurrency_py3k.py\", line 196, in greenlet_spawn\n    value = await result\n            ^^^^^^^^^^^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\dialects\\postgresql\\asyncpg.py\", line 563, in _prepare_and_execute\n    self._handle_exception(error)\n    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\dialects\\postgresql\\asyncpg.py\", line 513, in _handle_exception\n    self._adapt_connection._handle_exception(error)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\dialects\\postgresql\\asyncpg.py\", line 797, in _handle_exception\n    raise translated_error from error\nsqlalchemy.dialects.postgresql.asyncpg.AsyncAdapt_asyncpg_dbapi.ProgrammingError: <class 'asyncpg.exceptions.UndefinedTableError'>: \"daily_analytics\" 이름의 릴레이션(relation)이 없습니다\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"D:\\code\\ai-trading-system\\backend\\ai\\skills\\common\\logging_decorator.py\", line 66, in async_wrapper\n    result = await func(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\code\\ai-trading-system\\backend\\api\\reports_router.py\", line 512, in reports_health_check\n    result = await db.execute(stmt)\n             ^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\ext\\asyncio\\session.py\", line 449, in execute\n    result = await greenlet_spawn(\n             ^^^^^^^^^^^^^^^^^^^^^\n    ...<6 lines>...\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\util\\_concurrency_py3k.py\", line 201, in greenlet_spawn\n    result = context.throw(*sys.exc_info())\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\session.py\", line 2351, in execute\n    return self._execute_internal(\n           ~~~~~~~~~~~~~~~~~~~~~~^\n        statement,\n        ^^^^^^^^^^\n    ...<4 lines>...\n        _add_event=_add_event,\n        ^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\session.py\", line 2249, in _execute_internal\n    result: Result[Any] = compile_state_cls.orm_execute_statement(\n                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        self,\n        ^^^^^\n    ...<4 lines>...\n        conn,\n        ^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\orm\\context.py\", line 306, in orm_execute_statement\n    result = conn.execute(\n        statement, params or {}, execution_options=execution_options\n    )\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\base.py\", line 1419, in execute\n    return meth(\n        self,\n        distilled_parameters,\n        execution_options or NO_OPTIONS,\n    )\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\sql\\elements.py\", line 527, in _execute_on_connection\n    return connection._execute_clauseelement(\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        self, distilled_params, execution_options\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\base.py\", line 1641, in _execute_clauseelement\n    ret = self._execute_context(\n        dialect,\n    ...<8 lines>...\n        cache_hit=cache_hit,\n    )\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\base.py\", line 1846, in _execute_context\n    return self._exec_single_context(\n           ~~~~~~~~~~~~~~~~~~~~~~~~~^\n        dialect, context, statement, parameters\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\base.py\", line 1986, in _exec_single_context\n    self._handle_dbapi_exception(\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        e, str_statement, effective_parameters, cursor, context\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\base.py\", line 2363, in _handle_dbapi_exception\n    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\base.py\", line 1967, in _exec_single_context\n    self.dialect.do_execute(\n    ~~~~~~~~~~~~~~~~~~~~~~~^\n        cursor, str_statement, effective_parameters, context\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\engine\\default.py\", line 952, in do_execute\n    cursor.execute(statement, parameters)\n    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\dialects\\postgresql\\asyncpg.py\", line 585, in execute\n    self._adapt_connection.await_(\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        self._prepare_and_execute(operation, parameters)\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\util\\_concurrency_py3k.py\", line 132, in await_only\n    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501\n           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\util\\_concurrency_py3k.py\", line 196, in greenlet_spawn\n    value = await result\n            ^^^^^^^^^^^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\dialects\\postgresql\\asyncpg.py\", line 563, in _prepare_and_execute\n    self._handle_exception(error)\n    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\dialects\\postgresql\\asyncpg.py\", line 513, in _handle_exception\n    self._adapt_connection._handle_exception(error)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^\n  File \"C:\\Users\\a\\AppData\\Roaming\\Python\\Python314\\site-packages\\sqlalchemy\\dialects\\postgresql\\asyncpg.py\", line 797, in _handle_exception\n    raise translated_error from error\nsqlalchemy.exc.ProgrammingError: (sqlalchemy.dialects.postgresql.asyncpg.ProgrammingError) <class 'asyncpg.exceptions.UndefinedTableError'>: \"daily_analytics\" 이름의 릴레이션(relation)이 없습니다\n[SQL: SELECT daily_analytics.date, daily_analytics.portfolio_value_eod, daily_analytics.daily_pnl, daily_analytics.daily_return_pct, daily_analytics.cumulative_pnl, daily_analytics.total_trades, daily_analytics.buy_trades, daily_analytics.sell_trades, daily_analytics.total_volume_usd, daily_analytics.win_count, daily_analytics.loss_count, daily_analytics.win_rate, daily_analytics.avg_win_pct, daily_analytics.avg_loss_pct, daily_analytics.sharpe_ratio, daily_analytics.sortino_ratio, daily_analytics.max_drawdown_pct, daily_analytics.volatility_30d, daily_analytics.var_95, daily_analytics.ai_cost_usd, daily_analytics.ai_tokens_used, daily_analytics.signals_generated, daily_analytics.signal_avg_confidence, daily_analytics.signal_accuracy, daily_analytics.avg_slippage_bps, daily_analytics.avg_execution_time_ms, daily_analytics.positions_count, daily_analytics.avg_position_size_usd, daily_analytics.max_position_size_usd, daily_analytics.circuit_breaker_triggers, daily_analytics.kill_switch_active, daily_analytics.alerts_triggered, daily_analytics.created_at, daily_analytics.updated_at, daily_analytics.notes \nFROM daily_analytics ORDER BY daily_analytics.date DESC]\n(Background on this error at: https://sqlalche.me/e/20/f405)\n",
+        "context": {
+          "function": "reports_health_check"
+        }
+      },
+      "details": "ProgrammingError occurred 3 times in 24h"
+    },
+    {
+      "type": "performance_degradation",
+      "agent": "system/backfill",
+      "baseline_ms": 21,
+      "recent_avg_ms": 72,
+      "degradation_factor": 3.44,
+      "priority": "MEDIUM",
+      "details": "Performance degraded from 21ms to 72ms"
+    },
+    {
+      "type": "performance_degradation",
+      "agent": "system/consensus",
+      "baseline_ms": 0,
+      "recent_avg_ms": 0,
+      "degradation_factor": 0,
+      "priority": "MEDIUM",
+      "details": "Performance degraded from 0ms to 0ms"
+    },
+    {
+      "type": "performance_degradation",
+      "agent": "system/incremental",
+      "baseline_ms": 95,
+      "recent_avg_ms": 197,
+      "degradation_factor": 2.08,
+      "priority": "MEDIUM",
+      "details": "Performance degraded from 95ms to 197ms"
+    },
+    {
+      "type": "performance_degradation",
+      "agent": "system/kis",
+      "baseline_ms": 0,
+      "recent_avg_ms": 101,
+      "degradation_factor": 0,
+      "priority": "MEDIUM",
+      "details": "Performance degraded from 0ms to 101ms"
+    },
+    {
+      "type": "performance_degradation",
+      "agent": "system/log-manager",
+      "baseline_ms": 0,
+      "recent_avg_ms": 0,
+      "degradation_factor": 0,
+      "priority": "MEDIUM",
+      "details": "Performance degraded from 0ms to 0ms"
+    },
+    {
+      "type": "performance_degradation",
+      "agent": "system/weights",
+      "baseline_ms": 140,
+      "recent_avg_ms": 583,
+      "degradation_factor": 4.17,
+      "priority": "MEDIUM",
+      "details": "Performance degraded from 140ms to 583ms"
     }
   ],
   "summary": {
-    "total_patterns": 3,
+    "total_patterns": 34,
     "by_type": {
-      "high_error_rate": 3
+      "high_error_rate": 13,
+      "recurring_error": 15,
+      "performance_degradation": 6
     },
     "by_priority": {
-      "CRITICAL": 1,
-      "HIGH": 2
+      "CRITICAL": 5,
+      "HIGH": 9,
+      "MEDIUM": 20
     },
     "agents_affected": [
+      "system/gemini_free",
+      "system/log-manager",
+      "system/reports",
+      "system/kis",
+      "system/global_macro",
+      "system/notifications",
+      "system/ai_reviews",
+      "system/ai_chat",
+      "system/consensus",
       "war-room/war-room-debate",
-      "system/signal-consolidation",
-      "system/signal-generator-agent"
+      "system/positions",
+      "system/incremental",
+      "system/weights",
+      "system/backfill",
+      "analysis/ceo_analysis"
     ]
   }
 }

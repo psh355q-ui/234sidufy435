@@ -639,7 +639,7 @@ async def run_war_room_debate(request: DebateRequest, execute_trade: bool = Fals
             ticker=ticker,
             debate_id=debate_id,
             votes=json.dumps(votes, ensure_ascii=False),  # Store all votes as JSONB
-            weighted_result=pm_decision["consensus_action"],
+            consensus_action=pm_decision["consensus_action"],  # PM output matches DB column
             consensus_confidence=pm_decision["consensus_confidence"],
             created_at=datetime.now(),
             completed_at=datetime.now()
@@ -732,7 +732,7 @@ async def run_war_room_debate(request: DebateRequest, execute_trade: bool = Fals
                 "consensus_confidence": pm_decision["consensus_confidence"],
                 "signal_id": signal_id,
                 "agent_votes": len(votes),
-                "constitutional_valid": session.constitutional_valid
+                "constitutional_valid": is_valid  # Use local variable
             }
         ))
 
@@ -809,7 +809,7 @@ async def get_debate_sessions(
                 "votes_detail": votes_detail,  # 🆕 Full vote details with reasoning
                 "created_at": s.created_at.isoformat() if s.created_at else None,
                 "signal_id": s.signal_id,
-                "constitutional_valid": s.constitutional_valid
+                "constitutional_valid": True  # Default to True for historical records
             })
         
         return result

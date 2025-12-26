@@ -56,6 +56,8 @@ class TelegramNotifier:
         chat_id: str,
         enabled: bool = True,
         rate_limit_per_minute: int = 20,
+        min_priority: Optional['AlertPriority'] = None,
+        throttle_minutes: int = 5,
     ):
         """
         Initialize Telegram notifier.
@@ -65,11 +67,15 @@ class TelegramNotifier:
             chat_id: Chat ID to send messages (user or group)
             enabled: Enable/disable notifications
             rate_limit_per_minute: Max messages per minute
+            min_priority: Minimum priority level to send (defaults to NORMAL)
+            throttle_minutes: Message throttle window in minutes
         """
         self.bot_token = bot_token
         self.chat_id = chat_id
         self.enabled = enabled
         self.rate_limit = rate_limit_per_minute
+        self.min_priority = min_priority or AlertPriority.NORMAL
+        self.throttle_minutes = throttle_minutes
         
         self.base_url = f"https://api.telegram.org/bot{bot_token}"
         

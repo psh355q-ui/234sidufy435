@@ -34,8 +34,8 @@ class ImprovementProposer:
         self.patterns = patterns_data.get("patterns", [])
         self.summary = patterns_data.get("summary", {})
         
-        # Proposals directory
-        self.proposals_dir = Path(__file__).parent.parent.parent.parent / "logs" / "system" / "debugging-agent" / "proposals"
+        # Proposals directory - separate from runtime logs
+        self.proposals_dir = Path(__file__).parent.parent.parent.parent / "debugging" / "proposals"
         self.proposals_dir.mkdir(parents=True, exist_ok=True)
     
     def generate_proposals(self) -> List[str]:

@@ -278,10 +278,12 @@ class RiskAnalyzer:
 
         # Get portfolio snapshot
         stmt = select(PortfolioSnapshot).where(
-
             
             PortfolioSnapshot.snapshot_date == target_date
-        ).first()
+        )
+        
+        result = await self.db.execute(stmt)
+        snapshot = result.scalars().first()
 
         if not snapshot or not snapshot.positions:
             raise ValueError(f"No portfolio data for {target_date}")

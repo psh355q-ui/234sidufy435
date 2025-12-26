@@ -11,6 +11,7 @@ Gemini 1.5 Flash 무료 티어:
 
 import json
 import uuid
+import os
 from datetime import datetime
 from typing import Optional
 from pathlib import Path
@@ -23,6 +24,11 @@ from backend.ai.skills.common.logging_decorator import log_endpoint
 try:
     import google.generativeai as genai
     GENAI_AVAILABLE = True
+    
+    # Configure API key from environment
+    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+    if api_key:
+        genai.configure(api_key=api_key)
 except ImportError:
     GENAI_AVAILABLE = False
     genai = None

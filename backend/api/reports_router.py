@@ -205,15 +205,19 @@ async def list_weekly_reports(
     """
     List available weekly reports.
     """
-    query = db.query(WeeklyAnalytics)
+    from sqlalchemy import select
+    stmt = select(WeeklyAnalytics)
 
     if year:
-        query = query.filter(WeeklyAnalytics.year == year)
+        stmt = stmt.where(WeeklyAnalytics.year == year)
 
-    reports = query.order_by(
+    stmt = stmt.order_by(
         WeeklyAnalytics.year.desc(),
         WeeklyAnalytics.week_number.desc()
-    ).limit(limit).all()
+    ).limit(limit)
+    
+    result = await db.execute(stmt)
+    reports = result.scalars().all()
 
     return [
         {
@@ -283,15 +287,19 @@ async def list_monthly_reports(
     """
     List available monthly reports.
     """
-    query = db.query(MonthlyAnalytics)
+    from sqlalchemy import select
+    stmt = select(MonthlyAnalytics)
 
     if year:
-        query = query.filter(MonthlyAnalytics.year == year)
+        stmt = stmt.where(MonthlyAnalytics.year == year)
 
-    reports = query.order_by(
+    stmt = stmt.order_by(
         MonthlyAnalytics.year.desc(),
         MonthlyAnalytics.month.desc()
-    ).all()
+    )
+    
+    result = await db.execute(stmt)
+    reports = result.scalars().all()
 
     return [
         {
@@ -377,10 +385,14 @@ async def get_time_series_data(
 
     Useful for charting.
     """
-    daily_records = db.query(DailyAnalytics).filter(
+    from sqlalchemy import select
+    stmt = select(DailyAnalytics).where(
         DailyAnalytics.date >= start_date,
         DailyAnalytics.date <= end_date,
-    ).order_by(DailyAnalytics.date).all()
+    ).order_by(DailyAnalytics.date)
+    
+    result = await db.execute(stmt)
+    daily_records = result.scalars().all()
 
     if not daily_records:
         raise HTTPException(status_code=404, detail="No data available for date range")
@@ -439,10 +451,14 @@ async def export_to_csv(
     """
     Export daily analytics to CSV.
     """
-    daily_records = db.query(DailyAnalytics).filter(
+    from sqlalchemy import select
+    stmt = select(DailyAnalytics).where(
         DailyAnalytics.date >= start_date,
         DailyAnalytics.date <= end_date,
-    ).order_by(DailyAnalytics.date).all()
+    ).order_by(DailyAnalytics.date)
+    
+    result = await db.execute(stmt)
+    daily_records = result.scalars().all()
 
     if not daily_records:
         raise HTTPException(status_code=404, detail="No data available for date range")
@@ -491,9 +507,10 @@ async def reports_health_check(db: Session = Depends(get_db)):
     Health check for reports service.
     """
     # Check if we have recent data
-    latest_daily = db.query(DailyAnalytics).order_by(
-        DailyAnalytics.date.desc()
-    ).first()
+    from sqlalchemy import select
+    stmt = select(DailyAnalytics).order_by(DailyAnalytics.date.desc())
+    result = await db.execute(stmt)
+    latest_daily = result.scalars().first()
 
     return {
         "status": "healthy",

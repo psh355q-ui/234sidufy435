@@ -311,25 +311,9 @@ async def list_jobs(
     }
 
 
-@router.delete("/jobs/{job_id}")
-@log_endpoint("backfill", "system")
-async def cancel_job(job_id: str):
-    """Cancel a running job (marks as cancelled, actual stop may take time)."""
-    if job_id not in active_jobs:
-        raise HTTPException(404, f"Job {job_id} not found")
-
-    job = active_jobs[job_id]
-
-    if job["status"] in ["completed", "failed"]:
-        raise HTTPException(400, f"Cannot cancel {job['status']} job")
-
-    job["status"] = "cancelled"
-    job["completed_at"] = datetime.now()
-
-    return {"message": f"Job {job_id} cancelled", "job": job}
-
 
 # Background tasks
+
 
 
 async def run_news_backfill(

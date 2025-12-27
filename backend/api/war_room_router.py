@@ -638,7 +638,7 @@ async def run_war_room_debate(request: DebateRequest, execute_trade: bool = Fals
         session = AIDebateSession(
             ticker=ticker,
             debate_id=debate_id,
-            votes=json.dumps(votes, ensure_ascii=False),  # Store all votes as JSONB
+            votes=votes,  # Store votes as list of dicts (JSONB handles serialization)
             consensus_action=pm_decision["consensus_action"],  # PM output matches DB column
             consensus_confidence=pm_decision["consensus_confidence"],
             created_at=datetime.now(),
@@ -791,24 +791,37 @@ async def get_debate_sessions(
                 except:
                     votes_detail = []
 
+            # Parse votes from JSONB (Handle both Dict and List formats)
+            # Parse votes from JSONB (Handle both Dict and List formats)
+            votes_data = {}
+            raw_votes = s.votes
+
+            # 1. Handle stringified JSON (legacy data)
+            if isinstance(raw_votes, str):
+                try:
+                    raw_votes = json.loads(raw_votes)
+                except Exception:
+                    raw_votes = []
+            
+            # 2. Handle Dict (already in format)
+            if isinstance(raw_votes, dict):
+                votes_data = raw_votes
+            
+            # 3. Handle List (convert to Dict keyed by agent)
+            elif isinstance(raw_votes, list):
+                for v in raw_votes:
+                    if isinstance(v, dict) and "agent" in v:
+                        votes_data[v["agent"]] = v
+            
             result.append({
                 "id": s.id,
                 "ticker": s.ticker,
                 "consensus_action": s.consensus_action,
                 "consensus_confidence": s.consensus_confidence,
-                "votes": {
-                    "trader": s.trader_vote,
-                    "risk": s.risk_vote,
-                    "analyst": s.analyst_vote,
-                    "macro": s.macro_vote,
-                    "institutional": s.institutional_vote,
-                    "news": s.news_vote,
-                    "chip_war": s.chip_war_vote,  # 🆕 Phase 24
-                    "pm": s.pm_vote
-                },
+                "votes": votes_data,  # Use JSONB votes column
                 "votes_detail": votes_detail,  # 🆕 Full vote details with reasoning
                 "created_at": s.created_at.isoformat() if s.created_at else None,
-                "signal_id": s.signal_id,
+                "duration_seconds": s.duration_seconds,
                 "constitutional_valid": True  # Default to True for historical records
             })
         

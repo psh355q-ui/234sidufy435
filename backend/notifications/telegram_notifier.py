@@ -74,7 +74,7 @@ class TelegramNotifier:
         self.chat_id = chat_id
         self.enabled = enabled
         self.rate_limit = rate_limit_per_minute
-        self.min_priority = min_priority or AlertPriority.NORMAL
+        self.min_priority = min_priority or AlertPriority.MEDIUM
         self.throttle_minutes = throttle_minutes
         
         self.base_url = f"https://api.telegram.org/bot{bot_token}"

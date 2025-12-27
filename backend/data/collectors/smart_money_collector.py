@@ -19,6 +19,7 @@ from typing import Dict, List, Optional
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
+from backend.data.collectors.api_clients.yahoo_client import get_yahoo_client
 
 logger = logging.getLogger(__name__)
 
@@ -152,57 +153,29 @@ class SmartMoneyCollector:
         """
         logger.info(f"Fetching institutional holders for {ticker}")
         
-        # 실제로는 SEC EDGAR API, Yahoo Finance 사용
-        # 여기서는 샘플 데이터
+        client = get_yahoo_client()
+        raw_holders = client.get_institutional_holders(ticker)
         
         holders = []
         
-        # 샘플 데이터
-        sample_holders = [
-            {
-                "name": "Vanguard Group",
-                "type": HolderType.MUTUAL_FUND,
-                "shares": 1_500_000_000,
-                "value": 250_000_000_000,
-                "percentage": 7.2,
-                "change_shares": 50_000_000,
-                "change_pct": 3.5
-            },
-            {
-                "name": "BlackRock",
-                "type": HolderType.MUTUAL_FUND,
-                "shares": 1_200_000_000,
-                "value": 200_000_000_000,
-                "percentage": 6.0,
-                "change_shares": 30_000_000,
-                "change_pct": 2.6
-            },
-            {
-                "name": "Berkshire Hathaway",
-                "type": HolderType.HEDGE_FUND,
-                "shares": 500_000_000,
-                "value": 85_000_000_000,
-                "percentage": 2.5,
-                "change_shares": 100_000_000,  # 대량 매수!
-                "change_pct": 25.0
-            }
-        ]
-        
-        for sample in sample_holders[:limit]:
+        for raw in raw_holders:
             holder = InstitutionalHolder(
-                name=sample["name"],
-                holder_type=sample["type"],
-                shares=sample["shares"],
-                value=sample["value"],
-                percentage=sample["percentage"],
-                change_shares=sample["change_shares"],
-                change_percentage=sample["change_pct"],
-                quarter="2024Q4"
+                name=raw["holder"],
+                holder_type=HolderType.MUTUAL_FUND, # 기본값 (API에서 타입까지 구분은 어려움)
+                shares=raw["shares"],
+                value=raw["value"],
+                percentage=raw["pct_held"],
+                change_shares=0, # yfinance 기본 API에서 제공 안함
+                change_percentage=0.0,
+                quarter=f"{raw['date_reported'].year}Q{(raw['date_reported'].month-1)//3 + 1}" if hasattr(raw["date_reported"], 'year') else ""
             )
             holders.append(holder)
         
+        # Sort by value DESC
+        holders.sort(key=lambda x: x.value, reverse=True)
+        
         logger.info(f"Found {len(holders)} institutional holders")
-        return holders
+        return holders[:limit]
     
     async def get_insider_trades(
         self,
@@ -221,53 +194,41 @@ class SmartMoneyCollector:
         """
         logger.info(f"Fetching insider trades for {ticker} ({days} days)")
         
-        # 실제로는 OpenInsider.com, SEC Form 4 사용
+        client = get_yahoo_client()
+        raw_trades = client.get_insider_trades(ticker)
         
         trades = []
+        cutoff_date = datetime.now() - timedelta(days=days)
         
-        # 샘플 데이터
-        sample_trades = [
-            {
-                "insider": "Tim Cook",
-                "position": "CEO",
-                "type": TransactionType.BUY,
-                "shares": 100_000,
-                "price": 175.0,
-                "days_ago": 5
-            },
-            {
-                "insider": "Luca Maestri",
-                "position": "CFO",
-                "type": TransactionType.BUY,
-                "shares": 50_000,
-                "price": 174.5,
-                "days_ago": 7
-            },
-            {
-                "insider": "Board Member",
-                "position": "Director",
-                "type": TransactionType.SELL,
-                "shares": 20_000,
-                "price": 176.0,
-                "days_ago": 10
-            }
-        ]
-        
-        for sample in sample_trades:
-            trade_date = datetime.now() - timedelta(days=sample["days_ago"])
+        for raw in raw_trades:
+            # 날짜 필터링
+            if raw['date'] < cutoff_date:
+                continue
+                
+            # 매매 유형 추론
+            # Text에 'Sale'이나 'Disposition'이 있으면 매도, 'Purchase'나 'Acquisition'은 매수
+            text_lower = raw.get('text', '').lower()
+            if 'sale' in text_lower or 'disposition' in text_lower:
+                tx_type = TransactionType.SELL
+            elif 'purchase' in text_lower or 'acquisition' in text_lower or 'option exercise' in text_lower:
+                tx_type = TransactionType.BUY
+            else:
+                # Shares 변화로 추측 (yfinance 데이터에는 변화량 부호가 없을 수 있음, 보통 Transaction Type 컬럼이 있으나 여기선 텍스트 기반)
+                # 단순화: Shares가 있으면 일단 BUY로 가정하되, Text를 우선
+                tx_type = TransactionType.BUY
             
             trade = InsiderTrade(
                 ticker=ticker,
-                insider_name=sample["insider"],
-                position=sample["position"],
-                transaction_type=sample["type"],
-                shares=sample["shares"],
-                price=sample["price"],
-                value=sample["shares"] * sample["price"],
-                date=trade_date
+                insider_name=raw["insider"],
+                position=raw["position"],
+                transaction_type=tx_type,
+                shares=raw["shares"],
+                price=raw["value"] / raw["shares"] if raw["shares"] > 0 else 0.0, # 추정
+                value=raw["value"],
+                date=raw["date"]
             )
             trades.append(trade)
-        
+            
         logger.info(f"Found {len(trades)} insider trades")
         return trades
     

@@ -271,6 +271,7 @@ class AIDebateSession(Base):
     
     # Votes
     votes = Column(JSONB, nullable=False)
+    debate_transcript = Column(JSONB, nullable=True)  # Full debate transcript with reasoning
     consensus_action = Column(String(10), nullable=True)  # BUY/SELL/HOLD
     consensus_confidence = Column(Float, nullable=True)
     

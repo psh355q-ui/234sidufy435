@@ -162,8 +162,11 @@ class KISBroker:
                 symb=symbol.upper()
             )
 
-            if data_list:
+            if data_list and len(data_list) > 0:
                 row = data_list[0]
+                if row is None:
+                    logger.error(f"Price data row is None for {symbol}")
+                    return None
                 return {
                     "symbol": symbol.upper(),
                     "name": row.get('name', row.get('item_name', symbol)),

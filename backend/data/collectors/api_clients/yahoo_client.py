@@ -12,6 +12,7 @@ Yahoo Finance API Client
 """
 
 import yfinance as yf
+import pandas as pd
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 import logging
@@ -186,6 +187,101 @@ class YahooFinanceClient:
         except Exception as e:
             logger.error(f"Failed to get info for {ticker}: {e}")
             return {}
+
+
+    def get_institutional_holders(self, ticker: str) -> List[Dict]:
+        """
+        기관 투자자 보유 현황 조회
+        
+        Args:
+            ticker: 종목 코드
+            
+        Returns:
+            기관 투자자 리스트 (딕셔너리)
+        """
+        try:
+            ticker_obj = yf.Ticker(ticker)
+            holders = ticker_obj.institutional_holders
+            
+            if holders is None or holders.empty:
+                return []
+                
+            result = []
+            for _, row in holders.iterrows():
+                result.append({
+                    'holder': row['Holder'],
+                    'shares': int(row['Shares']),
+                    'date_reported': row['Date Reported'],
+                    'pct_held': float(row['pctHeld']),
+                    'value': float(row['Value'])
+                })
+            
+            logger.info(f"Fetched {len(result)} institutional holders for {ticker}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to get institutional holders for {ticker}: {e}")
+            return []
+
+    def get_insider_trades(self, ticker: str) -> List[Dict]:
+        """
+        내부자 거래 내역 조회
+        
+        Args:
+            ticker: 종목 코드
+            
+        Returns:
+            내부자 거래 리스트 (딕셔너리)
+        """
+        try:
+            # insider_transactions (최신 포맷) 우선 사용
+            ticker_obj = yf.Ticker(ticker)
+            trades = getattr(ticker_obj, 'insider_transactions', None)
+            
+            if trades is None or trades.empty:
+                 # fallback to insider_purchases if transactions empty
+                 trades = getattr(ticker_obj, 'insider_purchases', None)
+            
+            if trades is None or trades.empty:
+                return []
+                
+            result = []
+            # 최신 20개만
+            for _, row in trades.head(20).iterrows():
+                # 날짜 처리
+                try:
+                    date_val = row.get('Start Date') or row.get('Date') or row.get('Transaction Date')
+                    if hasattr(date_val, 'to_pydatetime'):
+                        trade_date = date_val.to_pydatetime()
+                    else:
+                        trade_date = pd.to_datetime(date_val).to_pydatetime()
+                except:
+                    trade_date = datetime.now()
+
+                # 컬럼 매핑 (yfinance 버전에 따라 다름)
+                insider_name = row.get('Name') or row.get('Insider') or 'Unknown'
+                position = row.get('Position') or row.get('Title') or 'Unknown'
+                shares = row.get('Shares')
+                value = row.get('Value')
+                
+                if pd.isna(shares): shares = 0
+                if pd.isna(value): value = 0
+
+                result.append({
+                    'insider': insider_name,
+                    'position': position,
+                    'shares': int(shares),
+                    'value': float(value),
+                    'date': trade_date,
+                    'text': str(row.get('Text', ''))
+                })
+            
+            logger.info(f"Fetched {len(result)} insider trades for {ticker}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to get insider trades for {ticker}: {e}")
+            return []
 
 
 # 전역 인스턴스

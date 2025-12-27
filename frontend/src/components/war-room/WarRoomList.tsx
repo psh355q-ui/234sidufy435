@@ -30,20 +30,37 @@ const WarRoomList: React.FC = () => {
         if (!apiSessions) return [];
 
         return apiSessions.map(session => {
-            // Convert votes_detail to messages format with actual reasoning
+            // Convert votes/votes_detail to messages format
             const messages: any[] = [];
+            
+            // Prefer 'votes' (dict) from backend, fallback to 'votes_detail' (list)
+            // Note: backend returns 'votes' key, but interface might verify 'agent_votes'. check both.
+            let votesDict: Record<string, any> = (session as any).votes || session.agent_votes || {};
             const votesDetail = session.votes_detail || [];
-            const agentOrder = ['risk', 'macro', 'institutional', 'trader', 'news', 'analyst'];
 
-            agentOrder.forEach((agent, index) => {
-                const voteDetail = votesDetail.find((v: any) => v.agent === agent);
-                if (voteDetail && voteDetail.agent !== 'chip_war') {  // Skip chip_war (not implemented yet)
+            // Helper: Convert list to dict if needed
+            if (Object.keys(votesDict).length === 0 && Array.isArray(votesDetail) && votesDetail.length > 0) {
+                 votesDetail.forEach((v: any) => {
+                     if(v.agent) votesDict[v.agent] = v;
+                 });
+            }
+
+            // Include ALL 8 agents
+            const agentOrder = [
+                'risk', 'macro', 'institutional', 'trader', 
+                'news', 'analyst', 'chip_war', 'dividend_risk'
+            ];
+
+            agentOrder.forEach((agent) => {
+                const vote = votesDict[agent] || votesDetail.find((v: any) => v.agent === agent);
+                
+                if (vote) {
                     messages.push({
                         id: `msg-${session.id}-${agent}`,
                         agent: agent,
-                        action: voteDetail.action,
-                        confidence: voteDetail.confidence,
-                        reasoning: voteDetail.reasoning || `${agent} agent vote: ${voteDetail.action}`,
+                        action: vote.action,
+                        confidence: vote.confidence,
+                        reasoning: vote.reasoning || `${agent} agent vote: ${vote.action}`,
                         timestamp: new Date(session.created_at),
                         isDecision: false
                     });

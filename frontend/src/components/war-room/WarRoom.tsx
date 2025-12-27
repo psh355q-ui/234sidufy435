@@ -59,6 +59,18 @@ const AGENTS = {
         icon: '🤵',
         color: '#607D8B',
         role: '중재자'
+    },
+    chip_war: {
+        name: 'Chip War',
+        icon: '🎮',
+        color: '#795548',
+        role: '반도체'
+    },
+    dividend_risk: {
+        name: 'Dividend',
+        icon: '💰',
+        color: '#E91E63',
+        role: '배당리스크'
     }
 };
 
@@ -242,7 +254,13 @@ const WarRoom: React.FC<WarRoomProps> = ({
                     ) : (
                         <>
                             {messages.map((msg) => {
-                                const agent = AGENTS[msg.agent];
+                                // Fallback to trader if agent not found
+                                const agent = AGENTS[msg.agent] || {
+                                    name: msg.agent,
+                                    icon: '🤖',
+                                    color: '#9E9E9E',
+                                    role: 'Unknown'
+                                };
 
                                 return (
                                     <div
@@ -356,7 +374,7 @@ const WarRoom: React.FC<WarRoomProps> = ({
                     <div className="war-room-footer">
                         <div className="stat">
                             <span className="stat-label">Agents</span>
-                            <span className="stat-value">{messages.filter(m => !m.isDecision).length}/6</span>
+                            <span className="stat-value">{messages.filter(m => !m.isDecision).length}/8</span>
                         </div>
                         <div className="stat">
                             <span className="stat-label">BUY</span>

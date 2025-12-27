@@ -518,33 +518,65 @@ def _url_fetch(url_path: str, tr_id: str, params: Dict, method: str = "GET") -> 
     headers = _base_headers.copy()
     headers["tr_id"] = tr_id
     
-    try:
-        if method == "GET":
-            response = _session.get(url, headers=headers, params=params)
-        else:
-            # POST 요청은 해시키 필요
-            if "CANO" in params:  # 주문 관련 API
-                hashkey = _get_hashkey(params)
-                if hashkey:
-                    headers["hashkey"] = hashkey
-            response = _session.post(url, headers=headers, json=params)
+    
+    retry_count = 0
+    max_retries = 10
+    
+    while retry_count <= max_retries:
+        try:
+            if method == "GET":
+                response = _session.get(url, headers=headers, params=params)
+            else:
+                # POST 요청은 해시키 필요
+                if "CANO" in params:  # 주문 관련 API
+                    hashkey = _get_hashkey(params)
+                    if hashkey:
+                        headers["hashkey"] = hashkey
+                response = _session.post(url, headers=headers, json=params)
+            
+            # Rate Limit Error Check (KIS API returns 200 even for errors sometimes, check body)
+            # But sometimes it might return non-200.
+            
+            # Parse JSON to check for specific rate limit codes
+            try:
+                res_data = response.json()
+                msg_cd = res_data.get("msg_cd", "")
+                # IGW00201: 초당 거래건수 초과 (모의)
+                # EGW00201: 초당 거래건수 초과 (실전)
+                if msg_cd in ["IGW00201", "EGW00201", "EGW00121"]:
+                    if retry_count < max_retries:
+                        wait_time = 0.2 * (2 ** retry_count) # 0.2, 0.4, 0.8
+                        logger.warning(f"KIS API Rate Limit ({msg_cd}). Retrying in {wait_time}s...")
+                        time.sleep(wait_time)
+                        retry_count += 1
+                        continue
+            except:
+                pass # JSON parse failed, proceed to return APIResponse
+            
+            return APIResponse(response)
+            
+        except Exception as e:
+            if retry_count < max_retries:
+                logger.warning(f"API Request failed: {e}. Retrying...")
+                retry_count += 1
+                time.sleep(0.5)
+                continue
+                
+            logger.error(f"API 호출 오류: {e}")
+            logger.error(f"URL: {url}")
+            logger.error(f"Headers: {headers}")
+            logger.error(f"Params: {params}")
+            
+            # 빈 응답 반환
+            class EmptyResponse:
+                status_code = 500
+                text = str(e)
+                def json(self):
+                    return {"rt_cd": "1", "msg1": str(e)}
+            
+            return APIResponse(EmptyResponse())
         
-        return APIResponse(response)
-        
-    except Exception as e:
-        logger.error(f"API 호출 오류: {e}")
-        logger.error(f"URL: {url}")
-        logger.error(f"Headers: {headers}")
-        logger.error(f"Params: {params}")
-        
-        # 빈 응답 반환
-        class EmptyResponse:
-            status_code = 500
-            text = str(e)
-            def json(self):
-                return {"rt_cd": "1", "msg1": str(e)}
-        
-        return APIResponse(EmptyResponse())
+
 
 
 def invoke_api(url_path: str, tr_id: str, params: Dict, method: str = "GET") -> APIResponse:

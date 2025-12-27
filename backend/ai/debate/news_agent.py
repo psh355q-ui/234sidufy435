@@ -59,13 +59,13 @@ class NewsAgent:
             # 1. Emergency News 조회 (최근 24시간)
             cutoff = datetime.now() - timedelta(hours=24)
             
-            # GroundingSearchLog 필드: ticker, search_query (not 'query')
+            # GroundingSearchLog fields: query (not search_query), no ticker column, search_date (not created_at)
             emergency_news = db.query(GroundingSearchLog)\
                 .filter(
-                    GroundingSearchLog.ticker == ticker,  # Exact match
-                    GroundingSearchLog.created_at >= cutoff
+                    GroundingSearchLog.query.ilike(f"%{ticker}%"),  # Search in query text
+                    GroundingSearchLog.search_date >= cutoff         # Use search_date
                 )\
-                .order_by(GroundingSearchLog.created_at.desc())\
+                .order_by(GroundingSearchLog.search_date.desc())\
                 .limit(5)\
                 .all()
             
@@ -98,12 +98,12 @@ class NewsAgent:
             news_summaries = []
             
             for news in emergency_news:
-                # GroundingSearchLog has: ticker, search_query, results_count
-                # No 'urgency' or 'results' field by default
+                # GroundingSearchLog has: query, result_count, estimated_cost
+                # No 'urgency' field by default
                 news_summaries.append({
                     "type": "EMERGENCY",
                     "urgency": "HIGH",  # Default urgency
-                    "content": news.search_query[:200] if news.search_query else f"Emergency search for {ticker}"
+                    "content": news.query[:200] if news.query else f"Emergency search for {ticker}"
                 })
             
             for article in recent_news:

@@ -507,16 +507,26 @@ async def reports_health_check(db: Session = Depends(get_db)):
     Health check for reports service.
     """
     # Check if we have recent data
-    from sqlalchemy import select
-    stmt = select(DailyAnalytics).order_by(DailyAnalytics.date.desc())
-    result = await db.execute(stmt)
-    latest_daily = result.scalars().first()
+    try:
+        from sqlalchemy import select
+        stmt = select(DailyAnalytics).order_by(DailyAnalytics.date.desc())
+        result = await db.execute(stmt)
+        latest_daily = result.scalars().first()
 
-    return {
-        "status": "healthy",
-        "latest_daily_report": latest_daily.date.isoformat() if latest_daily else None,
-        "data_available": latest_daily is not None,
-    }
+        return {
+            "status": "healthy",
+            "latest_daily_report": latest_daily.date.isoformat() if latest_daily else None,
+            "data_available": latest_daily is not None,
+        }
+    except Exception as e:
+        # Table may not exist yet
+        logger.warning(f"Reports health check error: {e}")
+        return {
+            "status": "healthy",
+            "latest_daily_report": None,
+            "data_available": False,
+            "note": "No data yet - expected on first run"
+        }
 
 
 # =============================================================================

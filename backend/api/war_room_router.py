@@ -306,24 +306,42 @@ async def save_initial_price_tracking(
     """
     import os
     from backend.brokers.kis_broker import KISBroker
+    import yfinance as yf
 
     try:
-        # Get current price from KIS
+        # Get current price from KIS (Primary) or Yahoo Finance (Fallback)
         account_no = os.environ.get("KIS_ACCOUNT_NUMBER", "")
         is_virtual = os.environ.get("KIS_IS_VIRTUAL", "true").lower() == "true"
+        current_price = None
 
-        if not account_no:
-            logger.warning("KIS_ACCOUNT_NUMBER not set - skipping price tracking")
-            return
+        # Try KIS first
+        if account_no:
+            try:
+                broker = KISBroker(account_no=account_no, is_virtual=is_virtual)
+                price_data = broker.get_price(ticker, exchange="NASDAQ")
+                if price_data:
+                    current_price = price_data["current_price"]
+                    logger.info(f"📊 Price from KIS: {ticker} @ ${current_price:.2f}")
+            except Exception as e:
+                logger.warning(f"KIS price fetch failed: {e}")
 
-        broker = KISBroker(account_no=account_no, is_virtual=is_virtual)
-        price_data = broker.get_price(ticker, exchange="NASDAQ")
+        # Fallback to Yahoo Finance
+        if current_price is None:
+            try:
+                stock = yf.Ticker(ticker)
+                hist = stock.history(period="1d")
+                if not hist.empty:
+                    current_price = float(hist['Close'].iloc[-1])
+                    logger.info(f"📊 Price from Yahoo Finance (fallback): {ticker} @ ${current_price:.2f}")
+                else:
+                    logger.warning(f"Yahoo Finance returned empty data for {ticker}")
+            except Exception as e:
+                logger.warning(f"Yahoo Finance price fetch failed: {e}")
 
-        if not price_data:
+        # Skip if no price available
+        if current_price is None:
             logger.warning(f"Failed to get price for {ticker} - skipping price tracking")
             return
-
-        current_price = price_data["current_price"]
 
         # Save consensus to price_tracking table
         from sqlalchemy import text

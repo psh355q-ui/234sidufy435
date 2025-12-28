@@ -91,6 +91,8 @@ class NewsArticle(Base):
 
     # Relationships
     analyses = relationship("AnalysisResult", back_populates="article", cascade="all, delete-orphan")
+    analysis = relationship("NewsAnalysis", back_populates="article", uselist=False, cascade="all, delete-orphan")
+    ticker_relevances = relationship("NewsTickerRelevance", back_populates="article", cascade="all, delete-orphan")
 
     # Indexes
     __table_args__ = (

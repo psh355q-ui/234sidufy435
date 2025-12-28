@@ -246,6 +246,18 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Failed to start Stock Price Scheduler: {e}")
 
+    # 🆕 Start Daily Learning Scheduler (Option 3: Self-Learning System)
+    try:
+        from backend.ai.learning.daily_learning_scheduler import DailyLearningScheduler
+        from datetime import time
+        import asyncio
+
+        learning_scheduler = DailyLearningScheduler(run_time=time(0, 0))  # Midnight UTC
+        asyncio.create_task(learning_scheduler.start())
+        logger.info("✅ Daily Learning Scheduler started (00:00 UTC)")
+    except Exception as e:
+        logger.warning(f"⚠️ Failed to start Daily Learning Scheduler: {e}")
+
     yield
 
     # Shutdown sequence
@@ -346,6 +358,14 @@ if SIGNALS_AVAILABLE:    # Phase 4: Trading Signals
     from backend.api.war_room_router import router as war_room_router
     app.include_router(war_room_router)
     logger.info("War Room router registered")
+    
+    # 🆕 War Room Analytics (Debate Visualization & Shadow Trading)
+    try:
+        from backend.api.war_room_analytics_router import router as war_room_analytics_router
+        app.include_router(war_room_analytics_router)
+        logger.info("War Room Analytics router registered")
+    except Exception as e:
+        logger.warning(f"War Room Analytics router not available: {e}")
 
     # 🆕 Signal Consolidation (Multi-Source Aggregation)
     from backend.api.signal_consolidation_router import router as signal_consolidation_router

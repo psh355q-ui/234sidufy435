@@ -433,7 +433,41 @@ elif fib['nearest_level'] == '38.2%' and current_price > fib['levels']['38.2%']:
 
 ## 3. Risk Agent 개선
 
-### 🎯 최우선 개선 항목
+### ✅ 완료된 개선 (2025-12-27)
+
+#### VaR (Value at Risk) 계산
+
+**파일**: [backend/ai/debate/risk_agent.py:380-460](../backend/ai/debate/risk_agent.py#L380)
+
+**구현 완료**:
+```python
+def _calculate_var(self, returns: List[float], confidence_level: float = 0.95) -> Dict:
+    """
+    VaR (Value at Risk) 계산 (Historical Method)
+
+    Returns:
+        - var_1day: 1일 VaR (%)
+        - var_10day: 10일 VaR (%)
+        - cvar: Conditional VaR (Expected Shortfall)
+    """
+    # Historical VaR: 하위 percentile 사용
+    var_percentile = (1 - confidence_level) * 100
+    var_1day = np.percentile(returns_array, var_percentile)
+
+    # 10일 VaR (Square Root of Time Rule)
+    var_10day = var_1day * np.sqrt(10)
+
+    # CVaR: VaR 초과 손실의 평균
+    tail_losses = returns_array[returns_array <= var_1day]
+    cvar = np.mean(tail_losses) if len(tail_losses) > 0 else var_1day
+```
+
+**매매 신호 통합** (lines 135-158):
+- VaR < -5%: SELL 신호 (헌법 제4조 위반 가능성)
+- CVaR < -10%: confidence_boost 감소
+- VaR > -2%: confidence_boost 증가 (낮은 리스크)
+
+### 🎯 추가 개선 필요 항목
 
 #### 3.1 샤프 비율 계산
 
@@ -593,75 +627,199 @@ return {
 
 ## 4. Macro Agent 개선
 
-### 🎯 최우선 개선 항목
+### ✅ 완료된 개선 (2025-12-27)
 
-#### 4.1 수익률 곡선 (Yield Curve) 분석
+#### 수익률 곡선 (Yield Curve) 분석
+
+**파일**: [backend/ai/debate/macro_agent.py:230-280](../backend/ai/debate/macro_agent.py#L230)
+
+**구현 완료**:
+```python
+def _analyze_yield_curve(self, yield_2y: float, yield_10y: float) -> Dict:
+    """
+    수익률 곡선 스프레드 (10Y - 2Y):
+    - 역전 (< 0): 경기 침체 신호 (강한 SELL)
+    - 평탄화 (0 ~ 25bps): 경기 둔화 조짐
+    - 정상 (25 ~ 150bps): 건강한 경제
+    - 가파름 (> 150bps): 경기 확장 기대
+    """
+```
+
+**매매 신호 통합** (lines 104-118):
+- 역전 (< 0bps): SELL 신호 (경기 침체 위험)
+- 가파름 (> 150bps): confidence +0.15 (경기 확장)
+- 평탄화 (0-25bps): confidence -0.10 (경기 둔화)
+
+### 🎯 추가 개선 필요 항목
+
+#### 4.1 유가 분석 (WTI Crude) ⭐ 추가 예정
+
+**영향**:
+- 유가 상승 → 인플레 압력 증가 → 에너지 섹터 유리, 항공/운송 불리
+- 유가 하락 → 소비재/운송 유리, 에너지 섹터 불리
 
 **구현**:
 ```python
-async def _analyze_yield_curve(self) -> Dict:
+def _analyze_oil_price(self, wti_price: float, wti_change_30d: float) -> Dict:
     """
-    2Y-10Y 수익률 곡선 분석
+    유가 분석 (WTI Crude)
 
-    경기침체 예측:
-    - 정상: 10Y > 2Y (장기 금리가 더 높음)
-    - 역전: 2Y > 10Y (장기 금리가 더 낮음) → 경기침체 신호
+    Args:
+        wti_price: 현재 WTI 가격 ($/barrel)
+        wti_change_30d: 30일 변화율 (%)
+
+    Returns:
+        {
+            "oil_price": float,
+            "signal": "HIGH|NORMAL|LOW",
+            "inflation_pressure": "INCREASING|STABLE|DECREASING",
+            "sector_impact": {...}
+        }
     """
-    # FRED API 사용
-    from fredapi import Fred
+    # 유가 수준 판단
+    if wti_price > 90:
+        signal = "HIGH"
+        inflation_pressure = "INCREASING"
+        sector_impact = {
+            "energy": "POSITIVE",  # XLE (Energy ETF)
+            "airlines": "NEGATIVE",  # 항공사 비용 증가
+            "consumer": "NEGATIVE"  # 소비재 압박
+        }
+    elif wti_price < 60:
+        signal = "LOW"
+        inflation_pressure = "DECREASING"
+        sector_impact = {
+            "energy": "NEGATIVE",
+            "airlines": "POSITIVE",
+            "consumer": "POSITIVE"
+        }
+    else:
+        signal = "NORMAL"
+        inflation_pressure = "STABLE"
+        sector_impact = {}
 
-    fred = Fred(api_key=os.environ.get('FRED_API_KEY'))
-
-    # 2년물 국채
-    dgs2 = fred.get_series('DGS2', observation_start=datetime.now() - timedelta(days=30))
-
-    # 10년물 국채
-    dgs10 = fred.get_series('DGS10', observation_start=datetime.now() - timedelta(days=30))
-
-    # 최근 값
-    yield_2y = dgs2.iloc[-1]
-    yield_10y = dgs10.iloc[-1]
-
-    # 스프레드
-    spread = yield_10y - yield_2y
-
-    # 역전 여부
-    is_inverted = spread < 0
-
-    # 역전 지속 기간
-    inversion_days = 0
-    if is_inverted:
-        for i in range(len(dgs10) - 1, -1, -1):
-            if dgs10.iloc[i] - dgs2.iloc[i] < 0:
-                inversion_days += 1
-            else:
-                break
+    # 급등/급락 체크
+    if wti_change_30d > 20:
+        reasoning = f"유가 급등 ({wti_change_30d:.1f}%) - 인플레 압력 증가, 에너지 섹터 강세"
+    elif wti_change_30d < -20:
+        reasoning = f"유가 급락 ({wti_change_30d:.1f}%) - 소비 여력 증가, 에너지 섹터 약세"
+    else:
+        reasoning = f"유가 안정 (${wti_price:.2f}/배럴)"
 
     return {
-        "yield_2y": yield_2y,
-        "yield_10y": yield_10y,
-        "spread": spread,
-        "is_inverted": is_inverted,
-        "inversion_days": inversion_days,
-        "recession_risk": "HIGH" if inversion_days > 60 else "MODERATE" if is_inverted else "LOW"
+        "oil_price": wti_price,
+        "oil_change_30d": wti_change_30d,
+        "signal": signal,
+        "inflation_pressure": inflation_pressure,
+        "sector_impact": sector_impact,
+        "reasoning": reasoning
     }
 ```
 
-**매매 신호**:
+**매매 신호 통합**:
 ```python
-yield_curve = await self._analyze_yield_curve()
+# 유가 분석
+oil_analysis = None
+if "wti_crude" in macro_data:
+    oil_analysis = self._analyze_oil_price(
+        wti_price=macro_data["wti_crude"],
+        wti_change_30d=macro_data.get("wti_change_30d", 0)
+    )
 
-if yield_curve['is_inverted'] and yield_curve['inversion_days'] > 90:
-    action = "SELL"
-    confidence = 0.85
-    reasoning = f"수익률 곡선 역전 {yield_curve['inversion_days']}일 지속 → 경기침체 리스크"
-elif yield_curve['spread'] > 1.0:
-    action = "BUY"
-    confidence = 0.75
-    reasoning = f"수익률 곡선 정상화 (스프레드 {yield_curve['spread']:.2f}%) → 경기 확장"
+    # 유가 영향 반영
+    sector = self._get_sector(ticker)  # 티커의 섹터 확인
+
+    if sector == "Energy" and oil_analysis["signal"] == "HIGH":
+        confidence_boost += 0.10
+        reasoning += " | 유가 고공행진 - 에너지 섹터 수혜"
+    elif sector in ["Airlines", "Transportation"] and oil_analysis["signal"] == "HIGH":
+        confidence_boost -= 0.10
+        reasoning += " | 유가 상승 - 운송 비용 부담"
 ```
 
-#### 4.2 PMI (구매관리자지수) 분석
+#### 4.2 달러 인덱스 분석 (DXY) ⭐ 추가 예정
+
+**영향**:
+- 달러 강세 → 미국 수출 불리, 신흥국 압박, 금/원자재 하락
+- 달러 약세 → 미국 수출 유리, 신흥국 수혜, 금/원자재 상승
+
+**구현**:
+```python
+def _analyze_dollar_index(self, dxy: float, dxy_change_30d: float) -> Dict:
+    """
+    달러 인덱스 (DXY) 분석
+
+    Args:
+        dxy: 현재 달러 인덱스 (기준: 100)
+        dxy_change_30d: 30일 변화율 (%)
+
+    Returns:
+        {
+            "dxy": float,
+            "signal": "STRONG|NEUTRAL|WEAK",
+            "impact": {...}
+        }
+    """
+    # 달러 강도 판단
+    if dxy > 105:
+        signal = "STRONG"
+        impact = {
+            "us_exporters": "NEGATIVE",  # 수출 기업 불리
+            "multinationals": "NEGATIVE",  # 다국적 기업 불리
+            "emerging_markets": "NEGATIVE",  # 신흥국 압박
+            "gold": "NEGATIVE",  # 금 가격 하락
+            "commodities": "NEGATIVE"  # 원자재 가격 하락
+        }
+    elif dxy < 95:
+        signal = "WEAK"
+        impact = {
+            "us_exporters": "POSITIVE",
+            "multinationals": "POSITIVE",
+            "emerging_markets": "POSITIVE",
+            "gold": "POSITIVE",
+            "commodities": "POSITIVE"
+        }
+    else:
+        signal = "NEUTRAL"
+        impact = {}
+
+    # 급등/급락
+    if dxy_change_30d > 5:
+        reasoning = f"달러 급강세 (DXY {dxy:.2f}, +{dxy_change_30d:.1f}%) - 수출 기업 부담, 신흥국 압박"
+    elif dxy_change_30d < -5:
+        reasoning = f"달러 급약세 (DXY {dxy:.2f}, {dxy_change_30d:.1f}%) - 수출 유리, 금/원자재 강세"
+    else:
+        reasoning = f"달러 안정 (DXY {dxy:.2f})"
+
+    return {
+        "dxy": dxy,
+        "dxy_change_30d": dxy_change_30d,
+        "signal": signal,
+        "impact": impact,
+        "reasoning": reasoning
+    }
+```
+
+**매매 신호 통합**:
+```python
+# 달러 인덱스 분석
+dxy_analysis = None
+if "dxy" in macro_data:
+    dxy_analysis = self._analyze_dollar_index(
+        dxy=macro_data["dxy"],
+        dxy_change_30d=macro_data.get("dxy_change_30d", 0)
+    )
+
+    # 달러 영향 반영
+    if self._is_us_exporter(ticker) and dxy_analysis["signal"] == "STRONG":
+        confidence_boost -= 0.08
+        reasoning += " | 달러 강세 - 수출 경쟁력 약화"
+    elif self._is_multinational(ticker) and dxy_analysis["signal"] == "STRONG":
+        confidence_boost -= 0.05
+        reasoning += " | 달러 강세 - 해외 수익 환차손"
+```
+
+#### 4.3 PMI (구매관리자지수) 분석
 
 **구현**:
 ```python
@@ -882,7 +1040,33 @@ async def _analyze_short_interest(self, ticker: str) -> Dict:
 
 ## 6. Analyst Agent 개선
 
-### 🎯 최우선 개선 항목
+### ✅ 완료된 개선 (2025-12-27)
+
+#### 경쟁사 비교 분석
+
+**파일**: [backend/ai/debate/analyst_agent.py:287-452](../backend/ai/debate/analyst_agent.py#L287)
+
+**구현 완료**:
+```python
+def _compare_with_peers(self, ticker: str, fundamental_data: Dict) -> Dict:
+    """
+    동종업계 경쟁사 비교 분석
+
+    Returns:
+        - sector: 섹터명
+        - peer_comparison: P/E, Growth, Margin vs 섹터 평균
+        - competitive_position: LEADER/COMPETITIVE/LAGGING
+        - competitive_score: -3 ~ +3 점수
+    """
+```
+
+**섹터 매핑**: AAPL, MSFT, GOOGL (Technology), TSLA (Automotive), JPM (Financials) 등
+
+**매매 신호 통합** (lines 161-186):
+- LEADER: BUY 신호 강화 (+0.15 confidence)
+- LAGGING: SELL 신호 강화 또는 BUY 신호 약화 (-0.15 confidence)
+
+### 🎯 추가 개선 필요 항목
 
 #### 6.1 PEG Ratio (성장 대비 밸류에이션)
 
@@ -1097,41 +1281,52 @@ async def _fetch_mlperf_results(self, ticker: str) -> Dict:
 
 ## 8. 구현 우선순위
 
-### Phase 1 (즉시 구현) - 2시간 이내
+### Phase 1 (즉시 구현) - ✅ 완료 (2025-12-27)
 
 1. ✅ **News Agent 시계열 트렌드 분석** (완료)
-2. **Trader Agent 지지/저항선 탐지**
-3. **Risk Agent 샤프 비율 계산**
+2. ✅ **Risk Agent VaR 계산** (완료)
+3. ✅ **Analyst Agent 경쟁사 비교 분석** (완료)
+4. ✅ **Sentiment Agent 생성** (완료) - 신규 에이전트
 
-### Phase 2 (1주 이내)
+### Phase 2 (다음 우선순위)
 
-4. **Trader Agent 멀티 타임프레임**
-5. **Trader Agent 볼린저밴드**
-6. **Macro Agent 수익률 곡선**
-7. **Analyst Agent PEG Ratio**
+1. **Macro Agent 유가/달러 분석** ⭐ NEW (1시간)
+2. **Trader Agent 지지/저항선 탐지** (1시간)
+3. **Trader Agent 멀티 타임프레임** (2시간)
+4. **Trader Agent 볼린저밴드** (1시간)
+5. **Risk Agent 샤프 비율 계산** (30분)
 
-### Phase 3 (2주 이내)
+### Phase 3 (1주 이내)
 
-8. **Institutional Agent 다크풀 분석**
-9. **Risk Agent VaR 계산**
-10. **Analyst Agent ROE/FCF**
+6. **Analyst Agent PEG Ratio** (30분)
+7. **Institutional Agent 다크풀 분석** (2시간)
+8. **Analyst Agent ROE/FCF** (1시간)
+9. **Macro Agent PMI 분석** (1시간)
 
-### Phase 4 (1개월 이내)
+### Phase 4 (2주 이내)
 
-11. **Trader Agent 피보나치**
-12. **ChipWar Agent AMD MI300X**
-13. **Institutional Agent 옵션 분석**
+9. **Trader Agent 피보나치**
+10. **ChipWar Agent AMD MI300X**
+11. **Institutional Agent 옵션 분석**
 
 ---
 
 ## 📊 예상 성과 개선
 
 ### 현재 시스템
+- Agent 개수: 7개
 - Constitutional 통과율: 37%
 - 에이전트 정확도: 미측정
 - 모의 거래 승률: 미시행
 
-### 개선 후 목표 (Phase 1-4 완료 시)
+### Phase 1 완료 후 (2025-12-27) ✅
+- Agent 개수: **8개** (Sentiment Agent 추가)
+- Constitutional 통과율: **80%+ 예상** (VaR 사전 체크)
+- 소셜 감성 반영: **100%** (Twitter/Reddit 실시간)
+- 경쟁사 비교 분석: **100%** (섹터 상대 평가)
+- VaR 기반 리스크 관리: **100%**
+
+### 최종 목표 (Phase 1-4 완료 시)
 - Constitutional 통과율: **90%+**
 - 에이전트 정확도: **65%+** (Self-Learning 후)
 - 모의 거래 승률: **60%+**
@@ -1139,5 +1334,26 @@ async def _fetch_mlperf_results(self, ticker: str) -> Dict:
 
 ---
 
+## 🎯 신규 추가된 Agent
+
+### Sentiment Agent (2025-12-27)
+
+**파일**: [backend/ai/debate/sentiment_agent.py](../backend/ai/debate/sentiment_agent.py)
+
+**투표 가중치**: 8%
+
+**핵심 기능**:
+1. Twitter/Reddit 감성 분석 (-1.0 ~ 1.0)
+2. Fear & Greed Index 역투자 전략
+   - Extreme Fear (< 25) → CONTRARIAN_BUY
+   - Extreme Greed (> 75) → CONTRARIAN_SELL
+3. Meme Stock 감지 (고거래량 + 급격한 감성 변화)
+4. 소셜 트렌딩 분석
+
+**War Room 통합**: 8개 Agent 구성 (총 100% 투표 가중치)
+
+---
+
 **작성 완료**: 2025-12-27
-**다음 리뷰**: 구현 진행 시 업데이트
+**Phase 1 완료**: 2025-12-27 ✅
+**다음 리뷰**: Phase 2 착수 시 업데이트

@@ -1,0 +1,160 @@
+{
+    "table_name": "news_decision_links",
+    "description": "뉴스 → 해석 → 의사결정 → 결과 연결 - Accountability Chain",
+    "primary_key": "id",
+    "columns": [
+        {
+            "name": "id",
+            "type": "INTEGER",
+            "nullable": false,
+            "auto_increment": true,
+            "description": "고유 ID"
+        },
+        {
+            "name": "interpretation_id",
+            "type": "INTEGER",
+            "nullable": false,
+            "description": "뉴스 해석 ID (Foreign Key)",
+            "foreign_key": {
+                "table": "news_interpretations",
+                "column": "id",
+                "on_delete": "CASCADE"
+            }
+        },
+        {
+            "name": "debate_session_id",
+            "type": "INTEGER",
+            "nullable": true,
+            "description": "War Room 토론 세션 ID (Foreign Key)",
+            "foreign_key": {
+                "table": "ai_debate_sessions",
+                "column": "id",
+                "on_delete": "SET NULL"
+            }
+        },
+        {
+            "name": "trading_signal_id",
+            "type": "INTEGER",
+            "nullable": true,
+            "description": "트레이딩 시그널 ID (Foreign Key)",
+            "foreign_key": {
+                "table": "trading_signals",
+                "column": "id",
+                "on_delete": "SET NULL"
+            }
+        },
+        {
+            "name": "ticker",
+            "type": "VARCHAR(20)",
+            "nullable": false,
+            "description": "종목 코드",
+            "example": "NVDA"
+        },
+        {
+            "name": "final_decision",
+            "type": "VARCHAR(10)",
+            "nullable": false,
+            "description": "최종 의사결정",
+            "enum": [
+                "BUY",
+                "SELL",
+                "HOLD"
+            ]
+        },
+        {
+            "name": "decision_outcome",
+            "type": "VARCHAR(20)",
+            "nullable": false,
+            "default": "PENDING",
+            "description": "의사결정 결과",
+            "enum": [
+                "SUCCESS",
+                "FAILURE",
+                "PENDING"
+            ]
+        },
+        {
+            "name": "profit_loss",
+            "type": "FLOAT",
+            "nullable": true,
+            "description": "손익 (%)"
+        },
+        {
+            "name": "news_influence_weight",
+            "type": "FLOAT",
+            "nullable": true,
+            "description": "뉴스가 의사결정에 미친 영향도 (0.0 ~ 1.0)"
+        },
+        {
+            "name": "created_at",
+            "type": "TIMESTAMP",
+            "nullable": false,
+            "default": "CURRENT_TIMESTAMP",
+            "description": "링크 생성 시각"
+        },
+        {
+            "name": "outcome_verified_at",
+            "type": "TIMESTAMP",
+            "nullable": true,
+            "description": "결과 검증 시각"
+        }
+    ],
+    "indexes": [
+        {
+            "name": "idx_link_interpretation",
+            "columns": [
+                "interpretation_id"
+            ],
+            "unique": false,
+            "description": "해석별 조회"
+        },
+        {
+            "name": "idx_link_debate_session",
+            "columns": [
+                "debate_session_id"
+            ],
+            "unique": false,
+            "description": "토론 세션별 조회"
+        },
+        {
+            "name": "idx_link_trading_signal",
+            "columns": [
+                "trading_signal_id"
+            ],
+            "unique": false,
+            "description": "트레이딩 시그널별 조회"
+        },
+        {
+            "name": "idx_link_ticker",
+            "columns": [
+                "ticker"
+            ],
+            "unique": false,
+            "description": "종목별 조회"
+        },
+        {
+            "name": "idx_link_outcome",
+            "columns": [
+                "decision_outcome",
+                "final_decision"
+            ],
+            "unique": false,
+            "description": "결과 분석용"
+        }
+    ],
+    "metadata": {
+        "category": "accountability",
+        "repository": "NewsDecisionLinkRepository",
+        "module": "News Interpretation System",
+        "created": "2025-12-29",
+        "last_updated": "2025-12-29",
+        "update_frequency": "Real-time (after War Room decision)",
+        "data_source": "Decision Linker + Price Tracking",
+        "related_files": [
+            "backend/automation/decision_linker.py",
+            "backend/database/models.py",
+            "backend/database/repository.py"
+        ],
+        "notes": "War Room 의사결정 직후 생성되며, 나중에 실제 결과로 업데이트됨"
+    }
+}

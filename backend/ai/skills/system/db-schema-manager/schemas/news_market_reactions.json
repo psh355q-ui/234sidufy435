@@ -1,0 +1,155 @@
+{
+    "table_name": "news_market_reactions",
+    "description": "뉴스 후 실제 시장 반응 검증 - AI 해석의 정확도 측정",
+    "primary_key": "id",
+    "columns": [
+        {
+            "name": "id",
+            "type": "INTEGER",
+            "nullable": false,
+            "auto_increment": true,
+            "description": "고유 ID"
+        },
+        {
+            "name": "interpretation_id",
+            "type": "INTEGER",
+            "nullable": false,
+            "description": "뉴스 해석 ID (Foreign Key)",
+            "foreign_key": {
+                "table": "news_interpretations",
+                "column": "id",
+                "on_delete": "CASCADE"
+            }
+        },
+        {
+            "name": "ticker",
+            "type": "VARCHAR(20)",
+            "nullable": false,
+            "description": "종목 코드",
+            "example": "NVDA"
+        },
+        {
+            "name": "price_at_news",
+            "type": "FLOAT",
+            "nullable": false,
+            "description": "뉴스 발생 시점 가격"
+        },
+        {
+            "name": "price_1h_after",
+            "type": "FLOAT",
+            "nullable": true,
+            "description": "1시간 후 가격"
+        },
+        {
+            "name": "price_1d_after",
+            "type": "FLOAT",
+            "nullable": true,
+            "description": "1일 후 가격"
+        },
+        {
+            "name": "price_3d_after",
+            "type": "FLOAT",
+            "nullable": true,
+            "description": "3일 후 가격"
+        },
+        {
+            "name": "actual_price_change_1h",
+            "type": "FLOAT",
+            "nullable": true,
+            "description": "1시간 후 가격 변화율 (%)"
+        },
+        {
+            "name": "actual_price_change_1d",
+            "type": "FLOAT",
+            "nullable": true,
+            "description": "1일 후 가격 변화율 (%)"
+        },
+        {
+            "name": "actual_price_change_3d",
+            "type": "FLOAT",
+            "nullable": true,
+            "description": "3일 후 가격 변화율 (%)"
+        },
+        {
+            "name": "interpretation_correct",
+            "type": "BOOLEAN",
+            "nullable": true,
+            "description": "해석 정확 여부 (방향 일치)"
+        },
+        {
+            "name": "confidence_justified",
+            "type": "FLOAT",
+            "nullable": true,
+            "description": "신뢰도 적절성 점수 (0.0 ~ 1.0)"
+        },
+        {
+            "name": "magnitude_accuracy",
+            "type": "FLOAT",
+            "nullable": true,
+            "description": "크기 정확도 (예상 vs 실제 차이)"
+        },
+        {
+            "name": "verified_at",
+            "type": "TIMESTAMP",
+            "nullable": true,
+            "description": "검증 완료 시각"
+        },
+        {
+            "name": "created_at",
+            "type": "TIMESTAMP",
+            "nullable": false,
+            "default": "CURRENT_TIMESTAMP",
+            "description": "레코드 생성 시각"
+        }
+    ],
+    "indexes": [
+        {
+            "name": "idx_reaction_interpretation",
+            "columns": [
+                "interpretation_id"
+            ],
+            "unique": true,
+            "description": "해석별 반응 (1:1)"
+        },
+        {
+            "name": "idx_reaction_ticker",
+            "columns": [
+                "ticker"
+            ],
+            "unique": false,
+            "description": "종목별 조회"
+        },
+        {
+            "name": "idx_reaction_verified",
+            "columns": [
+                "verified_at"
+            ],
+            "unique": false,
+            "description": "검증 완료 시각별 조회"
+        },
+        {
+            "name": "idx_reaction_correctness",
+            "columns": [
+                "interpretation_correct",
+                "confidence_justified"
+            ],
+            "unique": false,
+            "description": "정확도 분석용"
+        }
+    ],
+    "metadata": {
+        "category": "accountability",
+        "repository": "NewsMarketReactionRepository",
+        "module": "News Interpretation System",
+        "created": "2025-12-29",
+        "last_updated": "2025-12-29",
+        "update_frequency": "Scheduled (1h, 1d, 3d after interpretation)",
+        "data_source": "Price Tracking Scheduler + KIS API",
+        "related_files": [
+            "backend/automation/price_tracking_scheduler.py",
+            "backend/database/models.py",
+            "backend/database/repository.py"
+        ],
+        "notes": "price_tracking_scheduler가 1시간, 1일, 3일 후 실제 가격 변화를 측정하여 저장"
+    }
+}

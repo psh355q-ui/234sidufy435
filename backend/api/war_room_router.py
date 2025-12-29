@@ -758,6 +758,22 @@ async def run_war_room_debate(request: DebateRequest, execute_trade: bool = Fals
             }
         ))
 
+        # 🆕 Send Telegram alert for War Room decision
+        try:
+            from backend.services.alert_manager import alert_manager
+            import asyncio
+            
+            asyncio.create_task(
+                alert_manager.war_room_decision(
+                    ticker=ticker,
+                    action=pm_decision["consensus_action"],
+                    confidence=pm_decision["consensus_confidence"],
+                    num_votes=len(votes)
+                )
+            )
+        except Exception as e:
+            logger.warning(f"Failed to send War Room decision alert: {e}")
+
         return response
 
     except Exception as e:

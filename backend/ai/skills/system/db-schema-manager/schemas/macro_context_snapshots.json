@@ -1,0 +1,185 @@
+{
+    "table_name": "macro_context_snapshots",
+    "description": "거시 경제 상황 스냅샷 - 매일 갱신되는 시장 체제 정보",
+    "primary_key": "id",
+    "columns": [
+        {
+            "name": "id",
+            "type": "INTEGER",
+            "nullable": false,
+            "auto_increment": true,
+            "description": "고유 ID"
+        },
+        {
+            "name": "snapshot_date",
+            "type": "DATE",
+            "nullable": false,
+            "unique": true,
+            "description": "스냅샷 날짜 (일별 unique)"
+        },
+        {
+            "name": "regime",
+            "type": "VARCHAR(30)",
+            "nullable": false,
+            "description": "시장 체제",
+            "enum": [
+                "RISK_ON",
+                "RISK_OFF",
+                "ROTATION",
+                "UNCERTAINTY"
+            ]
+        },
+        {
+            "name": "fed_stance",
+            "type": "VARCHAR(20)",
+            "nullable": false,
+            "description": "Fed 스탠스",
+            "enum": [
+                "HAWKISH",
+                "DOVISH",
+                "NEUTRAL"
+            ]
+        },
+        {
+            "name": "vix_level",
+            "type": "FLOAT",
+            "nullable": false,
+            "description": "VIX 지수"
+        },
+        {
+            "name": "vix_category",
+            "type": "VARCHAR(20)",
+            "nullable": false,
+            "description": "VIX 범주",
+            "enum": [
+                "LOW",
+                "NORMAL",
+                "ELEVATED",
+                "HIGH",
+                "EXTREME"
+            ]
+        },
+        {
+            "name": "sector_rotation",
+            "type": "VARCHAR(50)",
+            "nullable": true,
+            "description": "섹터 로테이션 방향",
+            "example": "TECH_TO_DEFENSIVE"
+        },
+        {
+            "name": "dominant_narrative",
+            "type": "TEXT",
+            "nullable": false,
+            "description": "지배적 서사 (AI 생성)"
+        },
+        {
+            "name": "geopolitical_risk",
+            "type": "VARCHAR(20)",
+            "nullable": false,
+            "description": "지정학적 리스크 수준",
+            "enum": [
+                "HIGH",
+                "MEDIUM",
+                "LOW"
+            ]
+        },
+        {
+            "name": "earnings_season",
+            "type": "BOOLEAN",
+            "nullable": false,
+            "default": false,
+            "description": "실적 시즌 여부"
+        },
+        {
+            "name": "market_sentiment",
+            "type": "VARCHAR(20)",
+            "nullable": false,
+            "description": "시장 센티먼트",
+            "enum": [
+                "EXTREME_FEAR",
+                "FEAR",
+                "NEUTRAL",
+                "GREED",
+                "EXTREME_GREED"
+            ]
+        },
+        {
+            "name": "sp500_trend",
+            "type": "VARCHAR(20)",
+            "nullable": false,
+            "description": "S&P 500 트렌드",
+            "enum": [
+                "STRONG_UPTREND",
+                "UPTREND",
+                "SIDEWAYS",
+                "DOWNTREND",
+                "STRONG_DOWNTREND"
+            ]
+        },
+        {
+            "name": "created_at",
+            "type": "TIMESTAMP",
+            "nullable": false,
+            "default": "CURRENT_TIMESTAMP",
+            "description": "레코드 생성 시각"
+        },
+        {
+            "name": "updated_at",
+            "type": "TIMESTAMP",
+            "nullable": false,
+            "default": "CURRENT_TIMESTAMP",
+            "description": "레코드 수정 시각"
+        }
+    ],
+    "indexes": [
+        {
+            "name": "idx_macro_snapshot_date",
+            "columns": [
+                "snapshot_date"
+            ],
+            "unique": true,
+            "description": "날짜별 unique 조회"
+        },
+        {
+            "name": "idx_macro_regime",
+            "columns": [
+                "regime",
+                "fed_stance"
+            ],
+            "unique": false,
+            "description": "체제+Fed 스탠스 조회"
+        },
+        {
+            "name": "idx_macro_vix",
+            "columns": [
+                "vix_category"
+            ],
+            "unique": false,
+            "description": "VIX 범주별 조회"
+        },
+        {
+            "name": "idx_macro_sentiment",
+            "columns": [
+                "market_sentiment"
+            ],
+            "unique": false,
+            "description": "센티먼트별 조회"
+        }
+    ],
+    "metadata": {
+        "category": "accountability",
+        "repository": "MacroContextRepository",
+        "module": "Macro Context System",
+        "created": "2025-12-29",
+        "last_updated": "2025-12-29",
+        "update_frequency": "Daily (09:00 KST)",
+        "data_source": "Macro Context Updater + Market Data APIs",
+        "related_files": [
+            "backend/automation/macro_context_updater.py",
+            "backend/ai/debate/news_agent.py",
+            "backend/database/models.py",
+            "backend/database/repository.py"
+        ],
+        "notes": "매일 09:00 KST에 macro_context_updater가 시장 상황 분석하여 snapshot 생성"
+    }
+}

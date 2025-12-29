@@ -661,27 +661,242 @@ class NewsTickerRelevance(Base):
 class Relationship(Base):
     """지식 그래프 관계 (Triplets)"""
     __tablename__ = "relationships"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     subject = Column(String, nullable=False, index=True)
     relation = Column(String, nullable=False, index=True)
     object = Column(String, nullable=False, index=True)
-    
+
     evidence_text = Column(Text)
     source = Column(String)
     date = Column(Date, default=datetime.utcnow)
-    
+
     # pgvector embedding (1536 dim for OpenAI text-embedding-3-small)
     embedding = Column(Vector(1536))
-    
+
     confidence = Column(Float, default=0.8)
     verified_at = Column(DateTime)
     is_active = Column(Boolean, default=True)
-    
+
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     __table_args__ = (
         UniqueConstraint('subject', 'relation', 'object', name='uq_subject_relation_object'),
         Index('idx_rel_active', 'is_active'),
     )
+
+
+# ====================================
+# Accountability System Models
+# Phase 1 (Week 1-2) - Added 2025-12-29
+# ====================================
+
+class MacroContextSnapshot(Base):
+    """거시 경제 상황 스냅샷 - 매일 갱신되는 시장 체제 정보"""
+    __tablename__ = "macro_context_snapshots"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    snapshot_date = Column(Date, nullable=False, unique=True)
+    regime = Column(String(30), nullable=False)  # RISK_ON, RISK_OFF, ROTATION, UNCERTAINTY
+    fed_stance = Column(String(20), nullable=False)  # HAWKISH, DOVISH, NEUTRAL
+    vix_level = Column(Float, nullable=False)
+    vix_category = Column(String(20), nullable=False)  # LOW, NORMAL, ELEVATED, HIGH, EXTREME
+    sector_rotation = Column(String(50), nullable=True)
+    dominant_narrative = Column(Text, nullable=False)
+    geopolitical_risk = Column(String(20), nullable=False)  # HIGH, MEDIUM, LOW
+    earnings_season = Column(Boolean, nullable=False, default=False)
+    market_sentiment = Column(String(20), nullable=False)  # EXTREME_FEAR, FEAR, NEUTRAL, GREED, EXTREME_GREED
+    sp500_trend = Column(String(20), nullable=False)  # STRONG_UPTREND, UPTREND, SIDEWAYS, DOWNTREND, STRONG_DOWNTREND
+    created_at = Column(DateTime, nullable=False, default=datetime.now)
+    updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
+
+    # Relationships
+    interpretations = relationship("NewsInterpretation", back_populates="macro_context")
+
+    __table_args__ = (
+        Index('idx_macro_snapshot_date', 'snapshot_date'),
+        Index('idx_macro_regime', 'regime', 'fed_stance'),
+        Index('idx_macro_vix', 'vix_category'),
+        Index('idx_macro_sentiment', 'market_sentiment'),
+    )
+
+    def __repr__(self):
+        return f"<MacroContextSnapshot(date={self.snapshot_date}, regime='{self.regime}', fed='{self.fed_stance}')>"
+
+
+class NewsInterpretation(Base):
+    """AI의 뉴스 해석 저장 - War Room 실행 중 News Agent가 생성"""
+    __tablename__ = "news_interpretations"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    news_article_id = Column(Integer, ForeignKey('news_articles.id', ondelete='CASCADE'), nullable=False)
+    ticker = Column(String(20), nullable=False)
+    headline_bias = Column(String(20), nullable=False)  # BULLISH, BEARISH, NEUTRAL
+    expected_impact = Column(String(20), nullable=False)  # HIGH, MEDIUM, LOW
+    time_horizon = Column(String(20), nullable=False)  # IMMEDIATE, INTRADAY, MULTI_DAY
+    confidence = Column(Float, nullable=False)
+    reasoning = Column(Text, nullable=False)
+    macro_context_id = Column(Integer, ForeignKey('macro_context_snapshots.id', ondelete='SET NULL'), nullable=True)
+    interpreted_at = Column(DateTime, nullable=False, default=datetime.now)
+    created_at = Column(DateTime, nullable=False, default=datetime.now)
+
+    # Relationships
+    news_article = relationship("NewsArticle")
+    macro_context = relationship("MacroContextSnapshot", back_populates="interpretations")
+    market_reaction = relationship("NewsMarketReaction", back_populates="interpretation", uselist=False)
+    decision_links = relationship("NewsDecisionLink", back_populates="interpretation")
+    narratives = relationship("NewsNarrative", back_populates="interpretation")
+    failure_analyses = relationship("FailureAnalysis", back_populates="interpretation")
+
+    __table_args__ = (
+        Index('idx_interpretation_news_article', 'news_article_id'),
+        Index('idx_interpretation_ticker', 'ticker'),
+        Index('idx_interpretation_date', 'interpreted_at'),
+        Index('idx_interpretation_impact', 'expected_impact', 'headline_bias'),
+    )
+
+    def __repr__(self):
+        return f"<NewsInterpretation(id={self.id}, ticker='{self.ticker}', bias='{self.headline_bias}', impact='{self.expected_impact}')>"
+
+
+class NewsMarketReaction(Base):
+    """뉴스 후 실제 시장 반응 검증 - AI 해석의 정확도 측정"""
+    __tablename__ = "news_market_reactions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    interpretation_id = Column(Integer, ForeignKey('news_interpretations.id', ondelete='CASCADE'), nullable=False, unique=True)
+    ticker = Column(String(20), nullable=False)
+    price_at_news = Column(Float, nullable=False)
+    price_1h_after = Column(Float, nullable=True)
+    price_1d_after = Column(Float, nullable=True)
+    price_3d_after = Column(Float, nullable=True)
+    actual_price_change_1h = Column(Float, nullable=True)
+    actual_price_change_1d = Column(Float, nullable=True)
+    actual_price_change_3d = Column(Float, nullable=True)
+    interpretation_correct = Column(Boolean, nullable=True)
+    confidence_justified = Column(Float, nullable=True)
+    magnitude_accuracy = Column(Float, nullable=True)
+    verified_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.now)
+
+    # Relationships
+    interpretation = relationship("NewsInterpretation", back_populates="market_reaction")
+
+    __table_args__ = (
+        Index('idx_reaction_interpretation', 'interpretation_id'),
+        Index('idx_reaction_ticker', 'ticker'),
+        Index('idx_reaction_verified', 'verified_at'),
+        Index('idx_reaction_correctness', 'interpretation_correct', 'confidence_justified'),
+    )
+
+    def __repr__(self):
+        return f"<NewsMarketReaction(id={self.id}, ticker='{self.ticker}', correct={self.interpretation_correct})>"
+
+
+class NewsDecisionLink(Base):
+    """뉴스 → 해석 → 의사결정 → 결과 연결 - Accountability Chain"""
+    __tablename__ = "news_decision_links"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    interpretation_id = Column(Integer, ForeignKey('news_interpretations.id', ondelete='CASCADE'), nullable=False)
+    debate_session_id = Column(Integer, ForeignKey('ai_debate_sessions.id', ondelete='SET NULL'), nullable=True)
+    trading_signal_id = Column(Integer, ForeignKey('trading_signals.id', ondelete='SET NULL'), nullable=True)
+    ticker = Column(String(20), nullable=False)
+    final_decision = Column(String(10), nullable=False)  # BUY, SELL, HOLD
+    decision_outcome = Column(String(20), nullable=False, default='PENDING')  # SUCCESS, FAILURE, PENDING
+    profit_loss = Column(Float, nullable=True)
+    news_influence_weight = Column(Float, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.now)
+    outcome_verified_at = Column(DateTime, nullable=True)
+
+    # Relationships
+    interpretation = relationship("NewsInterpretation", back_populates="decision_links")
+    debate_session = relationship("AIDebateSession")
+    trading_signal = relationship("TradingSignal")
+    failure_analyses = relationship("FailureAnalysis", back_populates="decision_link")
+
+    __table_args__ = (
+        Index('idx_link_interpretation', 'interpretation_id'),
+        Index('idx_link_debate_session', 'debate_session_id'),
+        Index('idx_link_trading_signal', 'trading_signal_id'),
+        Index('idx_link_ticker', 'ticker'),
+        Index('idx_link_outcome', 'decision_outcome', 'final_decision'),
+    )
+
+    def __repr__(self):
+        return f"<NewsDecisionLink(id={self.id}, ticker='{self.ticker}', decision='{self.final_decision}', outcome='{self.decision_outcome}')>"
+
+
+class NewsNarrative(Base):
+    """리포트에 사용된 문장 추적 - 리포트 정확도 측정용"""
+    __tablename__ = "news_narratives"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    report_date = Column(Date, nullable=False)
+    report_type = Column(String(20), nullable=False)  # DAILY, WEEKLY, MONTHLY, QUARTERLY, HALF_YEARLY, ANNUAL
+    page_number = Column(Integer, nullable=False)
+    section = Column(String(50), nullable=False)
+    narrative_text = Column(Text, nullable=False)
+    interpretation_id = Column(Integer, ForeignKey('news_interpretations.id', ondelete='SET NULL'), nullable=True)
+    ticker = Column(String(20), nullable=True)
+    claim_type = Column(String(30), nullable=False)  # PREDICTION, ANALYSIS, OBSERVATION, RECOMMENDATION
+    accuracy_score = Column(Float, nullable=True)
+    verified = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.now)
+    verified_at = Column(DateTime, nullable=True)
+
+    # Relationships
+    interpretation = relationship("NewsInterpretation", back_populates="narratives")
+
+    __table_args__ = (
+        Index('idx_narrative_report_date', 'report_date', 'report_type'),
+        Index('idx_narrative_interpretation', 'interpretation_id'),
+        Index('idx_narrative_ticker', 'ticker'),
+        Index('idx_narrative_claim_type', 'claim_type', 'verified'),
+        Index('idx_narrative_accuracy', 'accuracy_score'),
+    )
+
+    def __repr__(self):
+        return f"<NewsNarrative(id={self.id}, report_date={self.report_date}, type='{self.report_type}', claim='{self.claim_type}')>"
+
+
+class FailureAnalysis(Base):
+    """실패 분석 및 학습 저장소 - AI가 틀렸던 판단에 대한 사후 분석"""
+    __tablename__ = "failure_analysis"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    interpretation_id = Column(Integer, ForeignKey('news_interpretations.id', ondelete='SET NULL'), nullable=True)
+    decision_link_id = Column(Integer, ForeignKey('news_decision_links.id', ondelete='SET NULL'), nullable=True)
+    ticker = Column(String(20), nullable=False)
+    failure_type = Column(String(50), nullable=False)  # WRONG_DIRECTION, WRONG_MAGNITUDE, WRONG_TIMING, WRONG_CONFIDENCE, MISSED_SIGNAL, FALSE_POSITIVE
+    severity = Column(String(20), nullable=False)  # CRITICAL, HIGH, MEDIUM, LOW
+    expected_outcome = Column(Text, nullable=False)
+    actual_outcome = Column(Text, nullable=False)
+    root_cause = Column(Text, nullable=False)
+    lesson_learned = Column(Text, nullable=False)
+    recommended_fix = Column(Text, nullable=False)
+    fix_applied = Column(Boolean, nullable=False, default=False)
+    fix_description = Column(Text, nullable=True)
+    fix_effective = Column(Boolean, nullable=True)
+    rag_context_updated = Column(Boolean, nullable=False, default=False)
+    analyzed_by = Column(String(50), nullable=False, default='failure_learning_agent')
+    analyzed_at = Column(DateTime, nullable=False, default=datetime.now)
+    created_at = Column(DateTime, nullable=False, default=datetime.now)
+    updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
+
+    # Relationships
+    interpretation = relationship("NewsInterpretation", back_populates="failure_analyses")
+    decision_link = relationship("NewsDecisionLink", back_populates="failure_analyses")
+
+    __table_args__ = (
+        Index('idx_failure_interpretation', 'interpretation_id'),
+        Index('idx_failure_decision_link', 'decision_link_id'),
+        Index('idx_failure_ticker', 'ticker'),
+        Index('idx_failure_type_severity', 'failure_type', 'severity'),
+        Index('idx_failure_fix_status', 'fix_applied', 'fix_effective'),
+        Index('idx_failure_analyzed_at', 'analyzed_at'),
+    )
+
+    def __repr__(self):
+        return f"<FailureAnalysis(id={self.id}, ticker='{self.ticker}', type='{self.failure_type}', severity='{self.severity}')>"

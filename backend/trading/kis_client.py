@@ -200,7 +200,7 @@ def load_config() -> Dict[str, str]:
                 os.environ.get("KIS_ACCOUNT_NO", "") or 
                 os.environ.get("KIS_ACCOUNT_NUMBER", "")
             ).split("-")[0],
-            "my_paper_stock": os.environ.get("KIS_PAPER_ACCOUNT", ""),
+            "my_paper_stock": os.environ.get("KIS_PAPER_ACCOUNT", "").split("-")[0] if os.environ.get("KIS_PAPER_ACCOUNT") else "",
             "my_prod": os.environ.get("KIS_PROD_CODE", "01"),
         }
         

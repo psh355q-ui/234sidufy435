@@ -34,7 +34,13 @@ from backend.database.models import (
     DataCollectionProgress,
     NewsSource,
     PriceTracking,
-    AgentVoteTracking
+    AgentVoteTracking,
+    MacroContextSnapshot,
+    NewsInterpretation,
+    NewsMarketReaction,
+    NewsDecisionLink,
+    NewsNarrative,
+    FailureAnalysis
 )
 
 if TYPE_CHECKING:
@@ -941,3 +947,382 @@ def get_sync_session():
             news_repo = NewsRepository(session)
     """
     return SessionLocal()
+
+
+# ====================================
+# Accountability System Repositories
+# Phase 1 (Week 1-2) - Added 2025-12-29
+# ====================================
+
+class MacroContextRepository:
+    """거시 경제 컨텍스트 저장 및 조회"""
+
+    def __init__(self, session: Session):
+        self.session = session
+
+    def create(self, data: Dict) -> MacroContextSnapshot:
+        """새로운 macro context 스냅샷 생성"""
+        snapshot = MacroContextSnapshot(**data)
+        self.session.add(snapshot)
+        self.session.commit()
+        self.session.refresh(snapshot)
+        return snapshot
+
+    def get_by_date(self, snapshot_date) -> Optional[MacroContextSnapshot]:
+        """특정 날짜의 macro context 조회"""
+        return self.session.query(MacroContextSnapshot).filter(
+            MacroContextSnapshot.snapshot_date == snapshot_date
+        ).first()
+
+    def get_latest(self) -> Optional[MacroContextSnapshot]:
+        """가장 최근 macro context 조회"""
+        return self.session.query(MacroContextSnapshot).order_by(
+            desc(MacroContextSnapshot.snapshot_date)
+        ).first()
+
+    def get_by_date_range(self, start_date, end_date) -> List[MacroContextSnapshot]:
+        """날짜 범위로 macro context 조회"""
+        return self.session.query(MacroContextSnapshot).filter(
+            and_(
+                MacroContextSnapshot.snapshot_date >= start_date,
+                MacroContextSnapshot.snapshot_date <= end_date
+            )
+        ).order_by(MacroContextSnapshot.snapshot_date.asc()).all()
+
+
+class NewsInterpretationRepository:
+    """뉴스 해석 저장 및 조회"""
+
+    def __init__(self, session: Session):
+        self.session = session
+
+    def create(self, data: Dict) -> NewsInterpretation:
+        """새로운 뉴스 해석 생성"""
+        interpretation = NewsInterpretation(**data)
+        self.session.add(interpretation)
+        self.session.commit()
+        self.session.refresh(interpretation)
+        return interpretation
+
+    def get_by_id(self, interpretation_id: int) -> Optional[NewsInterpretation]:
+        """ID로 해석 조회"""
+        return self.session.query(NewsInterpretation).filter(
+            NewsInterpretation.id == interpretation_id
+        ).first()
+
+    def get_by_news_article(self, news_article_id: int) -> List[NewsInterpretation]:
+        """뉴스 기사 ID로 해석 조회"""
+        return self.session.query(NewsInterpretation).filter(
+            NewsInterpretation.news_article_id == news_article_id
+        ).all()
+
+    def get_by_ticker(self, ticker: str, limit: int = 10) -> List[NewsInterpretation]:
+        """종목별 최근 해석 조회"""
+        return self.session.query(NewsInterpretation).filter(
+            NewsInterpretation.ticker == ticker
+        ).order_by(desc(NewsInterpretation.interpreted_at)).limit(limit).all()
+
+    def get_by_date_range(self, start_date, end_date) -> List[NewsInterpretation]:
+        """날짜 범위로 해석 조회"""
+        return self.session.query(NewsInterpretation).filter(
+            and_(
+                NewsInterpretation.interpreted_at >= start_date,
+                NewsInterpretation.interpreted_at <= end_date
+            )
+        ).order_by(NewsInterpretation.interpreted_at.asc()).all()
+
+    def get_high_impact_recent(self, hours: int = 24) -> List[NewsInterpretation]:
+        """최근 HIGH impact 해석 조회"""
+        cutoff_time = datetime.now() - timedelta(hours=hours)
+        return self.session.query(NewsInterpretation).filter(
+            and_(
+                NewsInterpretation.expected_impact == 'HIGH',
+                NewsInterpretation.interpreted_at >= cutoff_time
+            )
+        ).order_by(desc(NewsInterpretation.interpreted_at)).all()
+
+
+class NewsMarketReactionRepository:
+    """시장 반응 저장 및 조회"""
+
+    def __init__(self, session: Session):
+        self.session = session
+
+    def create(self, data: Dict) -> NewsMarketReaction:
+        """새로운 시장 반응 생성"""
+        reaction = NewsMarketReaction(**data)
+        self.session.add(reaction)
+        self.session.commit()
+        self.session.refresh(reaction)
+        return reaction
+
+    def get_by_interpretation_id(self, interpretation_id: int) -> Optional[NewsMarketReaction]:
+        """해석 ID로 반응 조회 (1:1 관계)"""
+        return self.session.query(NewsMarketReaction).filter(
+            NewsMarketReaction.interpretation_id == interpretation_id
+        ).first()
+
+    def update(self, reaction: NewsMarketReaction, data: Dict) -> NewsMarketReaction:
+        """시장 반응 업데이트 (1h, 1d, 3d 후 가격)"""
+        for key, value in data.items():
+            if hasattr(reaction, key):
+                setattr(reaction, key, value)
+        self.session.commit()
+        self.session.refresh(reaction)
+        return reaction
+
+    def get_pending_verifications(self, time_horizon: str = '1h') -> List[NewsMarketReaction]:
+        """검증 대기 중인 반응 조회"""
+        cutoff_hours = {'1h': 1, '1d': 24, '3d': 72}
+        cutoff_time = datetime.now() - timedelta(hours=cutoff_hours.get(time_horizon, 1))
+
+        if time_horizon == '1h':
+            return self.session.query(NewsMarketReaction).filter(
+                and_(
+                    NewsMarketReaction.price_1h_after.is_(None),
+                    NewsMarketReaction.created_at <= cutoff_time
+                )
+            ).all()
+        elif time_horizon == '1d':
+            return self.session.query(NewsMarketReaction).filter(
+                and_(
+                    NewsMarketReaction.price_1d_after.is_(None),
+                    NewsMarketReaction.created_at <= cutoff_time
+                )
+            ).all()
+        else:  # 3d
+            return self.session.query(NewsMarketReaction).filter(
+                and_(
+                    NewsMarketReaction.price_3d_after.is_(None),
+                    NewsMarketReaction.created_at <= cutoff_time
+                )
+            ).all()
+
+    def get_verified_reactions(self, start_date, end_date) -> List[NewsMarketReaction]:
+        """검증 완료된 반응 조회"""
+        return self.session.query(NewsMarketReaction).filter(
+            and_(
+                NewsMarketReaction.verified_at.isnot(None),
+                NewsMarketReaction.verified_at >= start_date,
+                NewsMarketReaction.verified_at <= end_date
+            )
+        ).all()
+
+    def get_worst_failures(self, limit: int = 10) -> List[NewsMarketReaction]:
+        """가장 틀린 판단 조회 (연간 리포트용)"""
+        return self.session.query(NewsMarketReaction).filter(
+            NewsMarketReaction.interpretation_correct == False
+        ).order_by(NewsMarketReaction.confidence_justified.asc()).limit(limit).all()
+
+
+class NewsDecisionLinkRepository:
+    """의사결정 링크 저장 및 조회"""
+
+    def __init__(self, session: Session):
+        self.session = session
+
+    def create(self, data: Dict) -> NewsDecisionLink:
+        """새로운 의사결정 링크 생성"""
+        link = NewsDecisionLink(**data)
+        self.session.add(link)
+        self.session.commit()
+        self.session.refresh(link)
+        return link
+
+    def get_by_interpretation_id(self, interpretation_id: int) -> List[NewsDecisionLink]:
+        """해석 ID로 링크 조회"""
+        return self.session.query(NewsDecisionLink).filter(
+            NewsDecisionLink.interpretation_id == interpretation_id
+        ).all()
+
+    def get_by_debate_session(self, debate_session_id: int) -> List[NewsDecisionLink]:
+        """War Room 세션 ID로 링크 조회"""
+        return self.session.query(NewsDecisionLink).filter(
+            NewsDecisionLink.debate_session_id == debate_session_id
+        ).all()
+
+    def update_outcome(self, link: NewsDecisionLink, outcome: str, profit_loss: float) -> NewsDecisionLink:
+        """의사결정 결과 업데이트"""
+        link.decision_outcome = outcome
+        link.profit_loss = profit_loss
+        link.outcome_verified_at = datetime.now()
+        self.session.commit()
+        self.session.refresh(link)
+        return link
+
+    def get_pending_outcomes(self, hours_old: int = 24) -> List[NewsDecisionLink]:
+        """결과 대기 중인 링크 조회"""
+        cutoff_time = datetime.now() - timedelta(hours=hours_old)
+        return self.session.query(NewsDecisionLink).filter(
+            and_(
+                NewsDecisionLink.decision_outcome == 'PENDING',
+                NewsDecisionLink.created_at <= cutoff_time
+            )
+        ).all()
+
+    def get_by_outcome(self, outcome: str, start_date, end_date) -> List[NewsDecisionLink]:
+        """결과별 링크 조회 (SUCCESS/FAILURE)"""
+        return self.session.query(NewsDecisionLink).filter(
+            and_(
+                NewsDecisionLink.decision_outcome == outcome,
+                NewsDecisionLink.created_at >= start_date,
+                NewsDecisionLink.created_at <= end_date
+            )
+        ).all()
+
+
+class NewsNarrativeRepository:
+    """리포트 서술 저장 및 조회"""
+
+    def __init__(self, session: Session):
+        self.session = session
+
+    def create(self, data: Dict) -> NewsNarrative:
+        """새로운 서술 생성"""
+        narrative = NewsNarrative(**data)
+        self.session.add(narrative)
+        self.session.commit()
+        self.session.refresh(narrative)
+        return narrative
+
+    def get_by_report_date(self, report_date, report_type: str = 'DAILY') -> List[NewsNarrative]:
+        """리포트 날짜+타입으로 서술 조회"""
+        return self.session.query(NewsNarrative).filter(
+            and_(
+                NewsNarrative.report_date == report_date,
+                NewsNarrative.report_type == report_type
+            )
+        ).order_by(NewsNarrative.page_number.asc()).all()
+
+    def get_by_interpretation_id(self, interpretation_id: int) -> List[NewsNarrative]:
+        """해석 ID로 서술 조회"""
+        return self.session.query(NewsNarrative).filter(
+            NewsNarrative.interpretation_id == interpretation_id
+        ).all()
+
+    def update_accuracy(self, narrative: NewsNarrative, accuracy_score: float) -> NewsNarrative:
+        """서술 정확도 업데이트"""
+        narrative.accuracy_score = accuracy_score
+        narrative.verified = True
+        narrative.verified_at = datetime.now()
+        self.session.commit()
+        self.session.refresh(narrative)
+        return narrative
+
+    def get_unverified_predictions(self, days_old: int = 1) -> List[NewsNarrative]:
+        """검증 대기 중인 예측 조회"""
+        cutoff_date = datetime.now() - timedelta(days=days_old)
+        return self.session.query(NewsNarrative).filter(
+            and_(
+                NewsNarrative.claim_type == 'PREDICTION',
+                NewsNarrative.verified == False,
+                NewsNarrative.created_at <= cutoff_date
+            )
+        ).all()
+
+    def get_accuracy_stats(self, start_date, end_date, report_type: str = 'DAILY') -> Dict:
+        """기간별 정확도 통계"""
+        narratives = self.session.query(NewsNarrative).filter(
+            and_(
+                NewsNarrative.report_date >= start_date,
+                NewsNarrative.report_date <= end_date,
+                NewsNarrative.report_type == report_type,
+                NewsNarrative.verified == True,
+                NewsNarrative.accuracy_score.isnot(None)
+            )
+        ).all()
+
+        if not narratives:
+            return {'count': 0, 'avg_accuracy': 0, 'by_claim_type': {}}
+
+        total = len(narratives)
+        avg_accuracy = sum(n.accuracy_score for n in narratives) / total
+
+        by_claim_type = {}
+        for claim_type in ['PREDICTION', 'ANALYSIS', 'OBSERVATION', 'RECOMMENDATION']:
+            filtered = [n for n in narratives if n.claim_type == claim_type]
+            if filtered:
+                by_claim_type[claim_type] = {
+                    'count': len(filtered),
+                    'avg_accuracy': sum(n.accuracy_score for n in filtered) / len(filtered)
+                }
+
+        return {
+            'count': total,
+            'avg_accuracy': avg_accuracy,
+            'by_claim_type': by_claim_type
+        }
+
+
+class FailureAnalysisRepository:
+    """실패 분석 저장 및 조회"""
+
+    def __init__(self, session: Session):
+        self.session = session
+
+    def create(self, data: Dict) -> FailureAnalysis:
+        """새로운 실패 분석 생성"""
+        analysis = FailureAnalysis(**data)
+        self.session.add(analysis)
+        self.session.commit()
+        self.session.refresh(analysis)
+        return analysis
+
+    def get_by_interpretation_id(self, interpretation_id: int) -> Optional[FailureAnalysis]:
+        """해석 ID로 분석 조회"""
+        return self.session.query(FailureAnalysis).filter(
+            FailureAnalysis.interpretation_id == interpretation_id
+        ).first()
+
+    def get_by_decision_link_id(self, decision_link_id: int) -> Optional[FailureAnalysis]:
+        """의사결정 링크 ID로 분석 조회"""
+        return self.session.query(FailureAnalysis).filter(
+            FailureAnalysis.decision_link_id == decision_link_id
+        ).first()
+
+    def get_by_severity(self, severity: str, limit: int = 10) -> List[FailureAnalysis]:
+        """심각도별 실패 조회 (CRITICAL/HIGH/MEDIUM/LOW)"""
+        return self.session.query(FailureAnalysis).filter(
+            FailureAnalysis.severity == severity
+        ).order_by(desc(FailureAnalysis.analyzed_at)).limit(limit).all()
+
+    def get_unfixed(self, severity: Optional[str] = None) -> List[FailureAnalysis]:
+        """미수정 실패 조회"""
+        query = self.session.query(FailureAnalysis).filter(
+            FailureAnalysis.fix_applied == False
+        )
+        if severity:
+            query = query.filter(FailureAnalysis.severity == severity)
+        return query.order_by(desc(FailureAnalysis.severity), desc(FailureAnalysis.analyzed_at)).all()
+
+    def mark_fix_applied(self, analysis: FailureAnalysis, fix_description: str) -> FailureAnalysis:
+        """수정 적용 표시"""
+        analysis.fix_applied = True
+        analysis.fix_description = fix_description
+        analysis.updated_at = datetime.now()
+        self.session.commit()
+        self.session.refresh(analysis)
+        return analysis
+
+    def mark_fix_effective(self, analysis: FailureAnalysis, effective: bool) -> FailureAnalysis:
+        """수정 효과 평가"""
+        analysis.fix_effective = effective
+        analysis.updated_at = datetime.now()
+        self.session.commit()
+        self.session.refresh(analysis)
+        return analysis
+
+    def get_by_date_range(self, start_date, end_date) -> List[FailureAnalysis]:
+        """날짜 범위로 실패 조회"""
+        return self.session.query(FailureAnalysis).filter(
+            and_(
+                FailureAnalysis.analyzed_at >= start_date,
+                FailureAnalysis.analyzed_at <= end_date
+            )
+        ).order_by(FailureAnalysis.analyzed_at.asc()).all()
+
+    def get_by_ticker(self, ticker: str, limit: int = 10) -> List[FailureAnalysis]:
+        """종목별 실패 분석 조회"""
+        return self.session.query(FailureAnalysis).filter(
+            FailureAnalysis.ticker == ticker
+        ).order_by(desc(FailureAnalysis.analyzed_at)).limit(limit).all()

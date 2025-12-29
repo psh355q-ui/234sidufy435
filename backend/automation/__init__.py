@@ -1,12 +1,18 @@
 """
 Automation Module
 
-자동매매 스케줄링 및 실행:
-- AutoTradingScheduler: 24시간 무인 자동매매 스케줄러
+자동화 작업:
+- Macro Context 업데이트
+- Report 생성
+- Price Tracking 검증
 """
 
-from .auto_trading_scheduler import AutoTradingScheduler
+from backend.automation.macro_context_updater import MacroContextUpdater
+from backend.automation.scheduler import AutomationScheduler
+from backend.automation.price_tracking_verifier import PriceTrackingVerifier
 
 __all__ = [
-    "AutoTradingScheduler",
+    "MacroContextUpdater",
+    "AutomationScheduler",
+    "PriceTrackingVerifier",
 ]

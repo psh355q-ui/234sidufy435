@@ -1,0 +1,222 @@
+{
+    "table_name": "failure_analysis",
+    "description": "실패 분석 및 학습 저장소 - AI가 틀렸던 판단에 대한 사후 분석",
+    "primary_key": "id",
+    "columns": [
+        {
+            "name": "id",
+            "type": "INTEGER",
+            "nullable": false,
+            "auto_increment": true,
+            "description": "고유 ID"
+        },
+        {
+            "name": "interpretation_id",
+            "type": "INTEGER",
+            "nullable": true,
+            "description": "관련 뉴스 해석 ID (Foreign Key)",
+            "foreign_key": {
+                "table": "news_interpretations",
+                "column": "id",
+                "on_delete": "SET NULL"
+            }
+        },
+        {
+            "name": "decision_link_id",
+            "type": "INTEGER",
+            "nullable": true,
+            "description": "관련 의사결정 링크 ID (Foreign Key)",
+            "foreign_key": {
+                "table": "news_decision_links",
+                "column": "id",
+                "on_delete": "SET NULL"
+            }
+        },
+        {
+            "name": "ticker",
+            "type": "VARCHAR(20)",
+            "nullable": false,
+            "description": "종목 코드",
+            "example": "NVDA"
+        },
+        {
+            "name": "failure_type",
+            "type": "VARCHAR(50)",
+            "nullable": false,
+            "description": "실패 유형",
+            "enum": [
+                "WRONG_DIRECTION",
+                "WRONG_MAGNITUDE",
+                "WRONG_TIMING",
+                "WRONG_CONFIDENCE",
+                "MISSED_SIGNAL",
+                "FALSE_POSITIVE"
+            ]
+        },
+        {
+            "name": "severity",
+            "type": "VARCHAR(20)",
+            "nullable": false,
+            "description": "심각도",
+            "enum": [
+                "CRITICAL",
+                "HIGH",
+                "MEDIUM",
+                "LOW"
+            ]
+        },
+        {
+            "name": "expected_outcome",
+            "type": "TEXT",
+            "nullable": false,
+            "description": "예상했던 결과"
+        },
+        {
+            "name": "actual_outcome",
+            "type": "TEXT",
+            "nullable": false,
+            "description": "실제 발생한 결과"
+        },
+        {
+            "name": "root_cause",
+            "type": "TEXT",
+            "nullable": false,
+            "description": "근본 원인 분석 (AI 생성)"
+        },
+        {
+            "name": "lesson_learned",
+            "type": "TEXT",
+            "nullable": false,
+            "description": "학습한 교훈 (AI 생성)"
+        },
+        {
+            "name": "recommended_fix",
+            "type": "TEXT",
+            "nullable": false,
+            "description": "권장 수정 사항 (AI 생성)"
+        },
+        {
+            "name": "fix_applied",
+            "type": "BOOLEAN",
+            "nullable": false,
+            "default": false,
+            "description": "수정 적용 여부"
+        },
+        {
+            "name": "fix_description",
+            "type": "TEXT",
+            "nullable": true,
+            "description": "적용된 수정 내용"
+        },
+        {
+            "name": "fix_effective",
+            "type": "BOOLEAN",
+            "nullable": true,
+            "description": "수정 효과 여부 (나중에 평가)"
+        },
+        {
+            "name": "rag_context_updated",
+            "type": "BOOLEAN",
+            "nullable": false,
+            "default": false,
+            "description": "RAG 컨텍스트 업데이트 여부"
+        },
+        {
+            "name": "analyzed_by",
+            "type": "VARCHAR(50)",
+            "nullable": false,
+            "default": "failure_learning_agent",
+            "description": "분석 주체",
+            "example": "failure_learning_agent"
+        },
+        {
+            "name": "analyzed_at",
+            "type": "TIMESTAMP",
+            "nullable": false,
+            "default": "CURRENT_TIMESTAMP",
+            "description": "분석 시각"
+        },
+        {
+            "name": "created_at",
+            "type": "TIMESTAMP",
+            "nullable": false,
+            "default": "CURRENT_TIMESTAMP",
+            "description": "레코드 생성 시각"
+        },
+        {
+            "name": "updated_at",
+            "type": "TIMESTAMP",
+            "nullable": false,
+            "default": "CURRENT_TIMESTAMP",
+            "description": "레코드 수정 시각"
+        }
+    ],
+    "indexes": [
+        {
+            "name": "idx_failure_interpretation",
+            "columns": [
+                "interpretation_id"
+            ],
+            "unique": false,
+            "description": "해석별 조회"
+        },
+        {
+            "name": "idx_failure_decision_link",
+            "columns": [
+                "decision_link_id"
+            ],
+            "unique": false,
+            "description": "의사결정 링크별 조회"
+        },
+        {
+            "name": "idx_failure_ticker",
+            "columns": [
+                "ticker"
+            ],
+            "unique": false,
+            "description": "종목별 조회"
+        },
+        {
+            "name": "idx_failure_type_severity",
+            "columns": [
+                "failure_type",
+                "severity"
+            ],
+            "unique": false,
+            "description": "실패 유형+심각도 조회"
+        },
+        {
+            "name": "idx_failure_fix_status",
+            "columns": [
+                "fix_applied",
+                "fix_effective"
+            ],
+            "unique": false,
+            "description": "수정 상태 조회"
+        },
+        {
+            "name": "idx_failure_analyzed_at",
+            "columns": [
+                "analyzed_at"
+            ],
+            "unique": false,
+            "description": "분석 시각별 조회"
+        }
+    ],
+    "metadata": {
+        "category": "accountability",
+        "repository": "FailureAnalysisRepository",
+        "module": "Failure Learning System",
+        "created": "2025-12-29",
+        "last_updated": "2025-12-29",
+        "update_frequency": "Real-time (when failures detected)",
+        "data_source": "Failure Learning Agent + Price Tracking",
+        "related_files": [
+            "backend/ai/skills/system/failure-learning-agent/failure_learning.py",
+            "backend/automation/price_tracking_scheduler.py",
+            "backend/database/models.py",
+            "backend/database/repository.py"
+        ],
+        "notes": "price_tracking_scheduler가 틀린 판단 발견 시 Failure Learning Agent 트리거하여 분석 저장"
+    }
+}

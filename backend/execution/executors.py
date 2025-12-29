@@ -19,7 +19,11 @@ from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-from config import get_settings
+try:
+    from backend.config import get_settings
+except ImportError:
+    # Fallback for standalone execution
+    get_settings = None
 
 logger = logging.getLogger(__name__)
 

@@ -1,0 +1,169 @@
+{
+    "table_name": "news_narratives",
+    "description": "리포트에 사용된 문장 추적 - 리포트 정확도 측정용",
+    "primary_key": "id",
+    "columns": [
+        {
+            "name": "id",
+            "type": "INTEGER",
+            "nullable": false,
+            "auto_increment": true,
+            "description": "고유 ID"
+        },
+        {
+            "name": "report_date",
+            "type": "DATE",
+            "nullable": false,
+            "description": "리포트 날짜"
+        },
+        {
+            "name": "report_type",
+            "type": "VARCHAR(20)",
+            "nullable": false,
+            "description": "리포트 타입",
+            "enum": [
+                "DAILY",
+                "WEEKLY",
+                "MONTHLY",
+                "QUARTERLY",
+                "HALF_YEARLY",
+                "ANNUAL"
+            ]
+        },
+        {
+            "name": "page_number",
+            "type": "INTEGER",
+            "nullable": false,
+            "description": "페이지 번호"
+        },
+        {
+            "name": "section",
+            "type": "VARCHAR(50)",
+            "nullable": false,
+            "description": "섹션 이름",
+            "example": "market_narrative"
+        },
+        {
+            "name": "narrative_text",
+            "type": "TEXT",
+            "nullable": false,
+            "description": "실제 서술 문장"
+        },
+        {
+            "name": "interpretation_id",
+            "type": "INTEGER",
+            "nullable": true,
+            "description": "관련 뉴스 해석 ID (Foreign Key)",
+            "foreign_key": {
+                "table": "news_interpretations",
+                "column": "id",
+                "on_delete": "SET NULL"
+            }
+        },
+        {
+            "name": "ticker",
+            "type": "VARCHAR(20)",
+            "nullable": true,
+            "description": "관련 종목 코드",
+            "example": "NVDA"
+        },
+        {
+            "name": "claim_type",
+            "type": "VARCHAR(30)",
+            "nullable": false,
+            "description": "주장 유형",
+            "enum": [
+                "PREDICTION",
+                "ANALYSIS",
+                "OBSERVATION",
+                "RECOMMENDATION"
+            ]
+        },
+        {
+            "name": "accuracy_score",
+            "type": "FLOAT",
+            "nullable": true,
+            "description": "정확도 점수 (0.0 ~ 1.0) - 나중에 계산"
+        },
+        {
+            "name": "verified",
+            "type": "BOOLEAN",
+            "nullable": false,
+            "default": false,
+            "description": "검증 완료 여부"
+        },
+        {
+            "name": "created_at",
+            "type": "TIMESTAMP",
+            "nullable": false,
+            "default": "CURRENT_TIMESTAMP",
+            "description": "레코드 생성 시각"
+        },
+        {
+            "name": "verified_at",
+            "type": "TIMESTAMP",
+            "nullable": true,
+            "description": "검증 완료 시각"
+        }
+    ],
+    "indexes": [
+        {
+            "name": "idx_narrative_report_date",
+            "columns": [
+                "report_date",
+                "report_type"
+            ],
+            "unique": false,
+            "description": "리포트별 조회"
+        },
+        {
+            "name": "idx_narrative_interpretation",
+            "columns": [
+                "interpretation_id"
+            ],
+            "unique": false,
+            "description": "해석별 조회"
+        },
+        {
+            "name": "idx_narrative_ticker",
+            "columns": [
+                "ticker"
+            ],
+            "unique": false,
+            "description": "종목별 조회"
+        },
+        {
+            "name": "idx_narrative_claim_type",
+            "columns": [
+                "claim_type",
+                "verified"
+            ],
+            "unique": false,
+            "description": "주장 유형별 검증 상태"
+        },
+        {
+            "name": "idx_narrative_accuracy",
+            "columns": [
+                "accuracy_score"
+            ],
+            "unique": false,
+            "description": "정확도별 조회"
+        }
+    ],
+    "metadata": {
+        "category": "accountability",
+        "repository": "NewsNarrativeRepository",
+        "module": "Report Accountability System",
+        "created": "2025-12-29",
+        "last_updated": "2025-12-29",
+        "update_frequency": "Daily (with reports)",
+        "data_source": "Report Generator",
+        "related_files": [
+            "backend/services/complete_5page_report_generator.py",
+            "backend/ai/skills/reporting/report-orchestrator-agent/report_orchestrator.py",
+            "backend/database/models.py",
+            "backend/database/repository.py"
+        ],
+        "notes": "리포트 생성 시 각 문장을 저장하고, 나중에 실제 결과로 accuracy_score 계산"
+    }
+}

@@ -6,31 +6,32 @@
 
 /**
  * WarRoomPage.tsx - War Room AI Debate 페이지
- * 
+ *
  * 📊 Data Sources:
- *   - API: GET /api/war-room/debates (AI Debate 세션)
- *   - API: POST /api/war-room/start (새 토론 시작)
- *   - API: GET /api/weights (에이전트 가중치)
+ *   - API: GET /api/war-room-mvp/history (AI Debate 세션)
+ *   - API: POST /api/war-room-mvp/deliberate (새 토론 시작)
+ *   - API: GET /api/war-room-mvp/info (시스템 정보)
  *   - State: debates, selectedTicker, agents
- * 
+ *
  * 🔗 Dependencies:
  *   - react: useState, useEffect
  *   - @tanstack/react-query: useQuery, useMutation
  *   - lucide-react: Users, MessageSquare, BarChart3
- * 
+ *
  * 📤 Components Used:
  *   - Card, LoadingSpinner, Button
  *   - AgentVoteDisplay: 에이전트 투표 표시
  *   - DebateTimeline: 토론 타임라인
- * 
+ *
  * 🔄 Used By:
  *   - App.tsx (route: /war-room)
- * 
+ *
  * 📝 Notes:
- *   - Phase 27: Constitutional AI UI
- *   - 9 Agents: Trader, Risk, Analyst, Macro, Institutional, News, ChipWar, DividendRisk, PM
+ *   - Phase: MVP Consolidation (2025-12-31)
+ *   - MVP 3+1 Agents: Trader (35%), Risk (35%), Analyst (30%), PM (+1)
  *   - 가중 투표 시스템
- *   - Constitutional AI 안전장치
+ *   - Hard Rules 코드 검증
+ *   - Position Sizing 자동 계산
  */
 
 import React, { useState } from 'react';
@@ -78,7 +79,7 @@ const WarRoomPage: React.FC = () => {
                         fontWeight: '600',
                         textShadow: '0 2px 10px rgba(0, 0, 0, 0.2)'
                     }}>
-                        AI 투자 위원회 실시간 토론 - 7개 에이전트의 집단 지성
+                        AI 투자 위원회 실시간 토론 - MVP 3+1 에이전트 시스템
                     </p>
                 </div>
             </div>

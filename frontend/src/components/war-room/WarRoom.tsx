@@ -1,76 +1,56 @@
 /**
- * War Room - AI 토론 실시간 시각화
- * 
- * 5개 AI Agents의 토론 과정을 카카오톡 스타일로 표시
- * 
+ * War Room - AI 토론 실시간 시각화 (MVP 3+1 System)
+ *
+ * MVP 3+1 AI Agents의 토론 과정을 카카오톡 스타일로 표시
+ *
  * Features:
  * - 실시간 토론 흐름
- * - Agent별 캐릭터 아이콘
+ * - Agent별 캐릭터 아이콘 (Trader 35%, Risk 35%, Analyst 30%, PM +1)
  * - 찬성/반대 시각화
- * - Constitutional 검증 결과
- * 
+ * - Hard Rules 검증 결과
+ * - Position Sizing 자동 계산
+ *
  * 작성일: 2025-12-15
+ * 업데이트: 2025-12-31 - MVP Consolidation
  */
 
 import React, { useState, useEffect, useRef } from 'react';
 import './WarRoom.css';
 import { CONSTITUTION_ARTICLES, getArticleByNumber } from '../../constants/constitution';
 
-// Agent 정의
+// Agent 정의 - MVP 3+1 System
 const AGENTS = {
     trader: {
-        name: 'Trader',
+        name: 'Trader MVP',
         icon: '🧑‍💻',
         color: '#4CAF50',
-        role: '공격수'
+        role: '공격수 (35%)',
+        weight: 0.35,
+        focus: 'Attack - Opportunities'
     },
     risk: {
-        name: 'Risk',
+        name: 'Risk MVP',
         icon: '👮',
         color: '#F44336',
-        role: '수비수'
+        role: '수비수 (35%)',
+        weight: 0.35,
+        focus: 'Defense + Position Sizing'
     },
     analyst: {
-        name: 'Analyst',
+        name: 'Analyst MVP',
         icon: '🕵️',
         color: '#2196F3',
-        role: '분석가'
-    },
-    macro: {
-        name: 'Macro',
-        icon: '🌍',
-        color: '#FF9800',
-        role: '매크로'
-    },
-    institutional: {
-        name: 'Institutional',
-        icon: '🏛️',
-        color: '#9C27B0',
-        role: '기관'
-    },
-    news: {
-        name: 'News',
-        icon: '📰',
-        color: '#00BCD4',
-        role: '뉴스'
+        role: '분석가 (30%)',
+        weight: 0.30,
+        focus: 'News + Macro + Institutional + ChipWar'
     },
     pm: {
-        name: 'PM',
+        name: 'PM MVP',
         icon: '🤵',
         color: '#607D8B',
-        role: '중재자'
-    },
-    chip_war: {
-        name: 'Chip War',
-        icon: '🎮',
-        color: '#795548',
-        role: '반도체'
-    },
-    dividend_risk: {
-        name: 'Dividend',
-        icon: '💰',
-        color: '#E91E63',
-        role: '배당리스크'
+        role: '결정자 (+1)',
+        weight: 'final',
+        focus: 'Hard Rules + Silence Policy'
     }
 };
 
@@ -123,7 +103,7 @@ const WarRoom: React.FC<WarRoomProps> = ({
         scrollToBottom();
     }, [messages]);
 
-    // 샘플 토론 시뮬레이션
+    // 샘플 토론 시뮬레이션 - MVP 3+1 System
     const simulateDebate = async () => {
         setIsDebating(true);
         setMessages([]);
@@ -134,37 +114,25 @@ const WarRoom: React.FC<WarRoomProps> = ({
                 agent: 'trader',
                 action: 'BUY',
                 confidence: 0.85,
-                reasoning: '강한 수급 신호 감지! 엔비디아 AI 칩 수요 급증'
+                reasoning: '[공격수 35%] 강한 수급 신호! NVDA AI 칩 수요 급증. Opportunity Score: 8.5/10'
             },
             {
                 agent: 'risk',
-                action: 'HOLD',
-                confidence: 0.65,
-                reasoning: '잠깐! VIX 22 돌파. 변동성 주의 필요합니다.'
+                action: 'BUY',
+                confidence: 0.75,
+                reasoning: '[수비수 35%] Risk Level: MEDIUM. Position Size: $25,000 (5%). Stop Loss: 3%'
             },
             {
                 agent: 'analyst',
                 action: 'BUY',
-                confidence: 0.70,
-                reasoning: 'P/E Ratio 합리적. 펀더멘털 양호합니다.'
-            },
-            {
-                agent: 'macro',
-                action: 'BUY',
-                confidence: 0.75,
-                reasoning: 'RISK_ON 체제 진입. 금리 안정화 중'
-            },
-            {
-                agent: 'institutional',
-                action: 'BUY',
                 confidence: 0.80,
-                reasoning: 'SEC 공시: 기관 매수 증가. BlackRock +2.5%'
+                reasoning: '[분석가 30%] 종합 Info Score: 7.5/10. 뉴스 긍정, 매크로 양호, 기관 매수 증가. Red Flags: 없음'
             },
             {
                 agent: 'pm',
                 action: 'BUY',
-                confidence: 0.78,
-                reasoning: '합의 도출: 4/5 agents BUY 투표',
+                confidence: 0.80,
+                reasoning: '[PM +1] 합의 도출: 3/3 agents BUY. Hard Rules PASSED. Can Execute: TRUE',
                 isDecision: true
             }
         ];
@@ -181,12 +149,12 @@ const WarRoom: React.FC<WarRoomProps> = ({
 
             setMessages(prev => [...prev, newMessage]);
 
-            // 합의 수준 업데이트
+            // 합의 수준 업데이트 (3 voting agents)
             if (msg.agent !== 'pm') {
                 const buyVotes = debateFlow
                     .slice(0, debateFlow.indexOf(msg) + 1)
                     .filter(m => m.action === 'BUY' && m.agent !== 'pm').length;
-                const totalVotes = debateFlow.filter(m => m.agent !== 'pm').length;
+                const totalVotes = 3; // MVP: Trader, Risk, Analyst
                 setConsensus(buyVotes / totalVotes);
             }
         }
@@ -374,7 +342,7 @@ const WarRoom: React.FC<WarRoomProps> = ({
                     <div className="war-room-footer">
                         <div className="stat">
                             <span className="stat-label">Agents</span>
-                            <span className="stat-value">{messages.filter(m => !m.isDecision).length}/8</span>
+                            <span className="stat-value">{messages.filter(m => !m.isDecision).length}/3 (+1 PM)</span>
                         </div>
                         <div className="stat">
                             <span className="stat-label">BUY</span>

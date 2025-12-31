@@ -328,10 +328,17 @@ class ShadowTradingMVP:
         if not self.closed_trades:
             return {
                 'total_trades': 0,
+                'winning_trades': 0,
+                'losing_trades': 0,
                 'win_rate': 0.0,
                 'profit_factor': 0.0,
                 'total_pnl': 0.0,
-                'total_pnl_pct': 0.0
+                'total_pnl_pct': 0.0,
+                'max_drawdown': 0.0,
+                'sharpe_ratio': 0.0,
+                'risk_adjusted_alpha': 0.0,
+                'current_capital': self.current_capital,
+                'days_running': (datetime.utcnow() - self.start_date).days if self.start_date else 0
             }
 
         # Calculate metrics

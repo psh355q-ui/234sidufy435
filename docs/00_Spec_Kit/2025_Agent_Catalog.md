@@ -1,28 +1,64 @@
 # 🤖 AI Agent Catalog - Complete Reference
 
-**Last Updated**: 2025-12-21  
-**Total Agents**: 23  
+**Last Updated**: 2026-01-04
+**Active System**: MVP (3+1 War Room Agents) + 16 Support Agents
+**Total Agents**: 20 Active + 8 Deprecated
 **Categories**: 4 (War Room, Analysis, Video Production, System)
+
+---
+
+## ⚠️ 2026 Update Notice
+
+**War Room System Migrated to MVP** (2025-12-31):
+- ✅ **Active**: 3+1 MVP Agents (Trader, Risk, Analyst, PM)
+- ⚠️ **Deprecated**: 8 Legacy Agents (참고용 유지, Skill 파일은 `legacy/` 폴더로 이동)
+
+**Current Agent Count**:
+- War Room MVP: **4 agents** (Trader MVP, Risk MVP, Analyst MVP, PM MVP)
+- Analysis: **5 agents** (Quick, Deep Reasoning, CEO, News Intelligence, Emergency)
+- Video Production: **4 agents** (News Collector, Story Writer, Character Designer, Director)
+- System: **7 agents** (Constitution, Signal Generator, Portfolio Manager, Backtest, Meta, Report, Notification)
+- **Total Active**: **20 agents**
+
+For detailed MVP Agent specifications, see [260104_Current_System_State.md](260104_Current_System_State.md#mvp-system-architecture-31-agents).
 
 ---
 
 ## Overview
 
-This document provides a complete catalog of all 23 AI agents in the system, organized by category. Each agent has a corresponding `SKILL.md` file that defines its role, capabilities, decision framework, and integration points.
+This document catalogs all AI agents in the system. The **War Room** section now documents both the MVP system (active) and Legacy system (deprecated).
 
 ---
 
 ## 📊 Summary Table
 
+### MVP War Room Agents (Active)
+
+| ID | Agent Name | Category | Weight | Model | Cost/Use | Status |
+|----|------------|----------|--------|-------|----------|--------|
+| **M01** | **Trader MVP** | War Room MVP | **35%** | Gemini 2.0 Flash | $0.010 | ✅ **ACTIVE** |
+| **M02** | **Risk MVP** | War Room MVP | **35%** | Gemini 2.0 Flash | $0.010 | ✅ **ACTIVE** |
+| **M03** | **Analyst MVP** | War Room MVP | **30%** | Gemini 2.0 Flash | $0.010 | ✅ **ACTIVE** |
+| **M04** | **PM Agent MVP** | War Room MVP | **Final** | Gemini 2.0 Flash | $0.005 | ✅ **ACTIVE** |
+
+**MVP System Cost**: ~$0.035/deliberation (67% reduction vs Legacy)
+
+### Legacy War Room Agents (Deprecated)
+
 | ID | Agent Name | Category | Model | Cost/Use | Status |
 |----|------------|----------|-------|----------|--------|
-| W01 | Trader Agent | War Room | Claude Haiku | $0.008 | ✅ Spec Complete |
-| W02 | Risk Agent | War Room | Claude Haiku | $0.008 | ✅ Spec Complete |
-| W03 | Analyst Agent | War Room | Gemini 2.0 Flash | $0.004 | ✅ Spec Complete |
-| W04 | Macro Agent | War Room | Gemini 2.0 Flash | $0.004 | ✅ Spec Complete |
-| W05 | Institutional Agent | War Room | Gemini 2.0 Flash | $0.004 | ✅ Spec Complete |
-| W06 | News Agent | War Room | Gemini 2.0 Flash | $0.004 | ✅ Spec Complete |
-| W07 | PM Agent | War Room | Claude Haiku | $0.010 | ✅ Spec Complete |
+| W01 | Trader Agent | War Room (Legacy) | Claude Haiku | $0.008 | ⚠️ DEPRECATED |
+| W02 | Risk Agent | War Room (Legacy) | Claude Haiku | $0.008 | ⚠️ DEPRECATED |
+| W03 | Analyst Agent | War Room (Legacy) | Gemini 2.0 Flash | $0.004 | ⚠️ DEPRECATED |
+| W04 | Macro Agent | War Room (Legacy) | Gemini 2.0 Flash | $0.004 | ⚠️ DEPRECATED |
+| W05 | Institutional Agent | War Room (Legacy) | Gemini 2.0 Flash | $0.004 | ⚠️ DEPRECATED |
+| W06 | News Agent | War Room (Legacy) | Gemini 2.0 Flash | $0.004 | ⚠️ DEPRECATED |
+| W07 | PM Agent | War Room (Legacy) | Claude Haiku | $0.010 | ⚠️ DEPRECATED |
+| W08 | ChipWar Agent | War Room (Legacy) | Gemini 2.0 Flash | $0.005 | ⚠️ DEPRECATED |
+
+**Legacy Cost**: ~$0.105/deliberation (reference only)
+
+### Other Agents (Active)
 | A01 | Quick Analyzer | Analysis | Claude Haiku | $0.014 | ✅ Spec Complete |
 | A02 | Deep Reasoning | Analysis | Gemini 2.0 Flash | $0.020 | ✅ Spec Complete |
 | A03 | CEO Speech Analyzer | Analysis | Gemini 2.0 Flash | $0.015 | ✅ Spec Complete |
@@ -40,11 +76,209 @@ This document provides a complete catalog of all 23 AI agents in the system, org
 | S06 | Report Writer | System | Gemini 2.0 Flash | $0.003 | ✅ Spec Complete |
 | S07 | Notification Agent | System | Rule-based | $0.000 | ✅ Spec Complete |
 
-**Total Estimated Cost**: ~$0.22/full system run (all agents)
+**Total Estimated Cost** (MVP System): ~$0.08/full system run (70% reduction)
 
 ---
 
-## 🏛️ War Room Agents (7)
+## 🏛️ War Room MVP Agents (4) - **ACTIVE SYSTEM**
+
+⭐ **현재 운영 중인 시스템** - 2025-12-31 전환 완료
+
+**Skills Location**: `backend/ai/skills/war_room_mvp/`
+**Code Location**: `backend/ai/mvp/`
+**Dual Mode**: Direct Class / Skill Handler (환경 변수로 전환)
+
+---
+
+### M01: Trader Agent MVP
+
+**File**: `backend/ai/skills/war_room_mvp/trader_agent_mvp/SKILL.md`
+**Code**: `backend/ai/mvp/trader_agent_mvp.py`
+
+**Role**: Attack - 공격적 기회 포착
+**Vote Weight**: **35%** (기존 Trader 15% + ChipWar 12% 통합)
+**Model**: Gemini 2.0 Flash Experimental
+
+**흡수한 Legacy Agents**:
+- Trader Agent (15%) - 기술적 분석, 차트 패턴
+- ChipWar Opportunity (12%) - 반도체 전쟁 기회 포착
+
+**Core Capabilities**:
+- 기술적 분석 (가격 패턴, 모멘텀, RSI, MACD)
+- 차트 패턴 인식 (이중 바닥, 컵 앤 핸들 등)
+- **반도체 전쟁 기회 포착** (NVIDIA, AMD 등 AI 칩 관련)
+- 단기/중기 트레이딩 신호
+- 진입/청산 타이밍 최적화
+
+**Output Format**:
+```json
+{
+  "agent": "trader_mvp",
+  "action": "buy|sell|hold|pass",
+  "confidence": 0.85,
+  "reasoning": "이중 바닥 패턴 완성, RSI 30 돌파",
+  "opportunity_score": 7.5,
+  "risk_factors": ["실적 발표 D-3"],
+  "chipwar_impact": "NVIDIA AI 칩 수요 증가 전망"
+}
+```
+
+---
+
+### M02: Risk Agent MVP
+
+**File**: `backend/ai/skills/war_room_mvp/risk_agent_mvp/SKILL.md`
+**Code**: `backend/ai/mvp/risk_agent_mvp.py`
+
+**Role**: Defense + Position Sizing - 방어적 리스크 관리 및 포지션 사이징
+**Vote Weight**: **35%** (기존 Risk 20% + Sentiment 8% 통합)
+**Model**: Gemini 2.0 Flash Experimental
+
+**흡수한 Legacy Agents**:
+- Risk Agent (20%) - 변동성, 리스크 분석
+- Sentiment Agent (8%) - 시장 심리 분석
+
+**Core Capabilities**:
+- 리스크 평가 (변동성, 베타, 시스템 리스크)
+- **Position Sizing Algorithm** (신규 기능!)
+  - Risk-based sizing (Account Risk / Stop Loss Distance)
+  - Confidence adjustment (Agent 신뢰도 반영)
+  - Volatility adjustment (시장 변동성 반영)
+  - Hard cap (10% portfolio limit)
+- 시장 심리 분석 (공포/탐욕 지수, VIX)
+- Stop Loss 설정
+- 배당주 리스크 평가
+
+**Position Sizing Formula**:
+```python
+base_size = (2% / stop_loss_distance) × portfolio_value
+confidence_adjusted = base_size × confidence
+risk_adjusted = confidence_adjusted × risk_multiplier
+final_size = min(risk_adjusted, 10% of portfolio)
+```
+
+**Output Format**:
+```json
+{
+  "agent": "risk_mvp",
+  "action": "buy|sell|hold|pass",
+  "confidence": 0.75,
+  "reasoning": "VIX 18 (정상 범위), 유동성 충분",
+  "risk_score": 4.2,
+  "position_size": 10000,
+  "position_size_pct": 10.0,
+  "stop_loss": 142.50,
+  "risk_factors": ["실적 발표 임박", "Fed 금리 결정 대기"],
+  "sentiment": "NEUTRAL"
+}
+```
+
+---
+
+### M03: Analyst Agent MVP
+
+**File**: `backend/ai/skills/war_room_mvp/analyst_agent_mvp/SKILL.md`
+**Code**: `backend/ai/mvp/analyst_agent_mvp.py`
+
+**Role**: Information - 종합 정보 분석
+**Vote Weight**: **30%**
+**Model**: Gemini 2.0 Flash Experimental
+
+**흡수한 Legacy Agents**:
+- News Agent (10%) - 뉴스 분석, 감성 분석
+- Macro Agent (10%) - 거시경제, Fed 정책
+- Institutional Agent (10%) - 기관 투자자 동향
+- ChipWar Geopolitics - 반도체 전쟁 지정학
+
+**Core Capabilities**:
+- 뉴스 분석 (RSS 피드, 임베딩 기반 유사도)
+- 거시경제 분석 (Fed 정책, GDP, 인플레이션)
+- 기관 투자자 동향 (13F filings, 유입/유출)
+- **반도체 전쟁 지정학적 영향** (미중 관계, 수출 규제)
+- Macro Context 통합 (Market Regime, VIX, Fed Stance)
+
+**Output Format**:
+```json
+{
+  "agent": "analyst_mvp",
+  "action": "buy|hold|pass",
+  "confidence": 0.70,
+  "reasoning": "긍정 뉴스 3건, Fed 중립 기조 유지",
+  "information_score": 6.0,
+  "news_summary": "AI 칩 수요 증가 전망 (Bloomberg)",
+  "macro_context": {
+    "regime": "RISK_ON",
+    "fed_stance": "HAWKISH",
+    "vix": 18.5
+  },
+  "institutional_flow": "유입 $1.2M (3일)",
+  "chipwar_geopolitics": "미국 AI 반도체 수출 규제 완화 전망"
+}
+```
+
+---
+
+### M04: PM Agent MVP
+
+**File**: `backend/ai/skills/war_room_mvp/pm_agent_mvp/SKILL.md`
+**Code**: `backend/ai/mvp/pm_agent_mvp.py`
+
+**Role**: Final Decision Maker + Hard Rules Enforcement
+**Vote Weight**: Final Decision (3개 Agent 의견 종합)
+**Model**: Gemini 2.0 Flash Experimental
+
+**신규 추가**: MVP 전환 시 추가됨
+
+**Core Capabilities**:
+- 3개 MVP Agent 의견 종합 (Weighted Voting: 35% + 35% + 30%)
+- **8개 Hard Rules 검증** (위반 시 자동 거부)
+- 최종 승인/거부 결정
+- Execution Router 선택 (Fast Track vs Deep Dive)
+- 신뢰도 조정 (Agent 간 의견 불일치 시)
+
+**8 Hard Rules**:
+```python
+1. Position size ≤ 30% of portfolio
+2. Position size ≤ 10% if confidence < 0.7
+3. Stop Loss required
+4. Stop Loss ≤ 10% from entry price
+5. No positions during earnings blackout (D-2 ~ D+1)
+6. Daily loss limit: -5%
+7. VIX > 40: No new positions
+8. RISK_OFF + VIX > 30: No new positions
+```
+
+**Output Format**:
+```json
+{
+  "agent": "pm_mvp",
+  "final_decision": "approve|reject",
+  "action": "buy|sell|hold|pass",
+  "confidence": 0.77,
+  "position_size": 10000,
+  "stop_loss": 142.50,
+  "reasoning": "3개 Agent 중 2개 BUY, 1개 HOLD. Hard Rules 통과.",
+  "voting_summary": {
+    "trader_mvp": {"vote": "buy", "weight": 0.35},
+    "risk_mvp": {"vote": "buy", "weight": 0.35},
+    "analyst_mvp": {"vote": "hold", "weight": 0.30}
+  },
+  "weighted_score": 7.0,
+  "hard_rules_passed": true,
+  "execution_path": "deep_dive"
+}
+```
+
+---
+
+## 🏛️ War Room Legacy Agents (8) - **DEPRECATED**
+
+⚠️ **2025-12-31 이후 비활성화** - 참고용으로만 유지
+
+**Skills Location**: `backend/ai/skills/legacy/war_room/` (이동 완료)
+**Status**: Documentation Only (코드는 `backend/ai/debate/` 에 유지)
+
+---
 
 ### W01: Trader Agent
 **File**: `backend/ai/skills/war-room/trader-agent/SKILL.md`
@@ -909,7 +1143,29 @@ User Input (e.g., "Analyze TSLA")
 
 ---
 
-**Version**: 1.0  
-**Last Updated**: 2025-12-21  
-**Total Agents**: 23 (100% Spec Complete)
+**Version**: 2.0
+**Last Updated**: 2026-01-04
+**Active Agents**: 20 (MVP 4 + Support 16)
+**Deprecated Agents**: 8 (Legacy War Room)
+**Status**: ✅ **Production Ready** (MVP System Active)
+
+---
+
+## 📝 Document Changelog
+
+### v2.0 (2026-01-04) - MVP Migration Update
+- Added 2026 Update Notice section
+- Added MVP War Room Agents section (M01-M04)
+- Marked Legacy War Room Agents as DEPRECATED (W01-W08)
+- Updated Summary Tables (MVP + Legacy + Other)
+- Added Agent mapping (Legacy → MVP)
+- Updated cost estimates (67% reduction)
+- Added Position Sizing details (Risk MVP)
+- Added Hard Rules section (PM MVP)
+- Total active agents: 23 → 20
+
+### v1.0 (2025-12-21) - Original Version
+- Documented all 23 agents (Legacy system)
+- 4 categories: War Room, Analysis, Video, System
+- Individual SKILL.md specifications
 

@@ -1,8 +1,37 @@
 # 🚀 AI Trading System - Complete System Overview
 
-**Last Updated**: 2025-12-21  
-**Project Status**: Phase G Complete (Agent Skills Framework + Constitutional AI)  
-**Total Progress**: 88% Complete
+**Last Updated**: 2026-01-04
+**Project Status**: MVP Migration Complete (3+1 Agents) + Shadow Trading Phase 1
+**Total Progress**: 95% Complete
+
+---
+
+## ⚠️ 2026 Update Notice
+
+**This document is based on the Legacy 8-Agent system (2025-12-21)**. For the current MVP system state, see:
+- **[260104_Current_System_State.md](260104_Current_System_State.md)** ⭐ **LATEST** (MVP 3+1 Agents, Shadow Trading, Production Ready)
+- **[260104_MVP_Architecture.md](260104_MVP_Architecture.md)** (MVP 상세 아키텍처)
+
+**Major Changes Since 2025-12-28**:
+- ✅ **MVP Migration** (2025-12-31): 8 Legacy Agents → 3+1 MVP Agents
+  - Cost: **-67%**, Speed: **-67%** (30s → 10s), API calls: **8 → 3**
+- ✅ **Position Sizing**: Risk-based automated algorithm (Risk Agent MVP 내장)
+- ✅ **Execution Layer**: Execution Router + Order Validator (8 Hard Rules)
+- ✅ **Shadow Trading**: Day 4/90, P&L +$1,274.85 (+1.27%)
+- ✅ **Database Optimization**: 복합 인덱스, N+1 제거, TTL 캐싱 (0.3-0.5s query time)
+- ✅ **Skills Architecture**: SKILL.md + handler.py, Dual Mode support
+
+**War Room Agent Mapping (Legacy → MVP)**:
+```
+Legacy 8-Agent                    →  MVP 3+1-Agent
+────────────────────────────────────────────────────────────
+Trader (15%) + ChipWar (12%)     →  Trader MVP (35%)
+Risk (20%) + Sentiment (8%)      →  Risk MVP (35%) + Position Sizing
+News (10%) + Macro (10%)         →  Analyst MVP (30%)
+  + Institutional (10%)
+  + ChipWar Geopolitics
+PM (15%)                         →  PM Agent MVP (Final Decision + Hard Rules)
+```
 
 ---
 
@@ -38,29 +67,31 @@ Inspired by governmental separation of powers:
 │  INTELLIGENCE   │              │   EXECUTION      │
 │   (Judicial)    │              │   (Executive)    │
 │                 │              │                  │
-│  War Room       │              │  Commander       │
-│  (7 AI Agents)  │──Proposal──▶│  (User)          │
+│  War Room MVP   │              │  Commander       │
+│  (3+1 Agents)   │──Proposal──▶│  (User)          │
 │                 │              │                  │
-│  Trader         │              │  ✓ Approve       │
-│  Risk           │              │  ✗ Reject        │
-│  Analyst        │              │                  │
-│  Macro          │              │  Shadow Trade    │
-│  Institutional  │              │  System          │
-│  News           │              │                  │
-│  PM (consensus) │              │                  │
+│  Trader MVP     │              │  ✓ Approve       │
+│  (35% Attack)   │              │  ✗ Reject        │
+│  Risk MVP       │              │                  │
+│  (35% Defense)  │              │  Shadow Trade    │
+│  Analyst MVP    │              │  System          │
+│  (30% Info)     │              │  (3 Month Test)  │
+│  PM MVP (Final) │              │                  │
 └─────────────────┘              └──────────────────┘
 ```
 
-### 2. Agent Skills Framework (23 Agents)
-Standardized `SKILL.md` format for all AI agents across 4 categories:
+### 2. Agent Skills Framework (MVP + Legacy)
+**2026 Update**: Skills Migration 완료 (2026-01-02). SKILL.md + handler.py 구조로 통합.
 
-| Category | Count | Status |
-|----------|-------|--------|
-| **War Room Agents** | 7 | ✅ 100% |
-| **Analysis Agents** | 5 | ✅ 100% |
-| **Video Production** | 4 | ✅ 100% |
-| **System Agents** | 7 | ✅ 100% |
-| **TOTAL** | **23** | ✅ **100%** |
+| Category | MVP System | Legacy System | Status |
+|----------|-----------|---------------|--------|
+| **War Room Agents** | 3+1 MVP | 8 Legacy (Deprecated) | ✅ MVP Active |
+| **Analysis Agents** | 5 | - | ✅ 100% |
+| **Video Production** | 4 | - | ✅ 100% |
+| **System Agents** | 7 | - | ✅ 100% |
+| **TOTAL** | **19 Active** | **8 Deprecated** | ✅ **Production Ready** |
+
+**Dual Mode 지원**: 환경 변수 `WAR_ROOM_MVP_USE_SKILLS`로 Direct Class / Skill Handler 모드 전환 가능
 
 ### 3. Emergency News Intelligence
 - Real-time monitoring via Anthropic Grounding API
@@ -125,75 +156,100 @@ News:
 └── Anthropic Grounding (Real-time, paid)
 ```
 
-### Database Schema (Key Tables)
+### Database Schema (17 Tables - 2026-01-04)
 
-#### Core Trading
+**2026 Update**: 14개 → 17개 테이블로 확장. 신규 추가 (2026-01-03):
+- `shadow_trading_sessions` - Shadow Trading 세션 관리
+- `shadow_trading_positions` - Shadow Trading 포지션 추적
+- `agent_weights_history` - Agent 투표 가중치 이력
+
+상세 스키마는 **[260104_Database_Schema.md](260104_Database_Schema.md)** 참조.
+
+#### Core Trading (5 tables)
 ```sql
--- Trading Signals (from all sources)
+-- Trading Signals
 trading_signals
-├── id, ticker, action (BUY/SELL/HOLD)
-├── signal_type, confidence, reasoning
-├── source (war_room, deep_reasoning, ceo_analysis, etc.)
+├── id, ticker, action, signal_type, confidence
 ├── entry_price, target_price, stop_loss
 └── generated_at, executed_at
 
--- AI Debate Sessions (War Room results)
-ai_debate_sessions
-├── id, ticker, consensus_action, consensus_confidence
-├── trader_vote, risk_vote, analyst_vote, macro_vote
-├── institutional_vote, news_vote, pm_vote
-├── debate_transcript (JSON), constitutional_valid
-└── signal_id (FK to trading_signals)
+-- Shadow Trading Sessions (NEW - 2026-01-03)
+shadow_trading_sessions
+├── id, initial_capital, current_value
+├── available_cash, total_pnl, total_pnl_pct
+└── status, created_at
 
--- Constitution Rules (Immutable)
-constitution_rules
-├── id, rule_type (RISK_LIMIT, ALLOCATION, CONSTRAINT)
-├── rule_content (Python code), sha256_hash
-├── active, created_at, approved_by
-└── last_modified (Requires human approval)
+-- Shadow Trading Positions (NEW - 2026-01-03)
+shadow_trading_positions
+├── id, session_id, symbol, quantity
+├── entry_price, current_price, stop_loss
+├── unrealized_pnl, entry_date
+└── exit_date, exit_price
+
+-- Signal Performance
+signal_performance
+-- Execution Logs
+execution_logs
 ```
 
-#### News & Analysis
+#### News & Analysis (4 tables)
 ```sql
 -- News Articles
-news_articles
+news_articles (23 records)
 ├── id, title, content, url, source
-├── published_date, crawled_at
-├── article_type (news, ceo_speech, emergency)
-├── sentiment_score, related_tickers[]
-└── embedding (vector for similarity search)
+├── published_date, sentiment_score, tickers[]
+└── embedding (vector, 1536 dims)
 
--- Analysis Results (Deep Reasoning)
-analysis_results
-├── id, article_id (FK), ticker
-├── theme, bull_case, bear_case
-├── step1_direct_impact, step2_secondary_impact, step3_conclusion
-├── model_name, created_at
-└── confidence_score
+-- News Interpretations (NEW - 2026-01-03)
+news_interpretations
+├── id, article_id, interpretation_text
+├── macro_context_snapshot, created_at
+└── model_name
 
--- Emergency News Alerts
-grounding_search_log
-├── id, query, results (JSON)
-├── urgency (CRITICAL/HIGH/MEDIUM/LOW)
-├── cost_usd, triggered_debate
+-- News Sources
+news_sources (10 active)
+
+-- RSS Feeds
+rss_feeds
+```
+
+#### War Room (3 tables)
+```sql
+-- War Room Sessions
+war_room_sessions
+├── id, ticker, action_context, final_decision
+├── confidence, agent_opinions (JSON)
+└── created_at, session_duration
+
+-- Agent Opinions
+agent_opinions
+├── id, session_id, agent_name, vote
+└── confidence, reasoning
+
+-- Agent Weights History (NEW - 2026-01-03)
+agent_weights_history
+├── id, agent_name, weight, effective_from
 └── created_at
 ```
 
-#### Video Production
+#### Other (5 tables)
 ```sql
--- Video Characters (MeowStreet Wars)
-video_characters
-├── id, ticker, character_name
-├── personality_traits, visual_description
-├── catchphrase, sector, market_cap_tier
-└── prompts (for HeyGen/Pika)
+-- Deep Reasoning Analyses
+deep_reasoning_analyses
 
--- Video Production Jobs
-video_production_jobs
-├── id, story_id, status
-├── news_collection, story_script
-├── character_assignments, storyboard
-└── video_url, created_at
+-- Macro Context Snapshots
+macro_context_snapshots
+├── regime, fed_stance, vix_category
+└── dominant_narrative (Claude AI generated)
+
+-- Stock Prices (TimescaleDB ready)
+stock_prices (1,750 records)
+
+-- Data Collection Progress
+data_collection_progress
+
+-- Dividend Aristocrats
+dividend_aristocrats
 ```
 
 ### Data Flow Architecture
@@ -243,9 +299,15 @@ video_production_jobs
 
 ---
 
-## 🤖 AI Agents (23 Total)
+## 🤖 AI Agents
 
-### War Room Agents (7) - Debate System
+⚠️ **Legacy System Documentation Below** (8-Agent War Room, deprecated 2025-12-31)
+
+For **current MVP system** (3+1 Agents), see [260104_Current_System_State.md](260104_Current_System_State.md#mvp-system-architecture-31-agents).
+
+---
+
+### War Room Agents (Legacy 8-Agent System - DEPRECATED)
 
 #### 1. Trader Agent
 - **Role**: Offensive / Technical Analysis
@@ -490,7 +552,9 @@ Target: \u003c$10/month ✅
 
 ## 🚀 Implementation Status
 
-### Completed Features (88%)
+**2026-01-04 Update**: 88% → 95% Complete
+
+### Completed Features (95%)
 
 #### ✅ Foundation (100%)
 - [x] PostgreSQL + TimescaleDB setup
@@ -506,30 +570,48 @@ Target: \u003c$10/month ✅
 - [x] KIS Broker API (Korean stocks)
 - [x] News embedding & similarity search
 
-#### ✅ AI System (95%)
-- [x] Agent Skills Framework (23 agents, all specs complete)
-- [x] War Room Debate Engine (7 agents)
+#### ✅ AI System (100%)
+- [x] Agent Skills Framework (SKILL.md + handler.py)
+- [x] **War Room MVP (3+1 Agents)** ← NEW (2025-12-31)
+  - [x] Trader MVP (35%), Risk MVP (35%), Analyst MVP (30%), PM MVP
+  - [x] Position Sizing (Risk-based algorithm)
+  - [x] Execution Router (Fast Track / Deep Dive)
+  - [x] Order Validator (8 Hard Rules)
+- [x] War Room Legacy (8 agents, deprecated but functional)
 - [x] Constitutional AI (3-branch architecture)
 - [x] Emergency News Monitoring (Grounding API)
 - [x] Analysis Lab (Quick, Deep Reasoning, CEO)
 - [x] Video Production Pipeline (4 agents, specs complete)
-- [ ] Full API integration (War Room → Trading Signals) - **IN PROGRESS**
+- [x] Skills Migration (Dual Mode support) ← NEW (2026-01-02)
 
-#### ✅ Trading Features (75%)
+#### ✅ Trading Features (90%)
 - [x] Signal generation (multiple sources)
 - [x] Backtest engine (event-driven)
 - [x] Portfolio tracking (real-time)
 - [x] Risk management (Constitutional rules)
-- [ ] Live trading execution - **PENDING**
-- [ ] Shadow Trade analytics - **PENDING**
+- [x] **Shadow Trading** ← NEW (2026-01-01 ~ )
+  - [x] Shadow Trading Engine (조건부 실행)
+  - [x] Real-time monitoring script
+  - [x] Day 4/90 진행 중, P&L +$1,274.85 (+1.27%)
+  - [x] Position tracking (2 active: NKE, AAPL)
+- [ ] Live trading execution (Real money) - **PENDING** (After 3-month validation)
+
+#### ✅ Database Optimization (Phase 1 Complete) ← NEW (2026-01-02)
+- [x] 복합 인덱스 6개 추가 (News, Signals, Stock Prices, Sessions)
+- [x] N+1 쿼리 제거 (selectinload 사용)
+- [x] TTL 캐싱 구현 (5분, `@cache_with_ttl` decorator)
+- [x] 쿼리 시간 최적화: 0.5-1.0s → 0.3-0.5s (-40%)
+- [x] War Room MVP 응답 시간: 12.76s (목표 <15s ✅)
+- [ ] Phase 2 (TimescaleDB hypertable, pgvector) - **PENDING**
 
 #### ✅ User Interface (90%)
 - [x] Dashboard (portfolio overview)
 - [x] Analysis Lab (ticker research)
 - [x] News Aggregation (real-time feed)
-- [x] War Room Visualization (debate view)
+- [x] War Room MVP Visualization ← UPDATED (3+1 agents)
 - [x] Deep Reasoning UI (3-step CoT)
 - [x] Trading Signals page
+- [x] Shadow Trading Monitor (CLI script) ← NEW (2026-01-04)
 - [ ] Commander Mode (Telegram interaction) - **PENDING**
 - [ ] Video Production UI - **PENDING**
 
@@ -839,13 +921,33 @@ ai-trading-system/
 
 ---
 
-**Version**: 2.0  
-**Last Updated**: 2025-12-21  
-**Next Review**: 2026-01-15  
-**Status**: ✅ Active Development (88% Complete)
+**Version**: 2.1
+**Last Updated**: 2026-01-04
+**Next Review**: 2026-02-01
+**Status**: ✅ **Production Ready** (95% Complete)
 
-**Prepared by**: AI Trading System Development Team  
+**Prepared by**: AI Trading System Development Team
 **License**: MIT (Open Source)
+
+---
+
+## 📝 Document Changelog
+
+### v2.1 (2026-01-04) - MVP Migration Update
+- Updated header: Progress 88% → 95%
+- Added 2026 Update Notice section (MVP changes, agent mapping)
+- Updated database schema: 14 → 17 tables
+- Added Database Optimization section (Phase 1 complete)
+- Updated AI System: 100% complete (MVP + Skills Migration)
+- Updated Trading Features: 90% (Shadow Trading added)
+- Marked Legacy 8-Agent system as DEPRECATED
+- Added cross-references to 260104 series documents
+
+### v2.0 (2025-12-21) - Original Version
+- Documented Legacy 8-Agent War Room system
+- 23 AI Agents catalog
+- Constitutional AI architecture
+- Emergency News Intelligence
 
 ---
 

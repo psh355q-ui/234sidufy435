@@ -35,6 +35,7 @@ import google.generativeai as genai
 
 from backend.ai.schemas.war_room_schemas import PMDecision
 from backend.ai.safety.leverage_guardian import get_leverage_guardian
+from backend.ai.router.persona_router import get_persona_router
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -56,22 +57,35 @@ class PMAgentMVP:
         # Agent configuration
         self.role = "포트폴리오 매니저"
 
+        # PersonaRouter 인스턴스
+        self.persona_router = get_persona_router()
+        
         # ===================================================================
-        # HARD RULES (Code-Enforced, NOT AI-interpreted)
-        # Updated: 2025-12-31 - Relaxed max_agent_disagreement for Phase 1
+        # HARD RULES (Dynamic from PersonaRouter)
+        # Updated: 2026-01-08 - Persona-specific thresholds
         # ===================================================================
+        # 페르소나별 동적 규칙 가져오기
+        persona_hard_rules = self.persona_router.get_hard_rules()
+        
         self.HARD_RULES = {
-            'max_position_size': 0.30,  # 30% 포지션 절대 상한
-            'max_portfolio_risk': 0.05,  # 5% 포트폴리오 전체 리스크 상한
-            'min_avg_confidence': 0.50,  # 50% 평균 confidence 하한 (Silence Policy)
-            'max_agent_disagreement': 0.75,  # 75% 의견 불일치 상한 (Phase 1 완화: 60% → 75%)
-            'stop_loss_required': True,  # Stop Loss 필수
-            'reject_extreme_risk': True,  # Risk Level "extreme" 시 거부
-            'max_correlated_positions': 3,  # 높은 상관관계 포지션 최대 3개
-            'max_sector_concentration': 0.40  # 40% 섹터 집중도 상한
+            'max_position_size': 0.30,  # 30% 포지션 절대 상한 (모든 페르소나 공통)
+            'max_portfolio_risk': 0.05,  # 5% 포트폴리오 전체 리스크 상한 (공통)
+            'min_avg_confidence': persona_hard_rules.get('min_avg_confidence', 0.50),  # 페르소나별
+            'max_agent_disagreement': persona_hard_rules.get('max_agent_disagreement', 0.67),  # 페르소나별
+            'stop_loss_required': True,  # Stop Loss 필수 (공통)
+            'reject_extreme_risk': True,  # Risk Level "extreme" 시 거부 (공통)
+            'max_correlated_positions': 3,  # 높은 상관관계 포지션 최대 3개 (공통)
+            'max_sector_concentration': 0.40  # 40% 섹터 집중도 상한 (공통)
         }
+        
         # 🔍 DEBUG: PM Agent 인스턴스 생성 시점 확인
-        logger.info(f"🔍 INIT DEBUG: PMAgentMVP created, max_agent_disagreement={self.HARD_RULES['max_agent_disagreement']}, instance_id={id(self)}, HARD_RULES_id={id(self.HARD_RULES)}")
+        current_mode = self.persona_router.get_current_mode()
+        logger.info(
+            f"🔍 INIT DEBUG: PMAgentMVP created with Persona={current_mode.value}, "
+            f"max_agent_disagreement={self.HARD_RULES['max_agent_disagreement']}, "
+            f"min_avg_confidence={self.HARD_RULES['min_avg_confidence']}, "
+            f"instance_id={id(self)}"
+        )
 
         # Silence Policy threshold
         self.SILENCE_THRESHOLD = 0.50  # Confidence < 50% → 판단 거부

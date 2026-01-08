@@ -106,6 +106,28 @@ PERSONA_DESCRIPTIONS: Dict[PersonaMode, str] = {
     PersonaMode.AGGRESSIVE: "공격적 투자: 레버리지 허용 (10% 제한), FOMO 제어",
 }
 
+# 페르소나별 Hard Rules 설정
+# Note: Agent 불일치 계산은 3명만 포함 (Trader, Risk, Analyst)
+#       PM은 Hard Rules 검증 후 최종 결정만 수행
+PERSONA_HARD_RULES: Dict[PersonaMode, Dict[str, float]] = {
+    PersonaMode.DIVIDEND: {
+        "max_agent_disagreement": 0.40,  # 거의 전원 동의 필요 (33% 불일치까지만 허용)
+        "min_avg_confidence": 0.60,      # 높은 확신도 요구
+    },
+    PersonaMode.LONG_TERM: {
+        "max_agent_disagreement": 0.50,  # 전원 동의 필수 (0% 불일치만 허용)
+        "min_avg_confidence": 0.55,      # 중간 이상 확신도
+    },
+    PersonaMode.TRADING: {
+        "max_agent_disagreement": 0.67,  # 2명 동의 필요 (33% 불일치까지 허용)
+        "min_avg_confidence": 0.50,      # 기본 확신도
+    },
+    PersonaMode.AGGRESSIVE: {
+        "max_agent_disagreement": 0.80,  # 3갈래 의견도 허용 (67% 불일치까지)
+        "min_avg_confidence": 0.45,      # 낮은 확신도도 허용 (기회 우선)
+    },
+}
+
 
 class PersonaRouter:
     """
@@ -230,6 +252,27 @@ class PersonaRouter:
         if self.is_leverage_allowed(mode):
             return 0.10  # 10% cap for aggressive mode
         return 0.0
+    
+    def get_hard_rules(self, mode: Optional[str] = None) -> Dict[str, float]:
+        """
+        지정된 모드에 대한 Hard Rules 설정 반환
+        
+        Args:
+            mode: 페르소나 모드 문자열
+        
+        Returns:
+            Dict[str, float]: Hard Rules 설정
+            예: {
+                "max_agent_disagreement": 0.67,
+                "min_avg_confidence": 0.50
+            }
+        
+        Note:
+            Agent 불일치 계산은 3명만 포함 (Trader, Risk, Analyst)
+            PM은 Hard Rules 검증 후 최종 결정만 수행
+        """
+        persona = self._resolve_mode(mode)
+        return PERSONA_HARD_RULES.get(persona, PERSONA_HARD_RULES[PersonaMode.TRADING])
 
 
 # 싱글톤 인스턴스 (전역 사용 가능)

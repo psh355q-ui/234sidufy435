@@ -191,22 +191,27 @@ class PMAgentMVP:
             }
 
         # ================================================================
-        # STEP 2: SILENCE POLICY CHECK
+        # STEP 2: SILENCE POLICY CHECK (Dynamic from Persona)
         # ================================================================
+        # 현재 Persona의 min_avg_confidence 가져오기
+        current_persona_rules = self.persona_router.get_hard_rules()
+        min_confidence_threshold = current_persona_rules.get('min_avg_confidence', 0.50)
+        
         avg_confidence = (
             trader_opinion.get('confidence', 0) * trader_opinion.get('weight', 0.35) +
             risk_opinion.get('confidence', 0) * risk_opinion.get('weight', 0.35) +
             analyst_opinion.get('confidence', 0) * analyst_opinion.get('weight', 0.30)
         )
 
-        # Silence Policy: 평균 confidence < threshold → 판단 거부
-        if avg_confidence < self.SILENCE_THRESHOLD:
+        # Silence Policy: 평균 confidence < threshold → 판단 거부 (Dynamic)
+        if avg_confidence < min_confidence_threshold:
+            current_mode = self.persona_router.get_current_mode()
             return {
                 'agent': 'pm_mvp',
                 'final_decision': 'silence',
                 'action': 'silence', # Schema compatibility
                 'confidence': avg_confidence,
-                'reasoning': f"Silence Policy: Average confidence ({avg_confidence:.2f}) below threshold ({self.SILENCE_THRESHOLD})",
+                'reasoning': f"Silence Policy: Average confidence ({avg_confidence:.2f}) below threshold ({min_confidence_threshold}) for {current_mode.value} mode",
                 'recommended_action': 'hold',
                 'position_size_adjustment': 0.0,
                 'risk_assessment': {
@@ -337,7 +342,12 @@ class PMAgentMVP:
                 f"포트폴리오 리스크 {total_risk*100:.1f}%가 최대 허용치 {self.HARD_RULES['max_portfolio_risk']*100:.1f}%를 초과합니다"
             )
 
-        # Rule 3: Agent Disagreement > 75% (Phase 1 완화)
+        # Rule 3: Agent Disagreement (Dynamic from Persona)
+        # 현재 Persona의 max_agent_disagreement 가져오기
+        current_persona_rules = self.persona_router.get_hard_rules()
+        max_disagreement = current_persona_rules.get('max_agent_disagreement', 0.67)
+        current_mode = self.persona_router.get_current_mode()
+        
         actions = [
             trader_opinion.get('action', 'pass'),
             risk_opinion.get('recommendation', 'reject'),
@@ -347,23 +357,31 @@ class PMAgentMVP:
         non_pass_actions = [a for a in actions if a != 'pass']
         if len(non_pass_actions) > 0:
             disagreement = 1.0 - (non_pass_actions.count(non_pass_actions[0]) / len(non_pass_actions))
-            # 🔍 DEBUG: 실제 validation 시점의 HARD_RULES 값 확인
-            logger.warning(f"🔍 VALIDATION DEBUG: disagreement={disagreement:.2f}, max_allowed={self.HARD_RULES['max_agent_disagreement']}, HARD_RULES_id={id(self.HARD_RULES)}, actions={actions}, non_pass={non_pass_actions}")
-            if disagreement > self.HARD_RULES['max_agent_disagreement']:
+            # 🔍 DEBUG: 현재 Persona 및 동적 기준 표시
+            logger.warning(
+                f"🔍 VALIDATION DEBUG: Persona={current_mode.value}, "
+                f"disagreement={disagreement:.2f}, max_allowed={max_disagreement}, "
+                f"actions={actions}, non_pass={non_pass_actions}"
+            )
+            if disagreement > max_disagreement:
                 violations.append(
-                    f"Agent 의견 불일치 {disagreement*100:.0f}%가 최대 허용치 {self.HARD_RULES['max_agent_disagreement']*100:.0f}%를 초과합니다"
+                    f"Agent 의견 불일치 {disagreement*100:.0f}%가 최대 허용치 {max_disagreement*100:.0f}%를 초과합니다 (Persona: {current_mode.value})"
                 )
 
-        # Rule 4: Average Confidence < 50% (handled by Silence Policy, but double-check)
+        # Rule 4: Average Confidence (Dynamic from Persona)
+        # 현재 Persona의 min_avg_confidence 가져오기
+        current_persona_rules = self.persona_router.get_hard_rules()
+        min_confidence = current_persona_rules.get('min_avg_confidence', 0.50)
+        
         confidences = [
             trader_opinion.get('confidence', 0.0),
             risk_opinion.get('confidence', 0.0),
             analyst_opinion.get('confidence', 0.0)
         ]
         avg_conf = sum(confidences) / len(confidences)
-        if avg_conf < self.HARD_RULES['min_avg_confidence']:
+        if avg_conf < min_confidence:
             violations.append(
-                f"평균 신뢰도 {avg_conf*100:.0f}%가 최소 요구치 {self.HARD_RULES['min_avg_confidence']*100:.0f}% 미만입니다"
+                f"평균 신뢰도 {avg_conf*100:.0f}%가 최소 요구치 {min_confidence*100:.0f}% 미만입니다"
             )
 
         # Rule 5: Stop Loss Required

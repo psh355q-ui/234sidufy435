@@ -28,6 +28,13 @@ const WarRoomList: React.FC = () => {
         refetchInterval: 10000,
     });
 
+    // Fetch War Room info (including dynamic weights)
+    const { data: warRoomInfo } = useQuery({
+        queryKey: ['war-room-info'],
+        queryFn: () => warRoomApi.getInfo(),
+        refetchInterval: 5000, // Refresh every 5 seconds to catch persona changes
+    });
+
     // Transform API response to match MockDebateSession interface
     const sessions: MockDebateSession[] = useMemo(() => {
         if (!apiSessions) return [];
@@ -251,6 +258,58 @@ const WarRoomList: React.FC = () => {
                     </div>
                 )}
             </Card>
+
+            {/* War Room Agent Weights Info */}
+            {warRoomInfo && (
+                <Card className="bg-gradient-to-br from-purple-50 to-blue-50 border-2 border-purple-200">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-bold text-purple-900 flex items-center gap-2">
+                            🎯 War Room 구성: {warRoomInfo.agent_structure}
+                        </h3>
+                        <span className="px-3 py-1 bg-purple-600 text-white text-sm font-bold rounded-full">
+                            {warRoomInfo.current_mode} 모드
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {warRoomInfo.agents.filter(agent => typeof agent.weight === 'number').map((agent, index) => (
+                            <div
+                                key={index}
+                                className="bg-white rounded-lg p-4 border-2 border-purple-100 hover:border-purple-300 transition-all"
+                            >
+                                <div className="flex items-center justify-between mb-2">
+                                    <h4 className="font-bold text-gray-900 text-sm">{agent.name}</h4>
+                                    <span className="text-2xl font-bold text-purple-600">
+                                        {typeof agent.weight === 'number'
+                                            ? `${(agent.weight * 100).toFixed(0)}%`
+                                            : agent.weight}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-gray-600">{agent.focus}</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* PM Agent (Final Decision Maker) */}
+                    {warRoomInfo.agents.find(agent => typeof agent.weight === 'string') && (
+                        <div className="mt-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-4 border-2 border-yellow-200">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h4 className="font-bold text-gray-900">
+                                        {warRoomInfo.agents.find(agent => typeof agent.weight === 'string')?.name}
+                                    </h4>
+                                    <p className="text-xs text-gray-600">
+                                        {warRoomInfo.agents.find(agent => typeof agent.weight === 'string')?.focus}
+                                    </p>
+                                </div>
+                                <span className="px-4 py-2 bg-yellow-500 text-white text-sm font-bold rounded-lg">
+                                    최종 결정권
+                                </span>
+                            </div>
+                        </div>
+                    )}
+                </Card>
+            )}
 
             {/* 검색 & 필터 */}
             <Card>

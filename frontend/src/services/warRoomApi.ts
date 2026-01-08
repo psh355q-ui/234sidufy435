@@ -74,6 +74,26 @@ export interface WarRoomHealthResponse {
     version: string;
 }
 
+export interface WarRoomAgent {
+    name: string;
+    weight: number | string;
+    focus: string;
+}
+
+export interface WarRoomInfo {
+    name: string;
+    version: string;
+    current_mode: string;  // "DIVIDEND" | "LONG_TERM" | "TRADING" | "AGGRESSIVE"
+    agent_structure: string;
+    agents: WarRoomAgent[];
+    execution_layer?: {
+        router: string;
+        validator: string;
+    };
+    decision_count?: number;
+    session_id?: string;
+}
+
 // ============================================================================
 // API Client
 // ============================================================================
@@ -165,6 +185,20 @@ export const warRoomApi = {
 
         if (!response.ok) {
             throw new Error(`Failed to fetch War Room health: ${response.statusText}`);
+        }
+
+        return response.json();
+    },
+
+    /**
+     * Get War Room information (including dynamic agent weights)
+     * GET /api/war-room-mvp/info
+     */
+    getInfo: async (): Promise<WarRoomInfo> => {
+        const response = await fetch(`${API_BASE_URL}/info`);
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch War Room info: ${response.statusText}`);
         }
 
         return response.json();

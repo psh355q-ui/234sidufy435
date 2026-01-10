@@ -119,7 +119,7 @@ const WarRoom: React.FC<WarRoomProps> = ({
 
         const agentMap: any = {};
         warRoomInfo.agents.forEach((agent: any) => {
-            const name = agent.name.toLowerCase().replace(/ /g, '_').replace('_mvp', '');
+            const name = agent.name.toLowerCase().replace(/ /g, '_').replace('_mvp', '').replace('_agent', '');
 
             // Map agent names to their icons and colors
             const iconMap: { [key: string]: string } = {

@@ -191,7 +191,7 @@ export const AnalysisProgressModal: React.FC<AnalysisProgressModalProps> = ({
                             <Brain className={`text-purple-600 ${status === 'running' ? 'animate-pulse' : ''}`} size={28} />
                             <div>
                                 <h2 className="text-xl font-bold text-gray-900">AI 뉴스 분석 진행 중</h2>
-                                <p className="text-sm text-gray-600">Gemini 2.5 Flash 분석 중...</p>
+                                <p className="text-sm text-gray-600">Ollama (Llama 3.2:3b) 분석 중...</p>
                             </div>
                         </div>
                         <div className="flex items-center space-x-2">

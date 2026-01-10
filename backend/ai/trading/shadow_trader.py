@@ -161,24 +161,48 @@ class ShadowTradingAgent:
                  logger.warning(f"👻 SELL FAILED: {result.get('error')}")
 
     def _record_order(self, db: Session, signal, ticker, side, qty, price, status, msg=""):
-        """Record to Order table (Shadow Mode)"""
+        """Record to Order table (Shadow Mode) - Using OrderManager"""
+        from backend.execution.order_manager import OrderManager
+        from backend.execution.state_machine import OrderState
+
         try:
+            # Create Order instance with initial state
             order = Order(
                 ticker=ticker,
                 action=side,
                 quantity=qty,
                 order_type="MARKET",
-                filled_price=price if status == "FILLED" else None,
                 limit_price=price,
-                status=status,
+                status=OrderState.IDLE.value,  # Start with IDLE
                 signal_id=signal.id,
-                error_message=msg if msg else None,
-                created_at=datetime.utcnow(),
-                filled_at=datetime.utcnow() if status == "FILLED" else None,
-                order_id=f"SHADOW_{ticker}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+                order_id=f"SHADOW_{ticker}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
+                created_at=datetime.utcnow()
             )
             db.add(order)
-            db.commit()
+            db.flush()  # Get the order ID
+
+            # Use OrderManager for state transitions
+            order_manager = OrderManager(db)
+
+            # Transition through states based on status
+            if status == "FILLED":
+                # Signal received → Validating → Order pending → Order sent → Fully filled
+                order_manager.receive_signal(order, {"signal_id": signal.id})
+                order_manager.start_validation(order)
+                order_manager.validation_passed(order, {"shadow_mode": True})
+                order_manager.order_sent(order, order.order_id)
+                order_manager.fully_filled(order, price)
+            elif status == "REJECTED":
+                order_manager.receive_signal(order, {"signal_id": signal.id})
+                order_manager.start_validation(order)
+                order_manager.validation_failed(order, [msg] if msg else ["Unknown rejection"])
+            elif status == "FAILED":
+                order_manager.receive_signal(order, {"signal_id": signal.id})
+                order_manager.start_validation(order)
+                order_manager.validation_passed(order, {"shadow_mode": True})
+                order_manager.order_failed(order, msg if msg else "Unknown failure")
+
             logger.info(f"📝 Order recorded: {side} {ticker} x{qty} @ ${price:.2f} - {status}")
         except Exception as e:
             logger.error(f"Failed to record order: {e}")
+            db.rollback()

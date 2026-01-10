@@ -162,4 +162,30 @@ export const getSystemInfo = async (): Promise<SystemInfo> => {
   return response.data;
 };
 
+export const getLatestBriefing = async (): Promise<{ content: string; date: string }> => {
+  const response = await apiClient.get('/briefing/latest');
+  return response.data;
+};
+
+export const generateBriefing = async (): Promise<void> => {
+  await apiClient.post('/briefing/generate');
+};
+
+export interface FeedbackData {
+  target_type: string;
+  target_id: string;
+  feedback_type: 'like' | 'dislike';
+  comment?: string;
+}
+
+export const sendFeedback = async (data: FeedbackData): Promise<{ id: number }> => {
+  const response = await apiClient.post('/feedback/', data);
+  return response.data;
+};
+
+export const getFeedbackList = async (limit: number = 20): Promise<any[]> => {
+  const response = await apiClient.get(`/feedback/?limit=${limit}`);
+  return response.data;
+};
+
 export default apiClient;

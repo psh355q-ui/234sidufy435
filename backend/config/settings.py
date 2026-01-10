@@ -6,7 +6,9 @@ Loads from environment variables with validation.
 from pydantic_settings import BaseSettings
 from pydantic import Field, validator
 from typing import Optional
+from typing import Optional
 import os
+from backend.config.secrets_manager import get_secret
 
 
 class Settings(BaseSettings):
@@ -33,12 +35,13 @@ class Settings(BaseSettings):
         )
     
     # ===== AI API Keys =====
-    anthropic_api_key: str = Field(default="", env="ANTHROPIC_API_KEY")
-    openai_api_key: str = Field(default="", env="OPENAI_API_KEY")
-    gemini_api_key: str = Field(default="", env="GEMINI_API_KEY")  # Keeping for backward compatibility
-    google_api_key: str = Field(default="", env="GOOGLE_API_KEY")  # Primary key for Gemini
-    chatgpt_api_key: str = Field(default="", env="CHATGPT_API_KEY")
-    newsapi_key: str = Field(default_factory=lambda: os.getenv("NEWS_API_KEY", ""), env="NEWS_API_KEY")
+    # ===== AI API Keys =====
+    anthropic_api_key: str = Field(default_factory=lambda: get_secret("ANTHROPIC_API_KEY", ""), env="ANTHROPIC_API_KEY")
+    openai_api_key: str = Field(default_factory=lambda: get_secret("OPENAI_API_KEY", ""), env="OPENAI_API_KEY")
+    gemini_api_key: str = Field(default_factory=lambda: get_secret("GEMINI_API_KEY", ""), env="GEMINI_API_KEY")
+    google_api_key: str = Field(default_factory=lambda: get_secret("GOOGLE_API_KEY", ""), env="GOOGLE_API_KEY")
+    chatgpt_api_key: str = Field(default_factory=lambda: get_secret("CHATGPT_API_KEY", ""), env="CHATGPT_API_KEY")
+    newsapi_key: str = Field(default_factory=lambda: get_secret("NEWS_API_KEY", ""), env="NEWS_API_KEY")
     
     # ===== AI Configuration =====
     ai_max_tokens: int = Field(default=4096, env="AI_MAX_TOKENS")
@@ -85,10 +88,11 @@ class Settings(BaseSettings):
     high_risk_position_reduction_pct: float = Field(default=50.0, env="HIGH_RISK_POSITION_REDUCTION_PCT")
 
     # ===== Trading API Keys =====
-    kis_app_key: Optional[str] = Field(default=None, env="KIS_APP_KEY")
-    kis_app_secret: Optional[str] = Field(default=None, env="KIS_APP_SECRET")
-    kis_account_number: Optional[str] = Field(default=None, env="KIS_ACCOUNT_NUMBER")
-    kis_account_product_code: str = Field(default="01", env="KIS_ACCOUNT_PRODUCT_CODE")
+    # ===== Trading API Keys =====
+    kis_app_key: Optional[str] = Field(default_factory=lambda: get_secret("KIS_APP_KEY"), env="KIS_APP_KEY")
+    kis_app_secret: Optional[str] = Field(default_factory=lambda: get_secret("KIS_APP_SECRET"), env="KIS_APP_SECRET")
+    kis_account_number: Optional[str] = Field(default_factory=lambda: get_secret("KIS_ACCOUNT_NUMBER"), env="KIS_ACCOUNT_NUMBER")
+    kis_account_product_code: str = Field(default_factory=lambda: get_secret("KIS_ACCOUNT_PRODUCT_CODE", "01"), env="KIS_ACCOUNT_PRODUCT_CODE")
     
     # ===== Feature Flags =====
     enable_live_trading: bool = Field(default=False, env="ENABLE_LIVE_TRADING")

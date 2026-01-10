@@ -224,7 +224,13 @@ class SignalExecutor:
 
                     return result
 
-                # 실패 시 재시도
+                # 거부된 경우 (SafetyGuard 등) 재시도 하지 않음
+                if result.status == OrderStatus.REJECTED:
+                    logger.warning(f"Order rejected (no retry): {result.message}")
+                    self.stats["rejected"] += 1
+                    return result
+
+                # 실패 시 재시도 (REJECTED가 아닌 FAILED 등일 때만)
                 if attempt < self.max_retries - 1:
                     logger.warning(f"Execution failed, retrying in 2 seconds...")
                     await asyncio.sleep(2)
@@ -300,6 +306,10 @@ class SignalExecutor:
         position_size = signal["position_size"]
 
         try:
+            # 0. Safety Guard (Pre-check)
+            from backend.execution.safety_guard import get_safety_guard
+            safety_guard = get_safety_guard()
+            
             # 1. 현재 가격 조회
             current_price = await self._get_current_price(kis, ticker)
             if not current_price:
@@ -333,6 +343,38 @@ class SignalExecutor:
                     status=OrderStatus.REJECTED,
                     message=f"Insufficient balance or invalid quantity: {quantity}",
                     error="INSUFFICIENT_BALANCE"
+                )
+
+            # Safety Guard Verification
+            # TODO: Fetch real daily_pnl from KIS if possible. Currently creating a minimal state.
+            portfolio_state = {
+                "balance": balance,
+                "initial_capital": balance, # Assuming current balance ~ initial for now (conservative)
+                "daily_pnl": 0.0 # Placeholder
+            }
+            
+            # Market Data for Liquidity Check (Optional but recommended)
+            # We only have current price here. Ideally we need volume/spread.
+            # Passing minimal data for now to at least check Max Order Amount.
+            market_data = {
+                "current_price": current_price
+            }
+            
+            is_safe, reason = safety_guard.check_order(
+                symbol=ticker, 
+                price=current_price, 
+                quantity=quantity, 
+                portfolio_state=portfolio_state,
+                market_data=market_data
+            )
+            
+            if not is_safe:
+                logger.warning(f"Safety Guard rejected order for {ticker}: {reason}")
+                return ExecutionResult(
+                    success=False,
+                    status=OrderStatus.REJECTED,
+                    message=f"Safety Guard Rejection: {reason}",
+                    error="SAFETY_GUARD_REJECTION"
                 )
 
             # 4. 주문 실행

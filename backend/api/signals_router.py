@@ -94,28 +94,8 @@ _signal_generator = None
 _signal_validator = None
 _notification_manager = None
 
-# WebSocket Connection Manager
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: List[WebSocket] = []
-
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
-
-    def disconnect(self, websocket: WebSocket):
-        if websocket in self.active_connections:
-            self.active_connections.remove(websocket)
-
-    async def broadcast(self, message: Dict):
-        for connection in self.active_connections:
-            try:
-                await connection.send_json(message)
-            except Exception:
-                # Handle broken connections gracefully
-                pass
-
-manager = ConnectionManager()
+# WebSocket Connection Manager - delegate to RealtimeNotifier
+# manager = ConnectionManager() # Removed in favor of RealtimeNotifier
 
 # REMOVED: In-memory storage replaced with PostgreSQL database
 # All signals are now stored in 'trading_signals' table
@@ -271,14 +251,29 @@ async def websocket_endpoint(websocket: WebSocket):
     """
     WebSocket endpoint for real-time signal updates.
     URL: /api/signals/ws
+    
+    Delegates connection management to RealtimeNotifier.
     """
-    await manager.connect(websocket)
+    notifier = get_notifier()
+    
+    # Accept connection
+    await websocket.accept()
+    
+    # Add to notifier
+    # Note: RealtimeNotifier.add_websocket_connection is valid
+    # But we need to handle potential disconnects carefully
+    notifier.add_websocket_connection(websocket)
+    
     try:
         while True:
             # Keep connection alive
+            # Client usually doesn't send much, but we need to listen to detect disconnect
             await websocket.receive_text()
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
+        notifier.remove_websocket_connection(websocket)
+    except Exception as e:
+        # Handle other errors (e.g. connection closed)
+        notifier.remove_websocket_connection(websocket)
 
 
 # ============================================================================
@@ -301,6 +296,7 @@ async def generate_signal_from_news(
     validator = get_validator()
     notifier = get_notifier()
     
+    # ... (rest of the function logic unchanged until _send_signal_notification call) ...
     # Convert request to analysis dict
     analysis = {
         "title": request.title,
@@ -381,15 +377,23 @@ async def generate_signal_from_news(
 async def _send_signal_notification(notifier, signal_data: Dict[str, Any]):
     """Send signal notification (background task)"""
     try:
-        # 1. Send via NotificationManager (Slack/Email)
-        await notifier.send_trading_signal(signal_data, priority="HIGH")
+        # 1. Send via NotificationManager (Slack/Email) AND WebSocket
+        # NotificationManager (RealtimeNotifier) now handles WS broadcast internally
+        # via notify_new_signal or similar logic
         
-        # 2. Broadcast via WebSocket
-        # Format for frontend needs to match: { type: 'new_signal', data: signal }
-        await manager.broadcast({
+        # We need to construct the message in the format RealtimeNotifier expects
+        # Or extend RealtimeNotifier to handle 'new_signal' explicitly if not present
+        
+        # Manually broadcast for now using the notifier's broadcast method
+        await notifier.broadcast_websocket({
             "type": "new_signal",
             "data": signal_data
         })
+        
+        # Also trigger standard notifications (Telegram/Slack)
+        # Note: send_trading_signal might typically handle this, but explicit broadcast ensures WS receives it
+        if hasattr(notifier, 'send_trading_signal'):
+            await notifier.send_trading_signal(signal_data, priority="HIGH")
         
     except Exception as e:
         import logging

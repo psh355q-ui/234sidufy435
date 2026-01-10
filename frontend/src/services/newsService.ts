@@ -29,6 +29,7 @@ export interface NewsArticle {
   has_analysis: boolean;
   sentiment?: string | null;
   urgency?: string | null;
+  market_impact?: string | null;
   actionable?: boolean;
   related_tickers?: string[];
 }
@@ -105,11 +106,10 @@ export interface NewsStats {
     mixed: number;
   };
   actionable_count: number;
-  gemini_usage: {
-    date: string;
+  ollama_usage: {
+    model: string;
     requests_used: number;
-    requests_remaining: number;
-    total_tokens: number;
+    requests_remaining: number | string;
     cost: string;
   };
 }

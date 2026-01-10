@@ -145,9 +145,9 @@ export const NewsAggregation: React.FC = () => {
             icon={<TrendingUp className="text-green-500" />}
           />
           <StatCard
-            title="Gemini 사용량"
-            value={`${stats.gemini_usage.requests_used}/1500`}
-            subtitle={stats.gemini_usage.cost}
+            title="Ollama 사용량"
+            value={`${stats.ollama_usage.requests_used}`}
+            subtitle={stats.ollama_usage.cost}
             icon={<Zap className="text-yellow-500" />}
           />
         </div>
@@ -363,59 +363,124 @@ interface ArticleItemProps {
   onClick: () => void;
 }
 
-const ArticleItem: React.FC<ArticleItemProps> = ({ article, onClick }) => (
-  <div className="p-4 hover:bg-gray-50 transition-colors cursor-pointer" onClick={onClick}>
-    <div className="flex items-start justify-between">
-      <div className="flex-1">
-        <h4 className="font-medium text-gray-900 line-clamp-2">{article.title}</h4>
-        <div className="flex items-center space-x-3 mt-2 text-sm text-gray-500">
-          <span>{article.source}</span>
-          <span>•</span>
-          {article.published_at ? (
-            <span
-              title={formatDateTimeKorean(article.published_at)}
-              className="cursor-help"
-            >
-              {getTimeAgo(article.published_at)} ({formatDateTimeKorean(article.published_at)})
-            </span>
-          ) : (
-            <span>날짜 없음</span>
+const ArticleItem: React.FC<ArticleItemProps> = ({ article, onClick }) => {
+  // Helpers for badge colors
+  const getUrgencyBadge = (urgency?: string | null) => {
+    if (!urgency) return null;
+    const colors = {
+      critical: 'bg-red-100 text-red-800 border-red-200',
+      high: 'bg-orange-100 text-orange-800 border-orange-200',
+      medium: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      low: 'bg-green-100 text-green-800 border-green-200'
+    };
+    const key = urgency.toLowerCase() as keyof typeof colors;
+    return colors[key] ? (
+      <span className={`px-2 py-0.5 text-xs font-medium rounded border ${colors[key]}`}>
+        {urgency.toUpperCase()}
+      </span>
+    ) : null;
+  };
+
+  const getImpactBadge = (impact?: string | null) => {
+    if (!impact) return null;
+    const colors = {
+      bullish: 'bg-green-50 text-green-700 border-green-200',
+      bearish: 'bg-red-50 text-red-700 border-red-200',
+      neutral: 'bg-gray-50 text-gray-600 border-gray-200',
+      uncertain: 'bg-purple-50 text-purple-700 border-purple-200'
+    };
+    const key = impact.toLowerCase() as keyof typeof colors;
+    return colors[key] ? (
+      <span className={`px-2 py-0.5 text-xs font-medium rounded border ${colors[key]}`}>
+        {impact.toUpperCase()}
+      </span>
+    ) : null;
+  };
+
+  return (
+    <div className="p-4 hover:bg-gray-50 transition-colors cursor-pointer" onClick={onClick}>
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <div className="flex items-center space-x-2 mb-1">
+            {article.related_tickers && article.related_tickers.length > 0 && (
+              <div className="flex space-x-1">
+                {article.related_tickers.slice(0, 3).map(ticker => (
+                  <span key={ticker} className="px-1.5 py-0.5 text-xs font-bold bg-blue-100 text-blue-700 rounded">
+                    {ticker}
+                  </span>
+                ))}
+              </div>
+            )}
+            {getUrgencyBadge(article.urgency)}
+            {getImpactBadge(article.market_impact)}
+          </div>
+
+          <h4 className="font-medium text-gray-900 line-clamp-2">{article.title}</h4>
+
+          <div className="flex items-center space-x-3 mt-2 text-sm text-gray-500">
+            <span className="font-medium text-gray-700">{article.source}</span>
+            <span>•</span>
+            {article.published_at ? (
+              <span
+                title={formatDateTimeKorean(article.published_at)}
+                className="cursor-help"
+              >
+                {getTimeAgo(article.published_at)}
+              </span>
+            ) : (
+              <span>날짜 없음</span>
+            )}
+          </div>
+
+          {article.keywords.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {article.keywords.slice(0, 5).map((kw, i) => (
+                <span key={i} className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
+                  {kw}
+                </span>
+              ))}
+            </div>
           )}
         </div>
-        {article.keywords.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-2">
-            {article.keywords.slice(0, 5).map((kw, i) => (
-              <span key={i} className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
-                {kw}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-      <div className="ml-4 flex flex-col items-end space-y-2">
-        {article.has_analysis ? (
-          <span className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded">
-            분석됨
-          </span>
-        ) : (
-          <span className="px-2 py-1 text-xs bg-gray-100 text-gray-500 rounded">
-            미분석
-          </span>
-        )}
-        {article.url && (
-          <a
-            href={article.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:underline"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <ExternalLink size={14} />
-          </a>
-        )}
+
+        <div className="ml-4 flex flex-col items-end space-y-2">
+          {article.has_analysis ? (
+            <div className="flex flex-col items-end space-y-1">
+              {article.actionable && (
+                <span className="px-2 py-1 text-xs font-bold bg-green-100 text-green-700 rounded-full flex items-center">
+                  <TrendingUp size={12} className="mr-1" /> ACTION
+                </span>
+              )}
+              {article.sentiment && (
+                <span className={`text-xs font-medium ${article.sentiment === 'positive' ? 'text-green-600' :
+                    article.sentiment === 'negative' ? 'text-red-600' :
+                      'text-gray-500'
+                  }`}>
+                  {article.sentiment.toUpperCase()}
+                </span>
+              )}
+            </div>
+          ) : (
+            <span className="px-2 py-1 text-xs bg-gray-100 text-gray-500 rounded">
+              미분석
+            </span>
+          )}
+
+          {article.url && (
+            <a
+              href={article.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-400 hover:text-blue-600 mt-1"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ExternalLink size={16} />
+            </a>
+          )}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default NewsAggregation;

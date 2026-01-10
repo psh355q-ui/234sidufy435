@@ -34,7 +34,7 @@ export const AnalysisConfigModal: React.FC<AnalysisConfigModalProps> = ({ isOpen
                         <Brain className="text-purple-600" size={28} />
                         <div>
                             <h2 className="text-xl font-bold text-gray-900">AI 배치 분석</h2>
-                            <p className="text-sm text-gray-600">Gemini 2.5 Flash</p>
+                            <p className="text-sm text-gray-600">Ollama (Llama 3.2:3b)</p>
                         </div>
                     </div>
                     <button
@@ -93,8 +93,8 @@ export const AnalysisConfigModal: React.FC<AnalysisConfigModalProps> = ({ isOpen
                         onClick={handleStartAnalysis}
                         disabled={isAnalyzing}
                         className={`flex-1 flex items-center justify-center space-x-2 px-4 py-2 rounded-lg font-semibold transition-all ${isAnalyzing
-                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700'
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700'
                             }`}
                     >
                         <Brain size={18} />

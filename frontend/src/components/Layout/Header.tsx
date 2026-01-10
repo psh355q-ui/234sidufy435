@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Bell, User, Menu } from 'lucide-react';
+import { Bell, User, Menu, MessageSquare } from 'lucide-react';
+import { Button } from 'antd';
+import { useNavigate } from 'react-router-dom';
 import { NotificationCenter, Notification } from '../Notifications/NotificationCenter';
 import { PersonaModeSwitcher } from '../Persona/ModeSwitcher';
 
@@ -36,6 +38,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
+  const navigate = useNavigate();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
 
@@ -65,6 +68,15 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
         </div>
 
         <div className="flex items-center gap-2 lg:gap-4">
+          <Button
+            type="text"
+            icon={<MessageSquare size={20} />}
+            onClick={() => navigate('/feedback')}
+            className="flex items-center gap-2"
+          >
+            Feedback
+          </Button>
+
           {/* Persona Mode Switcher */}
           <PersonaModeSwitcher />
 

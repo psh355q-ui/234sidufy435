@@ -428,14 +428,18 @@ class Order(Base):
     order_type = Column(String(20), nullable=False, default='market')
     limit_price = Column(Float, nullable=True)
     filled_price = Column(Float, nullable=True)
-    status = Column(String(20), nullable=False, default='pending')
+    filled_quantity = Column(Integer, nullable=True)  # Added for partial fills
+    status = Column(String(20), nullable=False, default='idle')  # Changed default to 'idle'
     order_id = Column(String(100), nullable=True, unique=True)
-    
+
     # Metadata
     created_at = Column(DateTime, nullable=False, default=datetime.now)
+    updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)  # Added for state machine
     filled_at = Column(DateTime, nullable=True)
     signal_id = Column(Integer, ForeignKey('trading_signals.id'), nullable=True)
     error_message = Column(Text, nullable=True)
+    order_metadata = Column(JSONB, nullable=True)  # Added for flexible metadata storage (renamed from 'metadata' to avoid SQLAlchemy conflict)
+    needs_manual_review = Column(Boolean, nullable=False, default=False)  # Added for recovery logic
 
     # Indexes
     __table_args__ = (
@@ -984,3 +988,68 @@ class AgentWeightsHistory(Base):
     
     def __repr__(self):
         return f"<AgentWeightsHistory(id={self.id}, changed_at={self.changed_at}, changed_by='{self.changed_by}')>"
+
+
+class DailyBriefing(Base):
+    """
+    Daily Briefing - AI Generated Daily Market Report
+    
+    Generates a comprehensive market summary including:
+    - Pre-market Gap Analysis (KIS/yfinance)
+    - Dark Pool & Options Flow (OptionsDataFetcher)
+    - Sector Rotation Analysis (SectorRotationAnalyzer)
+    - Market Sentiment (NewsPoller)
+    - Earnings Calendar (EarningsCalendarService)
+    - Macro Economic Events (EconomicCalendarService)
+    
+    Used by:
+    - DailyBriefingService
+    - Frontend Dashboard (Briefing Tab)
+    """
+    __tablename__ = "daily_briefings"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    date = Column(Date, nullable=False, unique=True, index=True)
+    content = Column(Text, nullable=False)  # Markdown content
+    
+    # Structured Data for Charts/Analytics
+    metrics = Column(JSONB, nullable=True)
+    # Expected structure:
+    # {
+    #   "gap_up_count": 12,
+    #   "gap_down_count": 5,
+    #   "leading_sector": "Technology",
+    #   "market_sentiment": "Fear",
+    #   "vix_close": 18.5
+    # }
+    
+    created_at = Column(DateTime, nullable=False, default=datetime.now)
+    updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
+    
+    __table_args__ = (
+        Index('idx_daily_briefing_date', 'date'),
+    )
+    
+    def __repr__(self):
+        return f"<DailyBriefing(date={self.date}, id={self.id})>"
+
+
+class UserFeedback(Base):
+    """사용자가 AI 리포트/시그널에 대해 남긴 피드백"""
+    __tablename__ = "user_feedback"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(50), nullable=True)  # Optional (Login not fully implemented yet)
+    target_type = Column(String(50), nullable=False) # 'report', 'signal', 'briefing'
+    target_id = Column(String(100), nullable=False)  # identifier of the target
+    feedback_type = Column(String(20), nullable=False) # 'like', 'dislike'
+    comment = Column(Text, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.now)
+
+    __table_args__ = (
+        Index('idx_feedback_target', 'target_type', 'target_id'),
+    )
+
+    def __repr__(self):
+        return f"<UserFeedback(id={self.id}, type={self.target_type}, feedback={self.feedback_type})>"
+

@@ -544,23 +544,35 @@ async def execute_kis_order(
             logger.error(f"Order execution failed for {ticker}")
             return None
 
-        # 5. Save order to database
+        # 5. Save order to database using OrderManager
+        from backend.execution.order_manager import OrderManager
+        from backend.execution.state_machine import OrderState
+
         order_id = order_result.get("order_id") or order_result.get("ODNO", "")
 
+        # Create Order with initial state
         order = Order(
             ticker=ticker,
             action=action,
             quantity=quantity,
-            price=current_price,
+            limit_price=current_price,
             order_type="MARKET",
-            status="PENDING",
-            broker="KIS",
+            status=OrderState.IDLE.value,  # Start with IDLE
             order_id=order_id,
             signal_id=signal_id,
             created_at=datetime.now()
         )
 
         db.add(order)
+        db.flush()  # Get the order ID
+
+        # Use OrderManager for state transitions
+        order_manager = OrderManager(db)
+        order_manager.receive_signal(order, {"broker": "KIS", "signal_id": signal_id})
+        order_manager.start_validation(order)
+        order_manager.validation_passed(order, {"broker": "KIS"})
+        order_manager.order_sent(order, order_id)
+
         db.commit()
         db.refresh(order)
 

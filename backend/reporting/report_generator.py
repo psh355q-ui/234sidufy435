@@ -17,7 +17,7 @@ from datetime import date, datetime, timedelta
 from typing import Optional, List, Dict
 from decimal import Decimal
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, select
 
 from backend.core.models.analytics_models import (
     DailyAnalytics,
@@ -78,17 +78,19 @@ class ReportGenerator:
         logger.info(f"Generating daily report for {target_date}")
 
         # Get daily analytics
-        daily_analytics = self.db.query(DailyAnalytics).filter(
-            DailyAnalytics.date == target_date
-        ).first()
+        result = await self.db.execute(
+            select(DailyAnalytics).where(DailyAnalytics.date == target_date)
+        )
+        daily_analytics = result.scalars().first()
 
         if not daily_analytics:
             raise ValueError(f"No daily analytics found for {target_date}")
 
         # Get portfolio snapshot
-        portfolio_snapshot = self.db.query(PortfolioSnapshot).filter(
-            PortfolioSnapshot.snapshot_date == target_date
-        ).first()
+        result = await self.db.execute(
+            select(PortfolioSnapshot).where(PortfolioSnapshot.snapshot_date == target_date)
+        )
+        portfolio_snapshot = result.scalars().first()
 
         # Create report
         report = DailyReport(
@@ -99,9 +101,9 @@ class ReportGenerator:
 
         # Build sections
         report.executive_summary = self._build_executive_summary(daily_analytics, portfolio_snapshot)
-        report.trading_activity = self._build_trading_activity(daily_analytics, target_date)
+        report.trading_activity = await self._build_trading_activity(daily_analytics, target_date)
         report.portfolio_overview = self._build_portfolio_overview(portfolio_snapshot, daily_analytics)
-        report.ai_performance = self._build_ai_performance(daily_analytics, target_date)
+        report.ai_performance = await self._build_ai_performance(daily_analytics, target_date)
         report.risk_metrics = self._build_risk_metrics(daily_analytics)
 
         # Build charts
@@ -174,7 +176,7 @@ class ReportGenerator:
             return ((daily_analytics.portfolio_value_eod - initial_value) / initial_value) * 100
         return Decimal('0')
 
-    def _build_trading_activity(
+    async def _build_trading_activity(
         self,
         daily_analytics: DailyAnalytics,
         target_date: date,
@@ -196,12 +198,15 @@ class ReportGenerator:
         )
 
         # Get top trades
-        top_trades_data = self.db.query(TradeExecution).filter(
-            func.date(TradeExecution.exit_timestamp) == target_date,
-            TradeExecution.status == 'CLOSED',
-        ).order_by(
-            TradeExecution.pnl_usd.desc()
-        ).limit(10).all()
+        result = await self.db.execute(
+            select(TradeExecution).where(
+                func.date(TradeExecution.exit_timestamp) == target_date,
+                TradeExecution.status == 'CLOSED',
+            ).order_by(
+                TradeExecution.pnl_usd.desc()
+            ).limit(10)
+        )
+        top_trades_data = result.scalars().all()
 
         if top_trades_data:
             headers = ["Ticker", "Action", "PnL", "Return %", "Confidence", "AI Source"]
@@ -281,7 +286,7 @@ class ReportGenerator:
 
         return overview
 
-    def _build_ai_performance(
+    async def _build_ai_performance(
         self,
         daily_analytics: DailyAnalytics,
         target_date: date,
@@ -300,15 +305,18 @@ class ReportGenerator:
             performance.cost_per_signal = daily_analytics.ai_cost_usd / daily_analytics.signals_generated
 
         # Build source comparison chart
-        signal_sources = self.db.query(
-            SignalPerformance.source,
-            func.count(SignalPerformance.id).label('count'),
-            func.avg(SignalPerformance.confidence).label('avg_confidence'),
-        ).filter(
-            func.date(SignalPerformance.generated_at) == target_date
-        ).group_by(
-            SignalPerformance.source
-        ).all()
+        result = await self.db.execute(
+            select(
+                SignalPerformance.source,
+                func.count(SignalPerformance.id).label('count'),
+                func.avg(SignalPerformance.confidence).label('avg_confidence'),
+            ).where(
+                func.date(SignalPerformance.generated_at) == target_date
+            ).group_by(
+                SignalPerformance.source
+            )
+        )
+        signal_sources = result.all()
 
         if signal_sources:
             labels = [s.source for s in signal_sources]
@@ -352,10 +360,13 @@ class ReportGenerator:
         """Build portfolio performance chart."""
         start_date = target_date - timedelta(days=lookback_days)
 
-        daily_records = self.db.query(DailyAnalytics).filter(
-            DailyAnalytics.date >= start_date,
-            DailyAnalytics.date <= target_date,
-        ).order_by(DailyAnalytics.date).all()
+        result = await self.db.execute(
+            select(DailyAnalytics).where(
+                DailyAnalytics.date >= start_date,
+                DailyAnalytics.date <= target_date,
+            ).order_by(DailyAnalytics.date)
+        )
+        daily_records = result.scalars().all()
 
         if not daily_records:
             return None
@@ -387,10 +398,13 @@ class ReportGenerator:
         """Build daily P&L chart."""
         start_date = target_date - timedelta(days=lookback_days)
 
-        daily_records = self.db.query(DailyAnalytics).filter(
-            DailyAnalytics.date >= start_date,
-            DailyAnalytics.date <= target_date,
-        ).order_by(DailyAnalytics.date).all()
+        result = await self.db.execute(
+            select(DailyAnalytics).where(
+                DailyAnalytics.date >= start_date,
+                DailyAnalytics.date <= target_date,
+            ).order_by(DailyAnalytics.date)
+        )
+        daily_records = result.scalars().all()
 
         if not daily_records:
             return None
@@ -434,10 +448,13 @@ class ReportGenerator:
         logger.info(f"Generating weekly report for {year}-W{week_number}")
 
         # Get weekly analytics
-        weekly_analytics = self.db.query(WeeklyAnalytics).filter(
-            WeeklyAnalytics.year == year,
-            WeeklyAnalytics.week_number == week_number,
-        ).first()
+        result = await self.db.execute(
+            select(WeeklyAnalytics).where(
+                WeeklyAnalytics.year == year,
+                WeeklyAnalytics.week_number == week_number,
+            )
+        )
+        weekly_analytics = result.scalars().first()
 
         if not weekly_analytics:
             raise ValueError(f"No weekly analytics found for {year}-W{week_number}")
@@ -462,10 +479,13 @@ class ReportGenerator:
         )
 
         # Build daily P&L chart
-        daily_records = self.db.query(DailyAnalytics).filter(
-            DailyAnalytics.date >= weekly_analytics.week_start_date,
-            DailyAnalytics.date <= weekly_analytics.week_end_date,
-        ).order_by(DailyAnalytics.date).all()
+        result = await self.db.execute(
+            select(DailyAnalytics).where(
+                DailyAnalytics.date >= weekly_analytics.week_start_date,
+                DailyAnalytics.date <= weekly_analytics.week_end_date,
+            ).order_by(DailyAnalytics.date)
+        )
+        daily_records = result.scalars().all()
 
         if daily_records:
             labels = [r.date.strftime("%m/%d") for r in daily_records]
@@ -507,10 +527,13 @@ class ReportGenerator:
         logger.info(f"Generating monthly report for {year}-{month:02d}")
 
         # Get monthly analytics
-        monthly_analytics = self.db.query(MonthlyAnalytics).filter(
-            MonthlyAnalytics.year == year,
-            MonthlyAnalytics.month == month,
-        ).first()
+        result = await self.db.execute(
+            select(MonthlyAnalytics).where(
+                MonthlyAnalytics.year == year,
+                MonthlyAnalytics.month == month,
+            )
+        )
+        monthly_analytics = result.scalars().first()
 
         if not monthly_analytics:
             raise ValueError(f"No monthly analytics found for {year}-{month:02d}")

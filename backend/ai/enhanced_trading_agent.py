@@ -31,7 +31,7 @@ from backend.models.trading_decision import TradingDecision
 from backend.services.market_scanner import DynamicScreener, ScreenerCandidate
 from backend.services.market_scanner.massive_api_client import get_massive_client
 from backend.ai.macro import MacroDataCollector, MacroSnapshot, MarketRegime
-from backend.ai.feedback import FeedbackLoop
+from backend.ai.learning.feedback_loop_service import FeedbackLoopService
 from backend.ai.reasoning.skeptic_agent import SkepticAgent, SkepticRecommendation
 from backend.ai.reasoning.macro_consistency_checker import MacroConsistencyChecker
 from backend.intelligence.reporter.daily_briefing import DailyBriefingGenerator
@@ -60,7 +60,7 @@ class EnhancedTradingAgent(TradingAgent):
             massive_api_client=self.massive_client,
         )
         self.macro_collector = MacroDataCollector()
-        self.feedback_loop = FeedbackLoop()
+        self.feedback_loop = FeedbackLoopService()
         self.skeptic_agent = SkepticAgent()
         self.macro_checker = MacroConsistencyChecker()
         self.briefing_generator = DailyBriefingGenerator()
@@ -184,6 +184,35 @@ class EnhancedTradingAgent(TradingAgent):
             market_context=market_context,
             portfolio_context=portfolio_context,
         )
+
+        # [NEW] Phase 7: Small Cap Strategy (Boost & Filter)
+        # Assuming analysis result has market_cap and spread info in features_used or similar
+        # Since TradingAgent.analyze usually returns a decision based on features, 
+        # let's assume valid features are in decision.features_used
+        
+        market_cap = decision.features_used.get('market_cap', 0) if decision.features_used else 0
+        spread_pct = decision.features_used.get('spread_pct', 0) if decision.features_used else 0
+        
+        # 1. Market Cap Boost ($300M ~ $2B)
+        if 300_000_000 <= market_cap <= 2_000_000_000:
+            original_conviction = decision.conviction
+            decision.conviction = min(1.0, decision.conviction * 1.2) # 20% Boost
+            logger.info(f"🚀 Small Cap Boost Applied: {ticker} (Cap: ${market_cap:,.0f}) {original_conviction:.2f}->{decision.conviction:.2f}")
+
+        # 2. Spread Filter (> 2%)
+        if spread_pct > 2.0:
+            logger.warning(f"🛑 High Spread Rejected: {ticker} ({spread_pct:.2f}%)")
+            decision.action = "HOLD"
+            decision.conviction = 0.0
+            decision.reasoning = f"Spread too high ({spread_pct:.2f}%)"
+        
+        # [NEW] Apply Agent Bias (Feedback Loop)
+        trader_bias = self.feedback_loop.get_agent_bias("Trader")
+        if trader_bias != 1.0:
+            original_conviction = decision.conviction
+            decision.conviction = min(1.0, max(0.0, decision.conviction * trader_bias))
+            logger.info(f"🤖 Agent Bias Applied: {original_conviction:.2f} -> {decision.conviction:.2f} (Bias: {trader_bias})")
+            
         result["decision"] = decision
         
         # Step 3: Skeptic Agent 검토
@@ -234,13 +263,13 @@ class EnhancedTradingAgent(TradingAgent):
         
         # Step 4: 예측 기록
         try:
-            await self.feedback_loop.record_prediction(
+            # "prediction" -> "vote" mapping
+            await self.feedback_loop.record_vote(
                 ticker=ticker,
-                action=decision.action,
-                conviction=decision.conviction,
-                model_used="enhanced_trading_agent",
-                entry_price=decision.features_used.get("current_price"),
-                reasoning=decision.reasoning[:200],
+                agent_name="Trader", # Treating base agent as Trader
+                vote=decision.action,
+                price=decision.features_used.get("current_price", 0.0),
+                confidence=decision.conviction
             )
             self.v2_metrics["predictions_recorded"] += 1
         except Exception as e:

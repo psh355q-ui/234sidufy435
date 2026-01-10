@@ -301,12 +301,12 @@ class SignalPerformance(Base):
 
     # Indexes
     __table_args__ = (
-        Index('idx_signal_ticker', 'ticker'),
-        Index('idx_signal_source', 'source'),
-        Index('idx_signal_generated_at', 'generated_at'),
-        Index('idx_signal_status', 'status'),
-        Index('idx_signal_outcome', 'outcome'),
-        Index('idx_signal_market_regime', 'market_regime'),
+        Index('idx_sig_perf_ticker', 'ticker'),
+        Index('idx_sig_perf_source', 'source'),
+        Index('idx_sig_perf_generated_at', 'generated_at'),
+        Index('idx_sig_perf_status', 'status'),
+        Index('idx_sig_perf_outcome', 'outcome'),
+        Index('idx_sig_perf_market_regime', 'market_regime'),
     )
 
     def __repr__(self):

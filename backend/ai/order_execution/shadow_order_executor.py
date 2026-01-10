@@ -61,30 +61,64 @@ class ShadowOrderExecutor:
                return await self._save_order(db, ticker, action, quantity, current_price, signal_id, timestamp)
 
     async def _save_order(self, db: AsyncSession, ticker, action, quantity, price, signal_id, timestamp) -> Dict:
+        from backend.execution.order_manager import OrderManager
+        from backend.execution.state_machine import OrderState
+
         try:
             shadow_order_id = f"SHADOW_{timestamp.strftime('%Y%m%d%H%M%S')}_{ticker}"
-            
+
+            # Create Order instance with initial state
             new_order = Order(
                 ticker=ticker,
                 action=action,
                 quantity=quantity,
-                order_type="market", # Always market for shadow
-                status="FILLED", # Instant fill
+                order_type="market",
+                status=OrderState.IDLE.value,  # Start with IDLE
                 limit_price=None,
-                filled_price=price,
-                created_at=timestamp,
-                filled_at=timestamp,
-                order_id=shadow_order_id, # Distinguisher
+                order_id=shadow_order_id,
                 signal_id=signal_id,
-                error_message="Shadow Trade (Simulated)"
+                created_at=timestamp
             )
-            
+
             db.add(new_order)
+            await db.flush()  # Get the order ID
+
+            # Use OrderManager for state transitions (Note: OrderManager is sync, so we use sync session)
+            # For async contexts, we need to handle this differently
+            # For now, we'll use the basic approach with proper state transitions
+
+            # Since OrderManager is sync and this is async, we'll do the transitions manually
+            # but following the state machine rules
+            from backend.execution.state_machine import state_machine
+
+            # Transition: IDLE → SIGNAL_RECEIVED
+            new_order.status = OrderState.SIGNAL_RECEIVED.value
+            new_order.metadata = {"signal_id": signal_id, "shadow_mode": True}
+            new_order.updated_at = timestamp
+
+            # Transition: SIGNAL_RECEIVED → VALIDATING
+            new_order.status = OrderState.VALIDATING.value
+            new_order.updated_at = timestamp
+
+            # Transition: VALIDATING → ORDER_PENDING
+            new_order.status = OrderState.ORDER_PENDING.value
+            new_order.updated_at = timestamp
+
+            # Transition: ORDER_PENDING → ORDER_SENT
+            new_order.status = OrderState.ORDER_SENT.value
+            new_order.updated_at = timestamp
+
+            # Transition: ORDER_SENT → FULLY_FILLED
+            new_order.status = OrderState.FULLY_FILLED.value
+            new_order.filled_price = price
+            new_order.filled_at = timestamp
+            new_order.updated_at = timestamp
+
             await db.commit()
             await db.refresh(new_order)
-            
+
             logger.info(f"✅ Shadow Order Filled: {ticker} @ {price}")
-            
+
             return {
                 "status": "filled",
                 "order_id": shadow_order_id,

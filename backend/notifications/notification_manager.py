@@ -60,6 +60,9 @@ class NotificationManager:
         self.telegram = telegram_notifier or create_telegram_notifier()
         self.slack = slack_notifier or create_slack_notifier()
         
+        # WebSocket connections (frontend clients)
+        self.websocket_connections: set = set()
+        
         self.settings_path = settings_path or "./config/notification_settings.json"
         
         # Alert history
@@ -156,6 +159,39 @@ class NotificationManager:
             self._history = self._history[-self._max_history:]
     
     # =========================================================================
+    # WebSocket Management
+    # =========================================================================
+
+    def add_websocket_connection(self, websocket):
+        """Add WebSocket connection"""
+        self.websocket_connections.add(websocket)
+        logger.info(f"WebSocket client connected (total: {len(self.websocket_connections)})")
+
+    def remove_websocket_connection(self, websocket):
+        """Remove WebSocket connection"""
+        self.websocket_connections.discard(websocket)
+        logger.info(f"WebSocket client disconnected (total: {len(self.websocket_connections)})")
+
+    async def broadcast_websocket(self, message: Dict[str, Any]):
+        """Broadcast message to all connected WebSocket clients"""
+        if not self.websocket_connections:
+            return
+
+        message_json = json.dumps(message)
+        disconnected = set()
+
+        for ws in self.websocket_connections:
+            try:
+                await ws.send_text(message_json)
+            except Exception as e:
+                logger.error(f"WebSocket send error: {e}")
+                disconnected.add(ws)
+        
+        # Cleanup disconnected clients
+        for ws in disconnected:
+            self.remove_websocket_connection(ws)
+
+    # =========================================================================
     # News Alerts
     # =========================================================================
     
@@ -241,6 +277,20 @@ class NotificationManager:
                 success = await self.slack.send_trading_signal(signal, priority)
                 results["slack"] = success
                 used_channels.append("slack")
+                
+        # Broadcast to WebSocket (Always, or if implied by ALL)
+        # We treat WebSocket as a default live channel
+        try:
+            ws_msg = {
+                "type": "new_signal",
+                "data": signal
+            }
+            await self.broadcast_websocket(ws_msg)
+            results["websocket"] = True
+            used_channels.append("websocket")
+        except Exception as e:
+            logger.error(f"Failed to broadcast signal via WebSocket: {e}")
+            results["websocket"] = False
         
         # Record
         overall_success = any(results.values()) if results else False
@@ -297,6 +347,32 @@ class NotificationManager:
         )
         
         return results
+    
+        return results
+        
+    async def notify_order_filled(self, order_data: Dict[str, Any]):
+        """
+        Notify order filled via WebSocket and optionally other channels.
+        """
+        # WebSocket
+        await self.broadcast_websocket({
+            "type": "order_filled",
+            "data": order_data
+        })
+        
+        # We can also add Telegram/Slack notification here if needed
+        # For now, just WebSocket for real-time updates
+        
+    async def notify_order_sent(self, order_data: Dict[str, Any]):
+        """Notify order sent"""
+        await self.broadcast_websocket({
+            "type": "order_sent",
+            "data": order_data
+        })
+
+    # =========================================================================
+    # Daily Summary
+    # =========================================================================
     
     async def send_daily_summary(
         self,

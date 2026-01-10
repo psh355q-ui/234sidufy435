@@ -59,6 +59,30 @@ class PMAgentMVP:
 
         # PersonaRouter 인스턴스
         self.persona_router = get_persona_router()
+
+        # Phase 2: Persona-specific Hard Rules
+        self.PERSONA_HARD_RULES_DEF = {
+            "trading": {
+                "max_portfolio_risk_pct": 0.15,
+                "max_agent_disagreement": 0.60,
+                "max_position_pct": 0.10
+            },
+            "long_term": {
+                "max_portfolio_risk_pct": 0.20,
+                "max_agent_disagreement": 0.70,
+                "max_position_pct": 0.15
+            },
+            "dividend": {
+                "max_portfolio_risk_pct": 0.10,
+                "max_agent_disagreement": 0.40,
+                "max_position_pct": 0.08
+            },
+            "aggressive": {
+                "max_portfolio_risk_pct": 0.25,
+                "max_agent_disagreement": 0.80,
+                "max_position_pct": 0.20
+            }
+        }
         
         # ===================================================================
         # HARD RULES (Dynamic from PersonaRouter)
@@ -107,9 +131,11 @@ class PMAgentMVP:
 
 출력 형식:
 {
-    "final_decision": "approve" | "reject" | "reduce_size" | "silence",
+    "final_decision": "approve" | "reject" | "reduce_size" | "silence" | "conditional",
     "confidence": 0.0 ~ 1.0,
     "reasoning": "최종 결정 근거",
+    "conditions": ["조건1", "조건2"] (final_decision="conditional"일 때 필수),
+    "human_question": "인간 확인 질문" (conditional일 때),
     "recommended_action": "buy" | "sell" | "hold",
     "position_size_adjustment": 0.0 ~ 1.0 (1.0 = full size, 0.5 = half),
     "risk_assessment": {
@@ -319,34 +345,74 @@ class PMAgentMVP:
     ) -> Dict[str, Any]:
         """
         Hard Rules 검증 (Code-Enforced)
-
-        Returns:
-            {
-                'passed': bool,
-                'violations': List[str]
-            }
+        Uses Persona-specific rules for limits.
         """
         violations = []
-
-        # Rule 1: Position Size > 30%
-        position_size_pct = risk_opinion.get('position_size_pct', 0.0)
-        if position_size_pct > self.HARD_RULES['max_position_size']:
-            violations.append(
-                f"포지션 크기 {position_size_pct*100:.1f}%가 최대 허용치 {self.HARD_RULES['max_position_size']*100}%를 초과합니다"
-            )
-
-        # Rule 2: Total Portfolio Risk > 5%
-        total_risk = portfolio_state.get('total_risk', 0.0)
-        if total_risk > self.HARD_RULES['max_portfolio_risk']:
-            violations.append(
-                f"포트폴리오 리스크 {total_risk*100:.1f}%가 최대 허용치 {self.HARD_RULES['max_portfolio_risk']*100:.1f}%를 초과합니다"
-            )
-
-        # Rule 3: Agent Disagreement (Dynamic from Persona)
-        # 현재 Persona의 max_agent_disagreement 가져오기
-        current_persona_rules = self.persona_router.get_hard_rules()
-        max_disagreement = current_persona_rules.get('max_agent_disagreement', 0.67)
+        
+        # Get Current Persona Rules
         current_mode = self.persona_router.get_current_mode()
+        persona_key = current_mode.value if hasattr(current_mode, 'value') else str(current_mode)
+        
+        # Fallback to default if persona not in map
+        rules = self.PERSONA_HARD_RULES_DEF.get(persona_key, self.PERSONA_HARD_RULES_DEF['trading'])
+        
+        # Rule 1: Position Size Limit (Persona Specific)
+        # Check absolute hard cap (30%) first, then persona limit
+        position_size_pct = risk_opinion.get('position_size_pct', 0.0)
+        
+        if position_size_pct > self.HARD_RULES['max_position_size']: # 30% Absolute Cap
+             violations.append(
+                f"포지션 크기 {position_size_pct*100:.1f}%가 시스템 절대 한도 {self.HARD_RULES['max_position_size']*100}%를 초과합니다"
+            )
+        elif position_size_pct > rules['max_position_pct']: # Persona limit
+            violations.append(
+                f"포지션 크기 {position_size_pct*100:.1f}%가 현재 페르소나({persona_key}) 한도 {rules['max_position_pct']*100:.1f}%를 초과합니다"
+            )
+
+        # Rule 2: Total Portfolio Risk (Persona Specific)
+        total_risk = portfolio_state.get('total_risk', 0.0)
+        
+        # Check absolute cap (5%) first? Or just use persona rule?
+        # Plan implies specific persona rules: 15%, 20%, 10%, 25%.
+        # Legacy hard rule was 5%. The new rules are much looser.
+        # I will use the persona rule, but warn if it exceeds the 'safe' 5% legacy baseline if desired?
+        # No, the plan replaces the 5% fixed limit.
+        
+        if total_risk > rules['max_portfolio_risk_pct']:
+            violations.append(
+                f"포트폴리오 리스크 {total_risk*100:.1f}%가 현재 페르소나({persona_key}) 한도 {rules['max_portfolio_risk_pct']*100:.1f}%를 초과합니다"
+            )
+
+        # Rule 3: Agent Disagreement (Directional) -- Updated to use pre-fetched rules
+        max_disagreement = rules['max_agent_disagreement']
+
+        # Debug info
+        logger.info(
+            f"🔍 VALIDATION DEBUG: Persona={persona_key}, Rules={{Risk: {rules['max_portfolio_risk_pct']:.2%}, "
+            f"Pos: {rules['max_position_pct']:.2%}, Disagree: {max_disagreement:.2%}}}"
+        )
+
+        disagreement = self._calculate_directional_disagreement(
+            votes=[
+                {'action': trader_opinion.get('action', 'pass'), 'weight': 0.35},
+                {'action': risk_opinion.get('recommendation', 'reject'), 'weight': 0.35},
+                {'action': analyst_opinion.get('action', 'pass'), 'weight': 0.30}
+            ]
+        )
+        
+        # logger.info(...) already in code, keeping logic concise
+        if disagreement > max_disagreement:
+             violations.append(
+                 f"Agent 방향성 불일치 {disagreement*100:.0f}%가 최대 허용치 {max_disagreement*100:.0f}%를 초과합니다 (Persona: {persona_key})"
+            )
+            
+        # Update validation for Position Size and Portfolio Risk using Persona Rules
+        # (Overwriting logic for Rule 1 & 2 implies we should have replaced them, 
+        # but since this tool replaces chunks, I will modify them in subsequent chunks or assumes default usage is okay for now 
+        # BUT wait, I need to apply persona_hard_rules to Rule 1 & 2 too.
+        # I will inject a helper method for getting current rules and update Rule 1 & 2 in a separate tool call or larger chunk if possible.
+        # For now, let's stick to replacing Rule 3 logic.)
+
         
         actions = [
             trader_opinion.get('action', 'pass'),
@@ -454,6 +520,41 @@ class PMAgentMVP:
             'violations': violations
         }
 
+    def _calculate_directional_disagreement(self, votes: List[Dict[str, Any]]) -> float:
+        """
+        Calculate disagreement based on direction (Attack vs Defense).
+        Neutral votes are excluded from disagreement calculation.
+        """
+        directions = {
+            "attack": ["buy", "매수", "approve", "recommend"],
+            "defense": ["sell", "reduce_size", "축소", "reject"],
+            "neutral": ["hold", "보류", "pass", "silence"]
+        }
+        
+        attack_weight = 0.0
+        defense_weight = 0.0
+        
+        for v in votes:
+            action = v.get('action', '').lower()
+            weight = v.get('weight', 0.0)
+            
+            if action in directions['attack']:
+                attack_weight += weight
+            elif action in directions['defense']:
+                defense_weight += weight
+            # Neutral is ignored
+            
+        total = attack_weight + defense_weight
+        if total == 0:
+            return 0.0
+            
+        minority = min(attack_weight, defense_weight)
+        # Disagreement is the ratio of the minority opinion to the total non-neutral opinion
+        # e.g. 0.7 vs 0.3 -> disagreement is 0.3 / 1.0 = 0.3
+        # e.g. 0.35 vs 0.35 -> disagreement is 0.35 / 0.7 = 0.5 (maximum disagreement)
+        # Formula from plan: return minority / total
+        return minority / total
+
     def _build_prompt(
         self,
         symbol: str,
@@ -537,9 +638,14 @@ class PMAgentMVP:
             result_dict['hard_rules_passed'] = True
 
         # Ensure compatibility
-        valid_actions = ['approve', 'reject', 'reduce_size', 'silence']
+        valid_actions = ['approve', 'reject', 'reduce_size', 'silence', 'conditional']
         if result_dict.get('action') not in valid_actions:
             result_dict['action'] = 'reject'
+            
+        # Map conditional -> approve for legacy compatibility (optional, or keep as conditional)
+        # If final_decision is conditional, ensures action is at least 'hold' or 'conditional'
+        if result_dict.get('final_decision') == 'conditional':
+             result_dict['action'] = 'conditional' # Ensure action matches if used elsewhere
             
         # Instantiate and Validate with Pydantic
         return PMDecision(**result_dict)

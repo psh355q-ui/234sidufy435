@@ -238,6 +238,29 @@ async def lifespan(app: FastAPI):
         )
     # (In a real setup, you would register mock_redis with health_monitor)
 
+    # 🔄 Order Recovery on Startup (State Machine Phase 2)
+    try:
+        from backend.execution.order_manager import OrderManager
+        from backend.execution.recovery import OrderRecovery
+        from backend.database.repository import get_sync_session
+
+        logger.info("🔄 Starting Order Recovery...")
+        db = get_sync_session()
+        order_manager = OrderManager(db, broker_client=None)  # broker_client will be added later
+        recovery = OrderRecovery(order_manager)
+
+        recovery_result = await recovery.recover_on_startup()
+
+        if recovery_result['total'] > 0:
+            logger.info(f"✅ Order Recovery Complete: {recovery_result['recovered']}/{recovery_result['total']} recovered")
+            if recovery_result['failed'] > 0:
+                logger.warning(f"⚠️ {recovery_result['failed']} orders need manual review")
+        else:
+            logger.info("✅ No pending orders to recover")
+    except Exception as e:
+        logger.error(f"❌ Order Recovery failed: {e}")
+        # Don't fail startup if recovery fails
+
     # 📊 Initialize and start Stock Price Scheduler
     try:
         from backend.services.stock_price_scheduler import get_stock_price_scheduler
@@ -324,6 +347,17 @@ async def lifespan(app: FastAPI):
             logger.info("✅ News Poller started (5m interval - Pre-filtered AI Analysis)")
         except Exception as e:
             logger.warning(f"⚠️ Failed to start News Poller: {e}")
+            
+    # 🆕 Initialize Event Subscriber (Order -> WebSocket bridge)
+    try:
+        from backend.events import event_bus
+        from backend.notifications.event_subscriber import setup_event_subscribers
+        from backend.notifications.notification_manager import get_notification_manager
+        
+        setup_event_subscribers(event_bus, get_notification_manager())
+        logger.info("✅ Event Subscriber initialized (Order -> WebSocket bridge)")
+    except Exception as e:
+        logger.warning(f"⚠️ Failed to initialize Event Subscriber: {e}")
     else:
         logger.info("⏭️ Embedded News Poller disabled (DISABLE_EMBEDDED_NEWS_POLLER=1)")
 
@@ -579,6 +613,22 @@ try:
     logger.info("Monitoring router registered")
 except Exception as e:
     logger.warning(f"Monitoring router not available: {e}")
+
+# NEW: Briefing Router (Phase 3)
+try:
+    from backend.api.briefing_router import router as briefing_router
+    app.include_router(briefing_router)
+    logger.info("Briefing router registered")
+except Exception as e:
+    logger.warning(f"Briefing router not available: {e}")
+
+# Feedback Router (Frontend Integration Phase)
+try:
+    from backend.api.feedback_router import router as feedback_router
+    app.include_router(feedback_router)
+    logger.info("Feedback router registered")
+except Exception as e:
+    logger.warning(f"Feedback router not available: {e}")
 
 # Data Backfill (Historical Data Seeding)
 try:
@@ -1182,3 +1232,10 @@ try:
     logger.info("✅ War Room MVP router registered (3+1 Agent System)")
 except Exception as e:
     logger.warning(f"❌ War Room MVP router not available: {e}")
+
+try:
+    from backend.api.feedback_router import router as feedback_router
+    app.include_router(feedback_router, prefix="/api")
+    logger.info("✅ Feedback router registered")
+except Exception as e:
+    logger.error(f"❌ Feedback router not available: {e}")

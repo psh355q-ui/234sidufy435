@@ -56,25 +56,24 @@ class RiskAgentMVP:
         self.MIN_CONFIDENCE_FOR_FULL_SIZE = 0.80  # 80% confidence required
 
         # System prompt
-        self.system_prompt = """당신은 전문 리스크 관리자입니다.
+        self.system_prompt = """당신은 'War Room'의 방어적 리스크 관리자(Defensive Risk Manager)입니다. 수익 가능성은 Trader Agent가 볼 것입니다. 당신은 오직 **'이 거래가 어떻게 잘못될 수 있는가?'**에만 집중하십시오.
 
 역할:
-1. 리스크 평가 및 Stop Loss/Take Profit 설정
-2. 시장 감정 및 심리 분석
-3. 배당 일정 리스크 체크
-4. 포지션 사이즈 추천 (최종 계산은 코드가 수행)
+1. **모든 거래를 의심하십시오.** Trader가 "대박 기회"라고 해도, 당신은 그 이면의 함정을 찾아야 합니다.
+2. **"최악의 시나리오(Worst Case)"를 항상 가정하십시오.** (예: 어닝 쇼크, 전쟁 발발, 금리 급등)
+3. 단순한 변동성이 아니라, **'상관관계 리스크(Correlation Trap)'**를 경고하십시오. (예: "기술주 전체가 무너지면 얘도 못 버팁니다")
+4. 당신의 승인은 "안전하다"는 뜻이 아니라, **"손실이 감내 가능하다(Calculated Risk)"**는 뜻이어야 합니다.
 
 분석 원칙:
-- 손실 방지 최우선
-- 감정/심리적 요소 고려 (공포/탐욕 지수, 변동성)
-- 배당락일 전후 리스크 평가
-- Stop Loss는 기술적 지지선 기반
+- **Capital Preservation First**: 원금 보존이 최우선입니다.
+- **Paranoid Mode**: 낙관 편향을 제거하고 철저히 비관적으로 보십시오.
+- **Hard Numbers**: "위험해 보인다" 대신, "하락 시 -15% 손실 예상"처럼 숫자로 말하십시오.
 
-출력 형식:
+출력 형식 (JSON):
 {
     "risk_level": "low" | "medium" | "high" | "extreme",
     "confidence": 0.0 ~ 1.0,
-    "reasoning": "구체적 리스크 근거",
+    "reasoning": "리스크 관점의 거부/축소 사유 (3줄 요약)",
     "stop_loss_pct": 손실 한도 (예: 0.02 = 2%),
     "take_profit_pct": 목표 수익 (예: 0.10 = 10%),
     "max_position_pct": 최대 포지션 비율 추천 (예: 0.15 = 15%),
@@ -82,14 +81,22 @@ class RiskAgentMVP:
     "volatility_risk": 0.0 ~ 10.0,
     "dividend_risk": "none" | "ex-dividend-near" | "cut-risk",
     "fear_greed_index": 0 ~ 100 (공포 ~ 탐욕),
-    "recommendation": "approve" | "reduce_size" | "reject"
+    "recommendation": "approve" | "reduce_size" | "reject",
+    "position_sizing": {"recommended_pct": 3.5, "reason": "높은 베타 고려"},
+    "var_95": -8.2,
+    "beta": 2.0,
+    "max_loss_scenario": {"event": "정책 변화", "loss_pct": -15},
+    "risk_decomposition": {
+        "structural": "추세 붕괴 위험",
+        "event": "트럼프 취임",
+        "sentiment": "과매도"
+    }
 }
 
 중요:
-- **반드시 한글로 응답할 것** (reasoning 필드는 한국어로 작성)
-- risk_level이 "extreme"이면 recommendation은 "reject"
-- Stop Loss는 반드시 설정 (최소 1%, 최대 10%)
-- 감정 지표가 극단적이면 경고
+- **Trader Agent의 낙관론에 휘둘리지 마십시오.**
+- risk_level이 "extreme"이면 recommendation은 무조건 "reject"입니다.
+- **반드시 한글로 응답할 것.**
 """
 
     def analyze(
@@ -97,9 +104,10 @@ class RiskAgentMVP:
         symbol: str,
         price_data: Dict[str, Any],
         trader_opinion: Optional[Dict[str, Any]] = None,
-        market_data: Optional[Dict[str, Any]] = None,
-        dividend_info: Optional[Dict[str, Any]] = None,
-        portfolio_context: Optional[Dict[str, Any]] = None
+        market_conditions: Optional[Dict[str, Any]] = None,
+        dividend_info: Optional[str] = None,
+        portfolio_state: Optional[Dict[str, Any]] = None,
+        option_data: Optional[Dict[str, Any]] = None # [Phase 3]
     ) -> Dict[str, Any]:
         """
         리스크 분석 및 포지션 사이즈 계산
@@ -112,11 +120,11 @@ class RiskAgentMVP:
             symbol=symbol,
             price_data=price_data,
             trader_opinion=trader_opinion,
-            market_data=market_data,
-            dividend_info=dividend_info
+            market_conditions=market_conditions,
+            dividend_info=dividend_info,
+            portfolio_state=portfolio_state,
+            option_data=option_data
         )
-
-        # Call Gemini API
         try:
             response = self.model.generate_content([
                 self.system_prompt,
@@ -130,11 +138,11 @@ class RiskAgentMVP:
             position_size_pct = 0.0
             kelly_breakdown = {}
             
-            if portfolio_context and trader_opinion:
+            if portfolio_state and trader_opinion:
                 position_sizing = self._calculate_position_size(
                     stop_loss_pct=result_dict.get('stop_loss_pct', 0.02),
                     confidence=trader_opinion.get('confidence', 0.5),
-                    portfolio_context=portfolio_context,
+                    portfolio_context=portfolio_state,
                     current_price=price_data['current_price'],
                     risk_level=result_dict.get('risk_level', 'medium')
                 )
@@ -173,6 +181,11 @@ class RiskAgentMVP:
                 'volatility_risk': result_dict.get('volatility_risk'),
                 'dividend_risk': result_dict.get('dividend_risk'),
                 'kelly_calculation': kelly_breakdown,
+                'position_sizing_recommendation': result_dict.get('position_sizing'),
+                'var_95': result_dict.get('var_95'),
+                'beta': result_dict.get('beta'),
+                'max_loss_scenario': result_dict.get('max_loss_scenario'),
+                'risk_decomposition': result_dict.get('risk_decomposition'),
                 'warnings': []
             }
             
@@ -219,48 +232,65 @@ class RiskAgentMVP:
         symbol: str,
         price_data: Dict[str, Any],
         trader_opinion: Optional[Dict[str, Any]] = None,
-        market_data: Optional[Dict[str, Any]] = None,
-        dividend_info: Optional[Dict[str, Any]] = None
+        market_conditions: Optional[Dict[str, Any]] = None,
+        dividend_info: Optional[str] = None,
+        portfolio_state: Optional[Dict[str, Any]] = None,
+        option_data: Optional[Dict[str, Any]] = None
     ) -> str:
         """Construct risk analysis prompt"""
-        prompt = f"Analyze risk for {symbol} based on the following data:\n\n"
+        prompt_parts = [f"Analyze risk for {symbol} based on the following data:\n"]
 
         # 1. Price Volatility
-        prompt += "1. Price & Volatility:\n"
-        prompt += f"- Current Price: {price_data.get('current_price')}\n"
-        prompt += f"- 52W High: {price_data.get('high_52w')}\n"
-        prompt += f"- 52W Low: {price_data.get('low_52w')}\n"
-        prompt += f"- Volatility: {price_data.get('volatility', 'Unknown')}\n\n"
+        prompt_parts.append("1. Price & Volatility:")
+        prompt_parts.append(f"- Current Price: {price_data.get('current_price')}")
+        prompt_parts.append(f"- 52W High: {price_data.get('high_52w')}")
+        prompt_parts.append(f"- 52W Low: {price_data.get('low_52w')}")
+        prompt_parts.append(f"- Volatility: {price_data.get('volatility', 'Unknown')}\n")
 
         # 2. Trader Opinion (Attack view)
-        prompt += "2. Trader Opinion (Attack View):\n"
+        prompt_parts.append("2. Trader Opinion (Attack View):")
         if trader_opinion:
-            prompt += f"- Action: {trader_opinion.get('action')}\n"
-            prompt += f"- Confidence: {trader_opinion.get('confidence')}\n"
-            prompt += f"- Reasoning: {trader_opinion.get('reasoning')}\n"
+            prompt_parts.append(f"- Action: {trader_opinion.get('action')}")
+            prompt_parts.append(f"- Confidence: {trader_opinion.get('confidence')}")
+            prompt_parts.append(f"- Reasoning: {trader_opinion.get('reasoning')}")
         else:
-            prompt += "No trader opinion available.\n"
-        prompt += "\n"
+            prompt_parts.append("No trader opinion available.")
+        prompt_parts.append("\n")
 
         # 3. Market Sentiment
-        prompt += "3. Market Conditions:\n"
-        if market_data:
-            sentiment = market_data.get('market_sentiment', 'Neutral')
-            vix = market_data.get('vix', 'Unknown')
-            prompt += f"- Market Sentiment: {sentiment}\n"
-            prompt += f"- VIX: {vix}\n"
+        prompt_parts.append("3. Market Conditions:")
+        if market_conditions:
+            sentiment = market_conditions.get('market_sentiment', 'Neutral')
+            vix = market_conditions.get('vix', 'Unknown')
+            prompt_parts.append(f"- Market Sentiment: {sentiment}")
+            prompt_parts.append(f"- VIX: {vix}")
         else:
-             prompt += "No market data.\n"
-        prompt += "\n"
+             prompt_parts.append("No market data.")
+        prompt_parts.append("\n")
         
         # 4. Dividend Info
-        prompt += "4. Dividend Information:\n"
+        prompt_parts.append("4. Dividend Information:")
         if dividend_info:
-            prompt += f"{str(dividend_info)}\n"
+            prompt_parts.append(f"배당 정보: {dividend_info}")
         else:
-            prompt += "No dividend info.\n"
+            prompt_parts.append("No dividend info.")
+        prompt_parts.append("\n")
+
+        # [Phase 3] Option Data Volatility Check
+        if option_data:
+            prompt_parts.append("\n옵션 내재변동성(IV) 및 리스크:")
+            prompt_parts.append(f"- Put/Call Ratio: {option_data.get('put_call_ratio', 'N/A')}")
+            prompt_parts.append(f"- Max Pain Price: ${option_data.get('max_pain', 'N/A')}")
+            current_price = price_data.get('current_price', 0)
+            max_pain = float(option_data.get('max_pain', 0))
+            if max_pain > 0 and current_price > 0:
+                deviation = (current_price - max_pain) / current_price * 100
+                prompt_parts.append(f"- Current vs Max Pain: {deviation:+.2f}% (Deviation)")
+            prompt_parts.append("\n")
+
+        prompt_parts.append("위 정보를 바탕으로 리스크를 분석하고 JSON 형식으로 답변하세요.")
             
-        return prompt
+        return "\n".join(prompt_parts)
 
     def _parse_response(self, response_text: str) -> Dict[str, Any]:
         """Deprecated: Use _parse_json_response and Pydantic validation in analyze"""

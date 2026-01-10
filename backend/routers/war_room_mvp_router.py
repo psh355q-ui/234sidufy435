@@ -28,6 +28,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from execution.shadow_trading_mvp import ShadowTradingMVP, ShadowTradingStatus
 from backend.data.news_models import get_db
 from backend.ai.mvp.data_helper import prepare_additional_data
+from backend.ai.mvp.enhanced_data_provider import EnhancedDataProvider
 import yfinance as yf
 
 # ============================================================================
@@ -176,6 +177,12 @@ def fetch_market_data(symbol: str) -> Dict[str, Any]:
 
         # Market sentiment based on price vs MA50
         market_sentiment = 0.6 if current_price > ma50 else 0.4
+        
+        # [Phase 3] Enhanced Data Fetching
+        print(f"📊 [Enhanced] Fetching Multi-TF, Options, Events for {symbol}...")
+        multi_tf_data = EnhancedDataProvider.get_multi_timeframe_data(symbol)
+        option_data = EnhancedDataProvider.get_option_data(symbol)
+        event_data = EnhancedDataProvider.get_event_proximity(symbol)
 
         return {
             "price_data": {
@@ -206,7 +213,10 @@ def fetch_market_data(symbol: str) -> Dict[str, Any]:
                 "market_cap": info.get('marketCap', 0),
                 "sector": info.get('sector', 'Unknown'),
                 "industry": info.get('industry', 'Unknown')
-            }
+            },
+            "multi_timeframe": multi_tf_data,
+            "option_data": option_data,
+            "events": event_data
         }
     except Exception as e:
         print(f"⚠️  Failed to fetch market data for {symbol}: {e}")
@@ -239,23 +249,28 @@ def fetch_market_data(symbol: str) -> Dict[str, Any]:
 # War Room MVP Endpoints
 # ============================================================================
 
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+
+# ... imports ...
+
 @router.post("/deliberate")
 async def deliberate(request: DeliberationRequest, db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
     MVP 전쟁실 심의
-
+    
     3+1 Agent 시스템:
     - Trader Agent MVP (35%)
     - Risk Agent MVP (35%)
     - Analyst Agent MVP (30%)
     - PM Agent MVP (Final Decision)
-
+    
     Parameters:
         - symbol: 종목 심볼 (필수)
         - action_context: 액션 컨텍스트 (기본값: "new_position")
         - market_data: 시장 데이터 (옵셔널 - 자동으로 yfinance에서 가져옴)
         - portfolio_state: 포트폴리오 상태 (옵셔널 - Shadow Trading에서 가져옴)
-
+    
     Returns:
         - final_decision: approve/reject/reduce_size/silence
         - recommended_action: buy/sell/hold
@@ -264,13 +279,44 @@ async def deliberate(request: DeliberationRequest, db: Session = Depends(get_db)
         - validation_result: Hard Rules 검증 결과
     """
     try:
-        # 1. Fetch market data if not provided
-        market_data = request.market_data
-        if not market_data:
-            print(f"📊 Fetching real-time market data for {request.symbol}...")
-            market_data = fetch_market_data(request.symbol)
+        loop = asyncio.get_event_loop()
+        
+        # 1. Prepare Fetch Tasks (Parallel Execution)
+        tasks = []
+        
+        # Task A: Fetch Market Data (if missing)
+        market_data_task = None
+        if not request.market_data:
+            print(f"📊 [Async] Fetching real-time market data for {request.symbol}...")
+            # Run blocking yfinance calls in thread pool
+            market_data_task = loop.run_in_executor(None, fetch_market_data, request.symbol)
+        else:
+             # Already provided
+             market_data_task = asyncio.create_task(asyncio.sleep(0, result=request.market_data))
 
-        # 2. Get portfolio state from Shadow Trading if not provided
+        # Task B: Fetch Additional Data (if missing)
+        additional_data_task = None
+        if not request.additional_data:
+            print(f"📰 [Async] Fetching news and additional data for {request.symbol}...")
+            # Run blocking DB/News calls in thread pool
+            additional_data_task = loop.run_in_executor(None, prepare_additional_data, request.symbol, db)
+        else:
+            # Already provided
+            additional_data_task = asyncio.create_task(asyncio.sleep(0, result=request.additional_data))
+            
+        # 2. Execute Data Fetching
+        market_data, additional_data = await asyncio.gather(market_data_task, additional_data_task)
+        
+        # Handle failures/empty data
+        if not additional_data:
+             additional_data = {
+                'news_articles': [],
+                'macro_indicators': None,
+                'institutional_data': None,
+                'chipwar_events': []
+            }
+            
+        # 3. Get portfolio state (Shadow Trading - Memory Operation, fast enough)
         portfolio_state = request.portfolio_state
         if not portfolio_state:
             if shadow_trading and shadow_trading.status == ShadowTradingStatus.ACTIVE:
@@ -304,23 +350,6 @@ async def deliberate(request: DeliberationRequest, db: Session = Depends(get_db)
                     "total_risk": 0.0,
                     "position_count": 0,
                     "current_positions": []
-                }
-
-        # 3. Prepare additional data if not provided (News, Macro, etc.)
-        additional_data = request.additional_data
-        if not additional_data:
-            try:
-                print(f"📰 Fetching news and additional data for {request.symbol}...")
-                additional_data = prepare_additional_data(request.symbol, db)
-                print(f"   → Found {len(additional_data.get('news_articles', []))} news articles")
-            except Exception as e:
-                print(f"⚠️ Failed to prepare additional data: {e}")
-                # Fallback to empty data
-                additional_data = {
-                    'news_articles': [],
-                    'macro_indicators': None,
-                    'institutional_data': None,
-                    'chipwar_events': []
                 }
 
         # 4. Run deliberation (Dual Mode)

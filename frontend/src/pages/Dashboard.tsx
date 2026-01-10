@@ -36,8 +36,8 @@
 
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, TrendingDown, DollarSign, Activity, PieChart, Zap, Layers, RefreshCw } from 'lucide-react';
-import { getPortfolio } from '../services/api';
+import { TrendingUp, TrendingDown, DollarSign, Activity, PieChart, Zap, Layers, RefreshCw, FileText } from 'lucide-react';
+import { getPortfolio, getLatestBriefing } from '../services/api';
 import { Card } from '../components/common/Card';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import {
@@ -48,6 +48,8 @@ import {
 } from '../components/Analysis/AdvancedCharts';
 import { InteractivePortfolio } from '../components/Portfolio/InteractivePortfolio';
 import GlobalMacroPanel from '../components/GlobalMacroPanel';
+import { ReportViewer } from '../components/ReportViewer';
+import { FeedbackComponent } from '../components/FeedbackComponent';
 
 type ChartTab = 'performance' | 'realtime' | 'sectors' | 'risk' | 'rebalance' | 'macro';
 
@@ -64,6 +66,19 @@ export const Dashboard: React.FC = () => {
     queryKey: ['portfolio'],
     queryFn: getPortfolio,
     refetchInterval: 10000, // Refresh every 10 seconds
+  });
+
+  // Fetch Daily Briefing
+  const {
+    data: briefingData,
+    isLoading: briefingLoading,
+    error: briefingError,
+    refetch: briefingRefetch
+  } = useQuery({
+    queryKey: ['briefing', 'latest'],
+    queryFn: getLatestBriefing,
+    retry: 1,
+    refetchOnWindowFocus: false,
   });
 
   if (portfolioLoading) {
@@ -201,13 +216,52 @@ export const Dashboard: React.FC = () => {
         </Card>
       </div>
 
+      {/* Daily Briefing Section (New Prominent Location) */}
+      <Card className="border-l-4 border-l-purple-500">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <FileText className="text-purple-600" size={24} />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900">Daily AI Briefing</h2>
+          </div>
+          <button
+            onClick={() => briefingRefetch()}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            title="Refresh Briefing"
+          >
+            <RefreshCw size={18} className={briefingLoading ? "animate-spin text-gray-400" : "text-gray-500"} />
+          </button>
+        </div>
+
+        {briefingLoading ? (
+          <div className="flex justify-center py-10">
+            <LoadingSpinner size="md" />
+          </div>
+        ) : briefingError ? (
+          <div className="bg-red-50 text-red-600 p-4 rounded text-center">
+            Failed to load briefing.
+          </div>
+        ) : (
+          <div className="bg-gray-50 rounded-lg border p-4">
+            <ReportViewer
+              content={briefingData?.content || "No briefing available for today."}
+              date={briefingData?.date}
+            />
+            <div className="mt-4 flex justify-end">
+              <FeedbackComponent targetType="report" targetId={`briefing_${briefingData?.date}`} />
+            </div>
+          </div>
+        )}
+      </Card>
+
       {/* Advanced Analytics Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-3">
           <Card>
-            <div className="flex items-center justify-between mb-6 border-b pb-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 border-b pb-4 gap-4">
               <h2 className="text-xl font-semibold text-gray-800">Portfolio Analytics</h2>
-              <div className="flex space-x-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setActiveTab('performance')}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'performance'
@@ -264,6 +318,7 @@ export const Dashboard: React.FC = () => {
               {renderChart()}
             </div>
           </Card>
+
         </div>
       </div >
 

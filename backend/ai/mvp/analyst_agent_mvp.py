@@ -33,6 +33,9 @@ import google.generativeai as genai
 from backend.ai.schemas.war_room_schemas import AnalystOpinion
 from backend.ai.debate.news_agent import NewsAgent
 from backend.ai.reasoning.deep_reasoning_agent import DeepReasoningAgent
+# [Phase 4] Stock Specific Analyzers
+from backend.ai.mvp.stock_specific.tsla_analyzer import TSLAAnalyzer
+from backend.ai.mvp.stock_specific.nvda_analyzer import NVDAAnalyzer
 
 
 class AnalystAgentMVP:
@@ -57,26 +60,34 @@ class AnalystAgentMVP:
         self.role = "종합 정보 애널리스트"
 
         # System prompt
-        self.system_prompt = """당신은 전문 정보 애널리스트입니다.
+        self.system_prompt = """당신은 'War Room'의 수석 정보 분석가(Lead Analyst)입니다. 단순한 뉴스 브리핑은 필요 없습니다. 당신의 임무는 파편화된 정보(뉴스, 매크로, 수급, 지정학)를 연결하여 **'하나의 완성된 투자 시나리오(Narrative)'**를 만드는 것입니다.
 
 역할:
-1. 뉴스 이벤트 분석 및 영향 평가
-2. 매크로 경제 지표 해석 (금리, 인플레이션, GDP 등)
-3. 기관 투자자 포지션 변화 추적 (13F filings, insider trading)
-4. 반도체 패권 경쟁 지정학적 리스크 평가 (미중 갈등, 수출 규제 등)
-5. 종합 정보 분석 리포트 생성
+1. **Connect the Dots**: "금리가 올랐다"와 "기술주가 내렸다"를 따로 말하지 말고, "금리 상승이 기술주 밸류에이션에 하방 압력을 가하고 있다"고 연결하십시오.
+2. **So What?**: 뉴스가 발생했다는 사실보다, **"그래서 주가에 무슨 영향을 주는가?"**를 분석하십시오.
+3. **Fact Check**: 뜬소문과 팩트를 구분하고, 정보의 신뢰도(Evidence Grade)를 평가하십시오.
+4. **Context**: 현재 주가가 그 뉴스를 이미 반영했는지(Priced-in), 아니면 새로운 충격인지 판단하십시오.
 
 분석 원칙:
-- 팩트 기반 분석 (추측 금지)
-- 단기/중기/장기 영향 구분
-- 여러 정보 소스 교차 검증
-- 지정학적 리스크는 확률 기반 평가
+- **Depth over Width**: 많은 뉴스를 나열하기보단, 핵심 재료 1~2개의 파급력을 심층 분석하십시오.
+- **Narrative over List**: 불렛포인트 나열보다 인과관계 설명이 중요합니다.
+- **Institutional Mindset**: 개미들이 모르는 '기관의 뷰'를 추론하십시오.
 
-출력 형식:
-{
+출력 형식 (JSON):
     "action": "buy" | "sell" | "hold" | "pass",
     "confidence": 0.0 ~ 1.0,
-    "reasoning": "구체적 분석 근거",
+    "reasoning": "전체 시장 맥락과 종목 이슈를 통합한 3줄 요약",
+    "valuation_analysis": {"pe_ratio": 0.0, "ps_ratio": 0.0, "interpretation": "고평가/적정/저평가"},
+    "catalyst_analysis": {
+        "positive": ["호재1 (영향력 상)", "호재2"],
+        "negative": ["악재1"],
+        "dates": ["일정1", "일정2"]
+    },
+    "evidence_grades": {
+        "news_reliability": "A/B/C",
+        "institutional_evidence": "A/B/C",
+        "macro_impact": "A/B/C"
+    },
     "news_impact": {
         "sentiment": "positive" | "negative" | "neutral",
         "impact_score": 0.0 ~ 10.0,
@@ -105,10 +116,8 @@ class AnalystAgentMVP:
 }
 
 중요:
-- **반드시 한글로 응답할 것** (reasoning, key_catalysts, red_flags 등 모든 텍스트 필드는 한국어로 작성)
-- 정보가 불충분하면 confidence를 낮추고 "pass" 권장
-- Red flags가 있으면 반드시 명시
-- 반도체 패권 경쟁 리스크는 확률적으로 평가
+- **반드시 한글로 응답할 것.**
+- 정보가 상충될 때(예: 실적은 좋은데 매크로는 나쁨), 어느 쪽이 우세한지 결론을 내리십시오.
 """
 
     async def analyze(
@@ -118,7 +127,11 @@ class AnalystAgentMVP:
         macro_indicators: Optional[Dict[str, Any]] = None,
         institutional_data: Optional[Dict[str, Any]] = None,
         chipwar_events: Optional[List[Dict[str, Any]]] = None,
-        price_context: Optional[Dict[str, Any]] = None
+
+        price_context: Optional[Dict[str, Any]] = None,
+
+        event_data: Optional[Dict[str, Any]] = None, # [Phase 3]
+        market_data: Optional[Dict[str, Any]] = None # [Phase 4 - Need full market data for analyzers]
     ) -> Dict[str, Any]:
         """
         종합 정보 분석
@@ -152,16 +165,42 @@ class AnalystAgentMVP:
             except Exception as e:
                 print(f"⚠️ AnalystAgent: News interpretation/reasoning failed: {e}")
 
+        # [Phase 4] Stock Specific Analysis
+        stock_specific_result = None
+        prompt_addition = ""
+        
+        try:
+            analyzer = None
+            if symbol.upper() == 'TSLA':
+                analyzer = TSLAAnalyzer(symbol)
+            elif symbol.upper() == 'NVDA':
+                analyzer = NVDAAnalyzer(symbol)
+                
+            if analyzer:
+                print(f"🔍 Running Stock Specific Analyzer for {symbol}...")
+                stock_specific_result = analyzer.analyze_specifics(
+                    news_articles=news_articles,
+                    market_data=market_data, # Passed from router
+                    event_data=event_data
+                )
+                prompt_addition = analyzer.get_prompt_addition()
+                
+        except Exception as e:
+            print(f"⚠️ Stock Specific Analysis Failed: {e}")
+
         # Construct analysis prompt
         prompt = self._build_prompt(
             symbol=symbol,
             news_articles=news_articles,
             news_interpretations=news_interpretations,
-            deep_reasoning_result=deep_reasoning_result, # [NEW] Pass result
+            deep_reasoning_result=deep_reasoning_result,
             macro_indicators=macro_indicators,
             institutional_data=institutional_data,
             chipwar_events=chipwar_events,
-            price_context=price_context
+            price_context=price_context,
+            event_data=event_data,
+            stock_specific_result=stock_specific_result, # [Phase 4]
+            prompt_addition=prompt_addition              # [Phase 4]
         )
 
         # Call Gemini API
@@ -235,7 +274,12 @@ class AnalystAgentMVP:
         macro_indicators: Optional[Dict[str, Any]] = None,
         institutional_data: Optional[Dict[str, Any]] = None,
         chipwar_events: Optional[List[Dict[str, Any]]] = None,
-        price_context: Optional[Dict[str, Any]] = None
+
+        price_context: Optional[Dict[str, Any]] = None,
+
+        event_data: Optional[Dict[str, Any]] = None,
+        stock_specific_result: Optional[Dict[str, Any]] = None, # [Phase 4]
+        prompt_addition: str = ""                               # [Phase 4]
     ) -> str:
         """Construct analysis prompt"""
         prompt = f"Analyze information for {symbol} based on the following data:\n\n"
@@ -322,6 +366,24 @@ class AnalystAgentMVP:
         # 5. Price Context
         if price_context:
              prompt += f"5. Price Context: {price_context}\n"
+             
+        # 6. Event Proximity (Phase 3)
+        if event_data:
+            prompt += "\n6. Upcoming Events:\n"
+            earnings = event_data.get('earnings', {})
+            earnings_date = earnings.get('date', 'N/A') if isinstance(earnings, dict) else str(earnings)
+            prompt += f"- Earnings Date: {earnings_date}\n"
+            prompt += f"- Earnings Date: {earnings_date}\n"
+            prompt += f"- Ex-Dividend: {event_data.get('ex_dividend', 'N/A')}\n"
+
+        # 7. Stock Specific Analysis (Phase 4)
+        if stock_specific_result:
+            prompt += f"\n7. Stock Specific Factors ({symbol}):\n"
+            prompt += f"- Specific Catalysts: {', '.join(stock_specific_result.get('specific_catalysts', []))}\n"
+            prompt += f"- Specific Risks: {', '.join(stock_specific_result.get('specific_risks', []))}\n"
+            prompt += f"- Score Adjustment: {stock_specific_result.get('score_adjustment', 0.0)}\n"
+            if prompt_addition:
+                prompt += f"\n[Special Focus Areas]\n{prompt_addition}\n"
         
         return prompt
 

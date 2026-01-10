@@ -192,7 +192,7 @@ async def analyze_news(request: AnalyzeRequest):
 
         # DB에 저장 (Repository 사용)
         try:
-            session = next(get_sync_session())
+            session = get_sync_session()
             repo = DeepReasoningRepository(session)
 
             analysis_data = {

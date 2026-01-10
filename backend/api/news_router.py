@@ -58,6 +58,7 @@ class NewsArticleResponse(BaseModel):
     has_analysis: bool
     sentiment: Optional[str] = None
     urgency: Optional[str] = None
+    market_impact: Optional[str] = None
     actionable: Optional[bool] = None
     related_tickers: List[str] = []
     
@@ -416,6 +417,7 @@ async def get_news_articles(
             has_analysis=a.analysis is not None,
             sentiment=a.analysis.sentiment_overall if a.analysis else None,
             urgency=a.analysis.urgency if a.analysis else None,
+            market_impact=a.analysis.market_impact_short if a.analysis else None,
             actionable=a.analysis.trading_actionable if a.analysis else None,
             related_tickers=[rel.ticker for rel in a.ticker_relevances] if a.ticker_relevances else []
         )

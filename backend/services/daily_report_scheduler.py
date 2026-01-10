@@ -17,6 +17,11 @@ Date: 2026-01-08
 import logging
 import asyncio
 import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
 from datetime import datetime, time, timedelta, date
 from typing import Optional, Dict, Any
 from dataclasses import dataclass, field
@@ -26,7 +31,7 @@ from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.reporting.report_generator import ReportGenerator
-from backend.core.database import get_db
+from backend.core.database import get_db, DatabaseSession
 
 logger = logging.getLogger(__name__)
 
@@ -190,7 +195,7 @@ class DailyReportScheduler:
             target_date = (datetime.utcnow() - timedelta(days=1)).date()
             stats.report_date = target_date
             
-            async with get_db() as db:
+            async with DatabaseSession() as db:
                 generator = ReportGenerator(db)
                 
                 try:
@@ -245,7 +250,7 @@ class DailyReportScheduler:
             week_number = last_week.isocalendar()[1]
             stats.report_date = last_week
             
-            async with get_db() as db:
+            async with DatabaseSession() as db:
                 generator = ReportGenerator(db)
                 
                 try:
@@ -299,7 +304,7 @@ class DailyReportScheduler:
             month = last_month_end.month
             stats.report_date = last_month_end
             
-            async with get_db() as db:
+            async with DatabaseSession() as db:
                 generator = ReportGenerator(db)
                 
                 try:

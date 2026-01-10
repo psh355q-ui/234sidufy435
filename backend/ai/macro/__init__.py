@@ -44,5 +44,16 @@ __all__ = [
     "CountryMacroData",
     "CountryRiskScore",
     "CountryRiskEngine",
-    "get_country_risk_engine"
+    "get_country_risk_engine",
+
+    # Macro Data Collector (Phase C)
+    "MacroDataCollector",
+    "MacroSnapshot",
+    "MarketRegime",
 ]
+
+from backend.ai.macro.macro_data_collector import (
+    MacroDataCollector,
+    MacroSnapshot,
+    MarketRegime
+)

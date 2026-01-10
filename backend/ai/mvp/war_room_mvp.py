@@ -170,7 +170,9 @@ class WarRoomMVP:
             market_data.get('price_data', {}),
             market_data.get('technical_data'),
             additional_data.get('chipwar_events') if additional_data else None,
-            market_data.get('market_conditions')
+            market_data.get('market_conditions'),
+            market_data.get('multi_timeframe'), # [Phase 3]
+            market_data.get('option_data')      # [Phase 3]
         )
         
         # Analyst Agent is now async (uses News Agent)
@@ -181,7 +183,8 @@ class WarRoomMVP:
                 additional_data.get('macro_indicators') if additional_data else None,
                 additional_data.get('institutional_data') if additional_data else None,
                 additional_data.get('chipwar_events') if additional_data else None,
-                market_data.get('price_data')
+                market_data.get('price_data'),
+                market_data.get('events') # [Phase 3]
             )
         )
         
@@ -199,7 +202,8 @@ class WarRoomMVP:
             trader_opinion,
             market_data.get('market_conditions'),
             additional_data.get('dividend_info') if additional_data else None,
-            portfolio_state
+            portfolio_state,
+            market_data.get('option_data') # [Phase 3]
         )
         
         # 4. Wait for remaining tasks

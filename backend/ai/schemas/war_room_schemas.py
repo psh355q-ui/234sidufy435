@@ -22,6 +22,13 @@ class TraderOpinion(BaseModel):
     momentum_strength: Literal['weak', 'moderate', 'strong'] = Field(default='weak')
     technical_indicators: Optional[Dict[str, Any]] = None
     catalysts: List[str] = Field(default_factory=list)
+    
+    # Enhanced Fields (Phase 1)
+    risk_reward_ratio: Optional[float] = Field(default=None, description="손익비")
+    support_levels: List[float] = Field(default_factory=list, description="지지 라인")
+    resistance_levels: List[float] = Field(default_factory=list, description="저항 라인")
+    volume_analysis: Optional[Dict[str, Any]] = Field(default=None, description="거래량 분석")
+    timeframe_details: Optional[Dict[str, Any]] = Field(default=None, description="상세 타임프레임")
 
     class Config:
         json_schema_extra = {
@@ -53,8 +60,16 @@ class RiskOpinion(BaseModel):
     sentiment_score: Optional[float] = Field(default=0.0, ge=-1.0, le=1.0)
     volatility_risk: Optional[float] = Field(default=None)
     dividend_risk: Optional[str] = Field(default='none')
+    dividend_risk: Optional[str] = Field(default='none')
     kelly_calculation: Optional[Dict[str, Any]] = None
     warnings: List[str] = Field(default_factory=list)
+
+    # Enhanced Fields (Phase 1)
+    position_sizing_recommendation: Optional[Dict[str, Any]] = None
+    var_95: Optional[float] = Field(default=None, description="VaR 95%")
+    beta: Optional[float] = Field(default=None, description="Portfolio Beta")
+    max_loss_scenario: Optional[Dict[str, Any]] = None
+    risk_decomposition: Optional[Dict[str, Any]] = None
 
     class Config:
         json_schema_extra = {
@@ -90,6 +105,11 @@ class AnalystOpinion(BaseModel):
     key_catalysts: List[str] = Field(default_factory=list, description="주요 촉매제")
     data_sources: List[str] = Field(default_factory=list, description="데이터 출처")
 
+    # Enhanced Fields (Phase 1)
+    valuation_analysis: Optional[Dict[str, Any]] = Field(default=None, description="밸류에이션 분석")
+    catalyst_analysis: Optional[Dict[str, Any]] = Field(default=None, description="상세 촉매제 분석")
+    evidence_grades: Optional[Dict[str, Any]] = Field(default=None, description="증거 신뢰도 등급")
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -109,7 +129,7 @@ class AnalystOpinion(BaseModel):
 class PMDecision(BaseModel):
     """PM Agent MVP 최종 결정 스키마"""
     agent: Literal['pm_mvp'] = 'pm_mvp'
-    final_decision: Literal['approve', 'reject', 'reduce_size', 'silence']
+    final_decision: Literal['approve', 'reject', 'reduce_size', 'silence', 'conditional']
     confidence: float = Field(ge=0.0, le=1.0, description="최종 결정 신뢰도")
     reasoning: str = Field(min_length=10, description="결정 근거")
     hard_rules_passed: bool = Field(description="Hard Rules 통과 여부")
@@ -145,7 +165,7 @@ class WarRoomResult(BaseModel):
     execution_mode: Literal['fast_track', 'deep_dive'] = Field(description="실행 모드")
     agent_opinions: Dict[str, Any] = Field(description="각 Agent 의견")
     pm_decision: PMDecision = Field(description="PM 최종 결정")
-    final_decision: Literal['approve', 'reject', 'reduce_size', 'silence']
+    final_decision: Literal['approve', 'reject', 'reduce_size', 'silence', 'conditional']
     approved_params: Optional[Dict[str, Any]] = Field(default=None)
     processing_time_ms: int = Field(ge=0, description="처리 시간 (ms)")
     timestamp: datetime = Field(default_factory=datetime.utcnow)

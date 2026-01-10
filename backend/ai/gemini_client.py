@@ -580,7 +580,8 @@ Respond with ONLY a valid JSON object (no markdown, no explanation):
 async def call_gemini_api(
     prompt: str,
     model_name: str = None,
-    temperature: float = 0.7
+    temperature: float = 0.7,
+    response_mime_type: str = "text/plain"
 ) -> str:
     """
     Simple helper function to call Gemini API without full client initialization.
@@ -589,6 +590,7 @@ async def call_gemini_api(
         prompt: The prompt to send to Gemini
         model_name: Model name (default: from env or gemini-2.0-flash-exp)
         temperature: Temperature for generation (0.0-1.0)
+        response_mime_type: "text/plain" or "application/json"
     
     Returns:
         Response text as string
@@ -613,9 +615,14 @@ async def call_gemini_api(
     if model_name is None:
         model_name = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash-exp")
     
+    generation_config = {
+        "temperature": temperature,
+        "response_mime_type": response_mime_type
+    }
+    
     model = genai.GenerativeModel(
         model_name,
-        generation_config={"temperature": temperature}
+        generation_config=generation_config
     )
     
     response = model.generate_content(prompt)

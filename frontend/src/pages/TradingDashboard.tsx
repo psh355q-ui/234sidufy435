@@ -49,6 +49,7 @@ import {
   Play
 } from 'lucide-react';
 import { ExecuteTradeModal } from '../components/Trading/ExecuteTradeModal';
+import { notification } from 'antd';
 
 // Types
 interface Signal {
@@ -101,6 +102,8 @@ export default function TradingDashboard() {
   const [selectedSignal, setSelectedSignal] = useState<Signal | null>(null);
   const [isExecuteModalOpen, setIsExecuteModalOpen] = useState(false);
 
+  // ...
+
   // WebSocket
   useEffect(() => {
     const ws = new WebSocket(WS_URL);
@@ -112,11 +115,39 @@ export default function TradingDashboard() {
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
+      console.log('[WebSocket] Message:', data);
 
       if (data.type === 'new_signal') {
-        console.log('[WebSocket] New signal received:', data.data);
         // Add new signal to top of list
         setSignals((prev) => [data.data, ...prev]);
+        notification.info({
+          message: 'New Signal Generated',
+          description: `${data.data.ticker} ${data.data.action} (Confidence: ${(data.data.confidence * 100).toFixed(0)}%)`,
+          placement: 'topRight',
+          duration: 5,
+        });
+      } else if (data.type === 'order_filled') {
+        const order = data.data;
+        notification.success({
+          message: 'Order Filled',
+          description: `${order.side} ${order.quantity} ${order.ticker} @ $${order.avg_price}`,
+          placement: 'topRight',
+          duration: 8,
+        });
+      } else if (data.type === 'order_sent') {
+        notification.info({
+          message: 'Order Sent to Broker',
+          description: `Sending order for ${data.data.ticker}...`,
+          placement: 'topRight',
+          duration: 3,
+        });
+      } else if (data.type === 'order_rejected' || data.type === 'order_failed') {
+        notification.error({
+          message: 'Order Failed',
+          description: `Order for ${data.data.ticker} failed: ${data.data.reason || 'Unknown error'}`,
+          placement: 'topRight',
+          duration: 10,
+        });
       }
     };
 

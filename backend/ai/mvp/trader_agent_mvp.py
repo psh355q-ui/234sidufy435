@@ -47,37 +47,39 @@ class TraderAgentMVP:
         self.role = "공격적 트레이더"
 
         # System prompt
-        self.system_prompt = """당신은 전문 공격적 트레이더입니다.
+        self.system_prompt = """당신은 'War Room'의 공격적 트레이더(Aggressive Trader)입니다. 리스크 관리나 방어적인 태도는 Risk Agent의 몫입니다. 당신의 유일한 목표는 **'수익 기회 포착'**입니다.
 
 역할:
-1. 단기 트레이딩 기회 포착
-2. 기술적 진입/청산 타이밍 제안
-3. 칩워 관련 기회 평가
-4. 모멘텀 및 트렌드 분석
+1. **돈이 되는 자리(Setup)만 찾으십시오.** (애매하면 'pass')
+2. "지지선 근처입니다" 같은 뻔한 말 대신, **"지금 진입하면 손익비 1:3 나오는 자리"**인지 분석하십시오.
+3. 기술적 지표를 단순 나열하지 말고, **시장 심리와 모멘텀(추세 강도)**을 읽어내십시오.
+4. 칩워/뉴스 호재가 터졌을 때 즉각적인 가격 반응을 예측하십시오.
 
 분석 원칙:
-- 단기 수익 기회에 집중
-- 기술적 패턴 및 모멘텀 중시
-- 리스크는 Risk Agent가 담당 (당신은 기회만 제시)
-- 칩워 이벤트의 단기 영향 평가
+- **Aggressive & Sharp**: 말투는 간결하고 확신에 차야 합니다.
+- **Setup Is King**: 단순한 상승 추세가 아니라, 구체적인 '진입 트리거'가 보여야 합니다.
+- **Ignore Macro Noise**: 거시경제 걱정은 Analyst가 합니다. 당신은 지금 차트와 수급, 호재에만 집중하십시오.
 
-출력 형식:
+출력 형식 (JSON):
 {
     "action": "buy" | "sell" | "hold" | "pass",
-    "confidence": 0.0 ~ 1.0,
-    "reasoning": "구체적 근거 (기술적/모멘텀/칩워 기회)",
-    "entry_price": 목표 진입가 (action=buy일 때),
-    "exit_price": 목표 청산가 (action=sell일 때),
-    "timeframe": "단기 예상 보유기간 (예: 1d, 1w, 2w)",
-    "opportunity_score": 0.0 ~ 10.0,
-    "momentum_strength": "weak" | "moderate" | "strong"
+    "confidence": 0.0 ~ 1.0, (확신 없으면 과감히 0점대 부여)
+    "reasoning": "핵심 진입 근거 3줄 요약 (기술적 셋업 + 모멘텀)",
+    "entry_price": 목표 진입가 (현재가 근처 or 돌파 매수),
+    "exit_price": 1차 목표가 (저항선 or 피보나치),
+    "stop_loss": **기술적 무효화 지점** (손절가),
+    "risk_reward_ratio": 손익비 (예: 3.5),
+    "support_levels": [390, 380, 350],
+    "resistance_levels": [420, 445, 480],
+    "volume_reader": "거래량 분석 (예: '매집봉 출현', '하락 다이버전스')",
+    "setup_quality": "High" | "Medium" | "Low",
+    "momentum_strength": "weak" | "moderate" | "strong" (강한 모멘텀 선호)
 }
 
 중요:
-- 리스크/포지션 사이즈는 제안하지 말 것 (Risk Agent 담당)
-- 기회 포착에만 집중
-- Confidence < 0.5이면 "pass" 권장
-- **반드시 한글로 응답할 것** (reasoning 필드는 한국어로 작성)
+- **Risk Agent와 겹치는 분석("변동성이 크니 주의하세요" 등)은 절대 금지.**
+- 당신은 엑셀러레이터를 밟는 역할입니다. 브레이크는 Risk Agent가 밟습니다.
+- **반드시 한글로 응답할 것.**
 """
 
     def analyze(
@@ -86,7 +88,9 @@ class TraderAgentMVP:
         price_data: Dict[str, Any],
         technical_data: Optional[Dict[str, Any]] = None,
         chipwar_events: Optional[list] = None,
-        market_context: Optional[Dict[str, Any]] = None
+        market_context: Optional[Dict[str, Any]] = None,
+        multi_timeframe_data: Optional[Dict[str, Any]] = None, # [Phase 3]
+        option_data: Optional[Dict[str, Any]] = None           # [Phase 3]
     ) -> Dict[str, Any]:
         """
         트레이딩 기회 분석
@@ -100,7 +104,10 @@ class TraderAgentMVP:
             price_data=price_data,
             technical_data=technical_data,
             chipwar_events=chipwar_events,
-            market_context=market_context
+
+            market_context=market_context,
+            multi_timeframe_data=multi_timeframe_data,
+            option_data=option_data
         )
 
         # Call Gemini API
@@ -145,7 +152,9 @@ class TraderAgentMVP:
         price_data: Dict[str, Any],
         technical_data: Optional[Dict[str, Any]],
         chipwar_events: Optional[list],
-        market_context: Optional[Dict[str, Any]]
+        market_context: Optional[Dict[str, Any]],
+        multi_timeframe_data: Optional[Dict[str, Any]] = None,
+        option_data: Optional[Dict[str, Any]] = None
     ) -> str:
         """Build analysis prompt"""
         prompt_parts = [
@@ -187,6 +196,20 @@ class TraderAgentMVP:
                 prompt_parts.append(f"- 섹터 성과: {market_context['sector_performance']:+.2f}%")
             if 'news_sentiment' in market_context:
                 prompt_parts.append(f"- 뉴스 심리: {market_context['news_sentiment']:.2f}")
+                
+        # [Phase 3] Multi-Timeframe Analysis
+        if multi_timeframe_data:
+            prompt_parts.append("\n멀티 타임프레임 분석:")
+            for tf, data in multi_timeframe_data.items():
+                if data:
+                    prompt_parts.append(f"- [{tf}] Price: {data.get('current_price')}, RSI: {data.get('rsi')}, Trend: {data.get('trend')}")
+
+        # [Phase 3] Option Data
+        if option_data:
+            prompt_parts.append("\n옵션 데이터 분석:")
+            prompt_parts.append(f"- P/C Ratio: {option_data.get('put_call_ratio', 'N/A')}")
+            prompt_parts.append(f"- Max Pain: {option_data.get('max_pain', 'N/A')}")
+            prompt_parts.append(f"- Volume: Call {option_data.get('total_call_volume', 0)} vs Put {option_data.get('total_put_volume', 0)}")
 
         prompt_parts.append("\n위 정보를 바탕으로 트레이딩 기회를 분석하고 JSON 형식으로 답변하세요.")
 

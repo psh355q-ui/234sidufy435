@@ -1,0 +1,79 @@
+name: Security Audit
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: '0 0 * * 0'  # Run weekly on Midnight Sunday
+
+jobs:
+  # 1. Static Application Security Testing (SAST)
+  bandit-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Install Bandit
+        run: pip install bandit
+        
+      - name: Run Bandit Scan
+        # Scan backend code, excluding tests and virtual environments
+        # -r: recursive
+        # -ll: log level (medium and up)
+        # -ii: confidence level (medium and up)
+        run: bandit -r backend -ll -ii -f json -o bandit_report.json
+        continue-on-error: true  # Don't fail the build immediately, proceed to upload report
+        
+      - name: Upload Bandit Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: bandit-report
+          path: bandit_report.json
+
+  # 2. Dynamic Application Security Testing (DAST) - OWASP ZAP
+  zap-scan:
+    runs-on: ubuntu-latest
+    needs: bandit-scan # Verify basic code safety first (optional dependency)
+    steps:
+      - uses: actions/checkout@v3
+
+      # Note: For ZAP to work, the application must be running.
+      # In a real pipeline, you would spin up the app with Docker Compose here.
+      # For this template, we assume a "target" URL is available or spin up a simple container.
+      
+      - name: Start Application Container (Example)
+        # Uncomment and adjust paths for your project
+        # run: docker-compose -f docker-compose.yml up -d backend
+        run: echo "Starting application stub..."
+
+      - name: OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.9.0
+        with:
+          # Target URL to scan (Change this to your staging or localhost-in-runner URL)
+          target: 'http://localhost:8000' 
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a'
+        continue-on-error: true # DAST often has false positives
+
+  # 3. Secret Scanning (TruffleHog)
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Fetch all history for secret history scanning
+      
+      - name: TruffleHog OSS
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: "${{ github.event.repository.default_branch }}"
+          head: HEAD
+          extra_args: --debug --only-verified

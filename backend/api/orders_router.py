@@ -43,6 +43,9 @@ class OrderResponse(BaseModel):
     created_at: str
     updated_at: Optional[str] = None
     filled_at: Optional[str] = None
+    filled_quantity: Optional[int] = 0
+    order_metadata: Optional[dict] = None
+    needs_manual_review: Optional[bool] = False
 
     class Config:
         from_attributes = True
@@ -111,8 +114,11 @@ async def get_orders(
                 order_id=order.order_id or "",
                 signal_id=order.signal_id,
                 created_at=order.created_at.isoformat() if order.created_at else None,
-                updated_at=None,  # Not in current model
-                filled_at=order.filled_at.isoformat() if order.filled_at else None
+                updated_at=order.updated_at.isoformat() if order.updated_at else None,
+                filled_at=order.filled_at.isoformat() if order.filled_at else None,
+                filled_quantity=order.filled_quantity or 0,
+                order_metadata=order.order_metadata or {},
+                needs_manual_review=order.needs_manual_review or False
             ))
 
         return result
@@ -160,8 +166,11 @@ async def get_order(order_id: int):
             order_id=order.order_id or "",
             signal_id=order.signal_id,
             created_at=order.created_at.isoformat() if order.created_at else None,
-            updated_at=None,
-            filled_at=order.filled_at.isoformat() if order.filled_at else None
+            updated_at=order.updated_at.isoformat() if order.updated_at else None,
+            filled_at=order.filled_at.isoformat() if order.filled_at else None,
+            filled_quantity=order.filled_quantity or 0,
+            order_metadata=order.order_metadata or {},
+            needs_manual_review=order.needs_manual_review or False
         )
 
     except HTTPException:

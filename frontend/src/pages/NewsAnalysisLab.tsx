@@ -68,11 +68,11 @@ export const NewsAnalysisLab: React.FC = () => {
                     <div className="bg-white rounded-lg shadow p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-gray-600">Gemini 사용량</p>
+                                <p className="text-sm text-gray-600">Ollama 사용량</p>
                                 <p className="text-xl font-bold mt-2">
-                                    {stats.gemini_usage.requests_used}/1500
+                                    {stats.ollama_usage.requests_used}
                                 </p>
-                                <p className="text-xs text-gray-500 mt-1">{stats.gemini_usage.cost}</p>
+                                <p className="text-xs text-gray-500 mt-1">{stats.ollama_usage.cost}</p>
                             </div>
                             <Zap className="text-yellow-500" size={40} />
                         </div>

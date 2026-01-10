@@ -39,6 +39,7 @@ import PortfolioOptimizationPage from './pages/PortfolioOptimizationPage';  // �
 import CorrelationDashboard from './pages/CorrelationDashboard';  // 🆕 Phase 32 (asset correlation)
 
 import Performance from './pages/Performance';  // 🆕 Phase 25.2 (performance dashboard)
+import FeedbackDashboard from './pages/FeedbackDashboard'; // 🆕 Phase 6
 // ... (imports)
 
 // ...
@@ -83,6 +84,8 @@ const App: React.FC = () => {
               <Route path="/multi-asset" element={<MultiAssetDashboard />} />  {/* 🆕 Phase 30 Multi-Asset Support */}
               <Route path="/portfolio-optimization" element={<PortfolioOptimizationPage />} />  {/* 🆕 Phase 31 Portfolio Optimization */}
               <Route path="/correlation" element={<CorrelationDashboard />} />  {/* 🆕 Phase 32 Asset Correlation */}
+
+              <Route path="/feedback" element={<FeedbackDashboard />} />  {/* 🆕 Phase 6 */}
 
               <Route path="/war-room" element={<WarRoomPage />} />
               <Route path="/signal-consolidation" element={<SignalConsolidationPage />} />

@@ -535,3 +535,20 @@ class KISBroker:
             "server": self.svr,
             "available": KIS_AVAILABLE,
         }
+
+def get_kis_broker() -> Optional[KISBroker]:
+    """
+    Factory function to get KIS Broker instance using environment variables.
+    """
+    try:
+        is_virtual = os.getenv("KIS_IS_VIRTUAL", "true").lower() == "true"
+        account_no = os.getenv("KIS_PAPER_ACCOUNT" if is_virtual else "KIS_ACCOUNT_NUMBER")
+        
+        if not account_no:
+            logger.warning("KIS Account Number not found in env")
+            return None
+            
+        return KISBroker(account_no=account_no, is_virtual=is_virtual)
+    except Exception as e:
+        logger.error(f"Failed to create KIS Broker: {e}")
+        return None

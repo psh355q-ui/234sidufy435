@@ -44,7 +44,8 @@ class Order:
         quantity: int,
         order_type: OrderType = OrderType.MARKET,
         limit_price: Optional[float] = None,
-        stop_price: Optional[float] = None
+        stop_price: Optional[float] = None,
+        strategy_id: Optional[str] = None
     ):
         self.ticker = ticker
         self.side = side
@@ -52,6 +53,7 @@ class Order:
         self.order_type = order_type
         self.limit_price = limit_price
         self.stop_price = stop_price
+        self.strategy_id = strategy_id
         self.timestamp = datetime.now()
 
     def to_dict(self) -> Dict[str, Any]:
@@ -63,6 +65,7 @@ class Order:
             "order_type": self.order_type.value,
             "limit_price": self.limit_price,
             "stop_price": self.stop_price,
+            "strategy_id": self.strategy_id,
             "timestamp": self.timestamp.isoformat()
         }
 
@@ -156,7 +159,8 @@ class SignalToOrderConverter:
             ticker=signal.ticker,
             side=order_side,
             quantity=quantity,
-            order_type=OrderType.MARKET
+            order_type=OrderType.MARKET,
+            strategy_id=signal.strategy_id
         )
 
         # 4. Post-Check Adjustments

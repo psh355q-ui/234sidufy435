@@ -44,6 +44,84 @@ class OrderManager:
         # 상태 전이 이력 (메모리 캐시)
         self._transition_history: List[Dict] = []
 
+    def create_order(self, ticker: str, action: str, quantity: int, strategy_id: Optional[str] = None, metadata: Optional[Dict] = None):
+        """
+        주문 생성 (DB 기록)
+        
+        Phase 3 Integration:
+        - T3.2: Conflict Detection (Check before create)
+        - T3.3: Priority Override & Transfer (Handle override resolution)
+        """
+        # 0. Validate Strategy ID (Required for conflict check)
+        if not strategy_id:
+             # Legacy support or error? For now allow but warn, or assume manual intervention
+             # But ConflictDetector requires strategy_id.
+             # If no strategy_id, we might skip conflict check (e.g. manual trade from dashboard?)
+             # Let's assume strategy_id is required for automated flow.
+             pass 
+
+        if strategy_id:
+            from backend.ai.skills.system.conflict_detector import ConflictDetector
+            from backend.services.ownership_service import OwnershipService
+            from backend.api.schemas.strategy_schemas import OrderAction, ConflictResolution
+            
+            detector = ConflictDetector(self.db)
+            
+            # Map string action to Enum
+            order_action = OrderAction.BUY if action.upper() == 'BUY' else OrderAction.SELL
+            
+            # 1. Check Conflict
+            conflict_response = detector.check_conflict(
+                strategy_id=strategy_id, 
+                ticker=ticker, 
+                action=order_action, 
+                quantity=quantity
+            )
+            
+            # 2. Handle Resolution
+            if not conflict_response.can_proceed:
+                error_reason = f"Order BLOCKED by ConflictDetector: {conflict_response.reasoning}"
+                logger.warning(f"[ORDER_CREATE] {error_reason}")
+                raise ValueError(error_reason)
+            
+            # 3. Handle Priority Override (T3.3)
+            if conflict_response.resolution == ConflictResolution.PRIORITY_OVERRIDE:
+                logger.info(f"[ORDER_CREATE] Priority Override triggered for {ticker}. Initiating transfer...")
+                
+                # Get current owner from detail or DB
+                # Conflict logic ensures detail is populated for override
+                current_owner_id = conflict_response.conflict_detail.owning_strategy_id
+                
+                ownership_service = OwnershipService(self.db)
+                transfer_result = ownership_service.transfer_ownership(
+                    ticker=ticker,
+                    from_strategy_id=current_owner_id,
+                    to_strategy_id=strategy_id,
+                    reason=f"Priority Override: {conflict_response.reasoning}"
+                )
+                
+                if not transfer_result['success']:
+                    error_reason = f"Ownership Transfer FAILED: {transfer_result['message']}"
+                    logger.error(f"[ORDER_CREATE] {error_reason}")
+                    raise ValueError(error_reason)
+                
+                logger.info(f"[ORDER_CREATE] Ownership transferred successfully. Proceeding with order.")
+
+        from backend.database.models import Order
+        
+        order = Order(
+            ticker=ticker,
+            action=action,
+            quantity=quantity,
+            strategy_id=strategy_id,
+            status=OrderState.CREATED.value if hasattr(OrderState, 'CREATED') else 'PENDING',
+            order_metadata=metadata
+        )
+        self.db.add(order)
+        self.db.commit()
+        self.db.refresh(order)
+        return order
+        
     # ================================================================
     # 핵심 메서드: 상태 전이 (Single Writer)
     # ================================================================

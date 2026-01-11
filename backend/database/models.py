@@ -17,7 +17,7 @@ models.py - SQLAlchemy 데이터베이스 모델
     - pgvector: 벡터 유사도 검색
     - TimescaleDB: 시계열 데이터 압축 및 집계
 
-📤 Database Models (16 classes):
+📤 Database Models (38 classes):
     1. NewsArticle: RSS 뉴스 (embedding, sentiment, tickers)
     2. AnalysisResult: Deep Reasoning 분석 (bull/bear case)
     3. TradingSignal: 매매 시그널 (PRIMARY/HIDDEN/LOSER, 출처 추적)
@@ -30,8 +30,13 @@ models.py - SQLAlchemy 데이터베이스 모델
     10. StockPrice: OHLCV 주가 데이터
     11. DataCollectionProgress: 데이터 수집 작업 진행률
     12. NewsSource: 뉴스 소스 설정
-    13. Order: 실제 주문 실행 기록 (KIS Broker)
+    13. Order: 실제 주문 실행 기록 (KIS Broker, strategy_id 추가)
     14. DividendAristocrat: 배당 귀족주 캐시 (연 1회 갱신)
+    ...
+    35. Strategy: 전략 레지스트리 (멀티 전략 오케스트레이션)
+    36. PositionOwnership: 포지션 소유권 추적 (충돌 방지)
+    37. ConflictLog: 전략 간 충돌 로그 (AI 설명 가능성)
+    38. UserFeedback: 사용자 피드백
 
 🔄 Imported By (참조가 가장 많음):
     - backend/api/*.py: 모든 API 라우터
@@ -52,7 +57,7 @@ models.py - SQLAlchemy 데이터베이스 모델
 Database: TimescaleDB (PostgreSQL with time-series extensions)
 """
 
-from sqlalchemy import Column, Integer, String, Float, DateTime, Date, Text, Boolean, ForeignKey, Index, BigInteger, Numeric, UniqueConstraint, JSON
+from sqlalchemy import Column, Integer, String, Float, DateTime, Date, Text, Boolean, ForeignKey, Index, BigInteger, Numeric, UniqueConstraint, JSON, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
@@ -441,11 +446,18 @@ class Order(Base):
     order_metadata = Column(JSONB, nullable=True)  # Added for flexible metadata storage (renamed from 'metadata' to avoid SQLAlchemy conflict)
     needs_manual_review = Column(Boolean, nullable=False, default=False)  # Added for recovery logic
 
+    # Multi-Strategy Orchestration (Phase 0, T0.2)
+    strategy_id = Column(String(36), ForeignKey('strategies.id', ondelete='SET NULL'), nullable=True, index=True)
+    conflict_check_passed = Column(Boolean, nullable=False, default=False)
+    conflict_reasoning = Column(Text, nullable=True)
+
     # Indexes
     __table_args__ = (
         Index('idx_order_ticker', 'ticker'),
         Index('idx_order_status', 'status'),
         Index('idx_order_created_at', 'created_at'),
+        Index('idx_orders_strategy_id', 'strategy_id'),
+        Index('idx_orders_strategy_status', 'strategy_id', 'status'),
     )
 
     def __repr__(self):
@@ -1052,4 +1064,105 @@ class UserFeedback(Base):
 
     def __repr__(self):
         return f"<UserFeedback(id={self.id}, type={self.target_type}, feedback={self.feedback_type})>"
+
+
+# ====================================
+# Multi-Strategy Orchestration Models
+# Phase 0, Task T0.2
+# ====================================
+
+class Strategy(Base):
+    """전략 레지스트리 - 멀티 전략 오케스트레이션을 위한 전략 메타데이터"""
+    __tablename__ = "strategies"
+
+    id = Column(String(36), primary_key=True, server_default=text("gen_random_uuid()"))
+    name = Column(String(50), nullable=False, unique=True, index=True)
+    display_name = Column(String(100), nullable=False)
+    persona_type = Column(String(50), nullable=False)
+    priority = Column(Integer, nullable=False)
+    time_horizon = Column(String(20), nullable=False)
+    is_active = Column(Boolean, nullable=False, default=True, server_default="true")
+    config_metadata = Column(JSONB, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now, server_default="NOW()")
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now, onupdate=datetime.now, server_default="NOW()")
+
+    # Relationships
+    position_ownerships = relationship("PositionOwnership", back_populates="strategy", foreign_keys="PositionOwnership.strategy_id")
+    conflicting_logs = relationship("ConflictLog", back_populates="conflicting_strategy", foreign_keys="ConflictLog.conflicting_strategy_id")
+    owning_logs = relationship("ConflictLog", back_populates="owning_strategy", foreign_keys="ConflictLog.owning_strategy_id")
+
+    __table_args__ = (
+        Index('idx_strategies_name', 'name', unique=True),
+        Index('idx_strategies_priority', 'priority', postgresql_ops={'priority': 'DESC'}),
+        Index('idx_strategies_active', 'is_active', postgresql_where="is_active = true"),
+    )
+
+    def __repr__(self):
+        return f"<Strategy(name={self.name}, priority={self.priority}, active={self.is_active})>"
+
+
+class PositionOwnership(Base):
+    """포지션 소유권 추적 - 어떤 전략이 어떤 포지션을 소유하는지 관리"""
+    __tablename__ = "position_ownership"
+
+    id = Column(String(36), primary_key=True, server_default=text("gen_random_uuid()"))
+    position_id = Column(String(36), nullable=True)  # FK 추후 연결 (positions 테이블 미구현)
+    strategy_id = Column(String(36), ForeignKey("strategies.id", ondelete="RESTRICT"), nullable=False, index=True)
+    ticker = Column(String(50), nullable=False, index=True)
+    ownership_type = Column(String(20), nullable=False)
+    locked_until = Column(DateTime(timezone=True), nullable=True)
+    reasoning = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now, server_default="NOW()")
+
+    # Relationships
+    strategy = relationship("Strategy", back_populates="position_ownerships", foreign_keys=[strategy_id], lazy="joined")
+    conflict_logs = relationship("ConflictLog", back_populates="ownership", foreign_keys="ConflictLog.ownership_id")
+
+    __table_args__ = (
+        Index('idx_ownership_position', 'position_id'),
+        Index('idx_ownership_strategy', 'strategy_id'),
+        Index('idx_ownership_ticker', 'ticker'),
+        Index('idx_ownership_ticker_strategy', 'ticker', 'strategy_id'),
+        Index('idx_ownership_locked', 'locked_until', postgresql_where=text("locked_until IS NOT NULL")),
+        Index('uk_ownership_primary_ticker', 'ticker', unique=True, postgresql_where=text("ownership_type = 'primary'")),
+    )
+
+    def __repr__(self):
+        return f"<PositionOwnership(ticker={self.ticker}, strategy={self.strategy_id}, type={self.ownership_type})>"
+
+
+class ConflictLog(Base):
+    """충돌 로그 - 전략 간 충돌 발생 이력 및 해결 방법 기록"""
+    __tablename__ = "conflict_logs"
+
+    id = Column(String(36), primary_key=True, server_default=text("gen_random_uuid()"))
+    ticker = Column(String(50), nullable=False, index=True)
+    conflicting_strategy_id = Column(String(36), ForeignKey("strategies.id", ondelete="SET NULL"), nullable=True)
+    owning_strategy_id = Column(String(36), ForeignKey("strategies.id", ondelete="SET NULL"), nullable=True)
+    action_attempted = Column(String(50), nullable=False)
+    action_blocked = Column(Boolean, nullable=False)
+    resolution = Column(String(50), nullable=False)
+    reasoning = Column(Text, nullable=False)
+    conflicting_strategy_priority = Column(Integer, nullable=True)
+    owning_strategy_priority = Column(Integer, nullable=True)
+    order_id = Column(String(100), nullable=True)
+    ownership_id = Column(String(36), ForeignKey("position_ownership.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now, server_default="NOW()")
+
+    # Relationships
+    conflicting_strategy = relationship("Strategy", back_populates="conflicting_logs", foreign_keys=[conflicting_strategy_id])
+    owning_strategy = relationship("Strategy", back_populates="owning_logs", foreign_keys=[owning_strategy_id])
+    ownership = relationship("PositionOwnership", back_populates="conflict_logs", foreign_keys=[ownership_id])
+
+    __table_args__ = (
+        Index('idx_conflict_ticker', 'ticker'),
+        Index('idx_conflict_created_at', 'created_at', postgresql_ops={'created_at': 'DESC'}),
+        Index('idx_conflict_conflicting_strategy', 'conflicting_strategy_id'),
+        Index('idx_conflict_owning_strategy', 'owning_strategy_id'),
+        Index('idx_conflict_resolution', 'resolution', 'action_blocked'),
+        Index('idx_conflict_ticker_date', 'ticker', 'created_at', postgresql_ops={'created_at': 'DESC'}),
+    )
+
+    def __repr__(self):
+        return f"<ConflictLog(ticker={self.ticker}, resolution={self.resolution}, blocked={self.action_blocked})>"
 

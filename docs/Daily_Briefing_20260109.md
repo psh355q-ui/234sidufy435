@@ -1,6 +1,6 @@
 # Daily Briefing - 2026-01-09
 
-*Generated: 2026-01-10 01:57:19 UTC*
+*Generated: 2026-01-10 22:10:00 UTC*
 
 ## Executive Summary
 

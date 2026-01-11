@@ -1,0 +1,277 @@
+{
+  "table_name": "conflict_logs",
+  "description": "충돌 로그 - 전략 간 충돌 발생 이력 및 해결 방법 기록. AI 설명 가능성 및 분석용.",
+  "primary_key": "id",
+  "columns": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "nullable": false,
+      "description": "충돌 로그 고유 식별자",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "ticker",
+      "type": "VARCHAR(10)",
+      "nullable": false,
+      "description": "충돌 발생 종목 코드",
+      "example": "NVDA"
+    },
+    {
+      "name": "conflicting_strategy_id",
+      "type": "UUID",
+      "nullable": false,
+      "description": "충돌을 일으킨 전략 ID (새 주문을 시도한 전략)",
+      "foreign_key": {
+        "table": "strategies",
+        "column": "id",
+        "on_delete": "SET NULL",
+        "on_update": "CASCADE",
+        "notes": "전략 삭제 시에도 로그 유지 (감사 목적)"
+      }
+    },
+    {
+      "name": "owning_strategy_id",
+      "type": "UUID",
+      "nullable": false,
+      "description": "기존 소유권을 가진 전략 ID",
+      "foreign_key": {
+        "table": "strategies",
+        "column": "id",
+        "on_delete": "SET NULL",
+        "on_update": "CASCADE",
+        "notes": "전략 삭제 시에도 로그 유지 (감사 목적)"
+      }
+    },
+    {
+      "name": "action_attempted",
+      "type": "VARCHAR(10)",
+      "nullable": false,
+      "description": "시도된 주문 유형",
+      "example": "sell",
+      "constraints": {
+        "check": "action_attempted IN ('buy', 'sell')"
+      }
+    },
+    {
+      "name": "action_blocked",
+      "type": "BOOLEAN",
+      "nullable": false,
+      "description": "주문 차단 여부. true: 차단됨, false: 허용됨(우선순위 override 등)"
+    },
+    {
+      "name": "resolution",
+      "type": "VARCHAR(50)",
+      "nullable": false,
+      "description": "충돌 해결 방법",
+      "example": "blocked",
+      "constraints": {
+        "check": "resolution IN ('allowed', 'blocked', 'priority_override', 'ownership_transferred', 'manual_override')"
+      }
+    },
+    {
+      "name": "reasoning",
+      "type": "TEXT",
+      "nullable": false,
+      "description": "충돌 상세 설명 및 해결 이유 (AI 설명 가능성 핵심)",
+      "example": "장기 투자 전략이 우선순위(100)로 포지션을 소유 중입니다. 단기 트레이딩 전략(50)은 매도할 수 없습니다."
+    },
+    {
+      "name": "conflicting_strategy_priority",
+      "type": "INTEGER",
+      "nullable": true,
+      "description": "충돌 시점의 conflicting_strategy 우선순위 (스냅샷)",
+      "example": 50
+    },
+    {
+      "name": "owning_strategy_priority",
+      "type": "INTEGER",
+      "nullable": true,
+      "description": "충돌 시점의 owning_strategy 우선순위 (스냅샷)",
+      "example": 100
+    },
+    {
+      "name": "order_id",
+      "type": "VARCHAR(100)",
+      "nullable": true,
+      "description": "관련 주문 ID (차단된 주문 또는 허용된 주문)",
+      "example": "ord_abc123"
+    },
+    {
+      "name": "ownership_id",
+      "type": "UUID",
+      "nullable": true,
+      "description": "관련 소유권 레코드 ID",
+      "foreign_key": {
+        "table": "position_ownership",
+        "column": "id",
+        "on_delete": "SET NULL",
+        "on_update": "CASCADE"
+      }
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMP WITH TIME ZONE",
+      "nullable": false,
+      "default": "NOW()",
+      "description": "충돌 발생 시각"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "idx_conflict_ticker",
+      "columns": ["ticker"],
+      "unique": false,
+      "description": "종목별 충돌 이력 조회"
+    },
+    {
+      "name": "idx_conflict_created_at",
+      "columns": ["created_at"],
+      "unique": false,
+      "order": "DESC",
+      "description": "최신 충돌 이력 조회 (대시보드용)"
+    },
+    {
+      "name": "idx_conflict_conflicting_strategy",
+      "columns": ["conflicting_strategy_id"],
+      "unique": false,
+      "description": "전략별 충돌 발생 횟수 분석"
+    },
+    {
+      "name": "idx_conflict_owning_strategy",
+      "columns": ["owning_strategy_id"],
+      "unique": false,
+      "description": "전략별 소유권 방어 횟수 분석"
+    },
+    {
+      "name": "idx_conflict_resolution",
+      "columns": ["resolution", "action_blocked"],
+      "unique": false,
+      "description": "해결 유형별 통계 분석"
+    },
+    {
+      "name": "idx_conflict_ticker_date",
+      "columns": ["ticker", "created_at"],
+      "unique": false,
+      "order": "DESC",
+      "description": "종목별 최신 충돌 조회 (복합 인덱스)"
+    }
+  ],
+  "constraints": [
+    {
+      "name": "chk_action_attempted_valid",
+      "type": "CHECK",
+      "condition": "action_attempted IN ('buy', 'sell')",
+      "description": "유효한 주문 유형만 허용"
+    },
+    {
+      "name": "chk_resolution_valid",
+      "type": "CHECK",
+      "condition": "resolution IN ('allowed', 'blocked', 'priority_override', 'ownership_transferred', 'manual_override')",
+      "description": "유효한 해결 유형만 허용"
+    },
+    {
+      "name": "chk_different_strategies",
+      "type": "CHECK",
+      "condition": "conflicting_strategy_id != owning_strategy_id",
+      "description": "충돌은 서로 다른 전략 간에만 발생"
+    }
+  ],
+  "foreign_keys": [
+    {
+      "name": "fk_conflict_conflicting_strategy",
+      "columns": ["conflicting_strategy_id"],
+      "references": {
+        "table": "strategies",
+        "columns": ["id"]
+      },
+      "on_delete": "SET NULL",
+      "on_update": "CASCADE",
+      "description": "전략 삭제 시 NULL로 설정 (로그 보존)"
+    },
+    {
+      "name": "fk_conflict_owning_strategy",
+      "columns": ["owning_strategy_id"],
+      "references": {
+        "table": "strategies",
+        "columns": ["id"]
+      },
+      "on_delete": "SET NULL",
+      "on_update": "CASCADE",
+      "description": "전략 삭제 시 NULL로 설정 (로그 보존)"
+    },
+    {
+      "name": "fk_conflict_ownership",
+      "columns": ["ownership_id"],
+      "references": {
+        "table": "position_ownership",
+        "columns": ["id"]
+      },
+      "on_delete": "SET NULL",
+      "on_update": "CASCADE",
+      "description": "소유권 삭제 시 NULL로 설정 (로그 보존)"
+    }
+  ],
+  "metadata": {
+    "phase": "Phase 0: Multi-Strategy Orchestration - T0.1",
+    "created": "2026-01-11",
+    "update_frequency": "Real-time (충돌 발생 시 INSERT only)",
+    "estimated_rows": "1000-10000 (월간, 충돌 빈도에 따라)",
+    "data_retention": "영구 보관 (감사 및 분석 목적)",
+    "query_patterns": [
+      "최근 충돌 목록 (대시보드): SELECT * FROM conflict_logs ORDER BY created_at DESC LIMIT 50",
+      "종목별 충돌 이력: SELECT * FROM conflict_logs WHERE ticker = ? ORDER BY created_at DESC",
+      "전략별 충돌 통계: SELECT strategy_id, COUNT(*) FROM conflict_logs GROUP BY conflicting_strategy_id",
+      "일별 충돌 집계: SELECT DATE(created_at), COUNT(*) FROM conflict_logs GROUP BY DATE(created_at)"
+    ],
+    "performance_notes": [
+      "INSERT only 테이블 (UPDATE/DELETE 없음) - WAL 최적화",
+      "created_at DESC 인덱스로 최신 데이터 빠른 조회",
+      "파티셔닝 고려: 월별 파티션으로 오래된 데이터 아카이브 가능",
+      "대용량 시 TimescaleDB hypertable 변환 고려"
+    ]
+  },
+  "design_decisions": {
+    "set_null_on_delete": {
+      "reason": "충돌 로그는 감사 및 분석 목적으로 영구 보관 필요",
+      "tradeoff": "strategy_id가 NULL이 될 수 있어 JOIN 시 OUTER JOIN 필요",
+      "mitigation": "우선순위 스냅샷 컬럼으로 삭제된 전략 정보 일부 보존"
+    },
+    "priority_snapshot": {
+      "reason": "전략 우선순위가 변경되어도 충돌 당시의 상황 재현 가능",
+      "tradeoff": "데이터 중복 (스냅샷 저장)",
+      "benefit": "분석 및 디버깅 시 정확한 컨텍스트 제공"
+    },
+    "reasoning_required": {
+      "reason": "AI 설명 가능성 핵심 요구사항 (Decision Log D-04)",
+      "enforcement": "NOT NULL 제약조건으로 reasoning 필수화"
+    },
+    "insert_only_pattern": {
+      "reason": "감사 로그 특성상 변경 불가 원칙 (immutable audit log)",
+      "enforcement": "애플리케이션 레벨에서 UPDATE/DELETE 방지"
+    },
+    "resolution_enum": {
+      "values": {
+        "allowed": "충돌 없음 또는 같은 전략 내 조정",
+        "blocked": "충돌 감지 → 주문 차단",
+        "priority_override": "높은 우선순위 전략이 소유권 획득",
+        "ownership_transferred": "기존 소유권을 높은 우선순위 전략으로 이전",
+        "manual_override": "사용자가 수동으로 충돌 해제"
+      }
+    }
+  },
+  "analytics_queries": {
+    "daily_conflict_rate": {
+      "description": "일별 충돌 발생률",
+      "sql": "SELECT DATE(created_at) as date, COUNT(*) as conflicts, SUM(CASE WHEN action_blocked THEN 1 ELSE 0 END) as blocked FROM conflict_logs GROUP BY DATE(created_at) ORDER BY date DESC"
+    },
+    "strategy_conflict_heatmap": {
+      "description": "전략 간 충돌 매트릭스",
+      "sql": "SELECT s1.name as conflicting, s2.name as owning, COUNT(*) as count FROM conflict_logs cl JOIN strategies s1 ON cl.conflicting_strategy_id = s1.id JOIN strategies s2 ON cl.owning_strategy_id = s2.id GROUP BY s1.name, s2.name"
+    },
+    "most_conflicted_tickers": {
+      "description": "충돌 빈발 종목 TOP 10",
+      "sql": "SELECT ticker, COUNT(*) as conflicts FROM conflict_logs GROUP BY ticker ORDER BY conflicts DESC LIMIT 10"
+    }
+  }
+}

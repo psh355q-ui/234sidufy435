@@ -671,6 +671,16 @@ try:
 except Exception as e:
     logger.warning(f"Account Partitioning router not available: {e}")
 
+# Multi-Strategy Orchestration - Strategy Management API
+try:
+    from backend.api.strategy_router import strategy_router, ownership_router, conflict_router
+    app.include_router(strategy_router, prefix="/api/strategies", tags=["Multi-Strategy"])
+    app.include_router(ownership_router, prefix="/api/ownership", tags=["Multi-Strategy"])
+    app.include_router(conflict_router, prefix="/api/conflicts", tags=["Multi-Strategy"])
+    logger.info("✅ Multi-Strategy Orchestration routers registered (Strategy/Ownership/Conflict)")
+except Exception as e:
+    logger.warning(f"Multi-Strategy Orchestration routers not available: {e}")
+
 # System/Mock routers (no prefix)=============================================================================
 
 

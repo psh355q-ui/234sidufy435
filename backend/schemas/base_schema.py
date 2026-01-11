@@ -410,6 +410,7 @@ class InvestmentSignal(BaseModel):
     take_profit: Optional[float] = Field(None, description="익절가")
     risk_score: Optional[float] = Field(None, ge=0.0, le=1.0, description="리스크 점수 (0~1)")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="추가 메타데이터")
+    strategy_id: Optional[str] = Field(None, description="발생 전략 ID (Multi-Strategy)")
 
     class Config:
         json_schema_extra = {

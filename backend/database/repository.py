@@ -42,7 +42,10 @@ from backend.database.models import (
     NewsDecisionLink,
     NewsNarrative,
     FailureAnalysis,
-    DeepReasoningAnalysis
+    DeepReasoningAnalysis,
+    Strategy,
+    PositionOwnership,
+    ConflictLog
 )
 
 if TYPE_CHECKING:

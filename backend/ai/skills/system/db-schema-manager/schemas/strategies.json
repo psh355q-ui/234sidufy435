@@ -1,0 +1,219 @@
+{
+  "table_name": "strategies",
+  "description": "전략 레지스트리 - 멀티 전략 오케스트레이션을 위한 전략 메타데이터 관리",
+  "primary_key": "id",
+  "columns": [
+    {
+      "name": "id",
+      "type": "VARCHAR(36)",
+      "nullable": false,
+      "description": "전략 고유 식별자",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "name",
+      "type": "VARCHAR(50)",
+      "nullable": false,
+      "unique": true,
+      "description": "전략 시스템명 (trading, long_term, dividend, aggressive 등)",
+      "example": "long_term"
+    },
+    {
+      "name": "display_name",
+      "type": "VARCHAR(100)",
+      "nullable": false,
+      "description": "사용자 표시용 전략명",
+      "example": "장기 투자 전략"
+    },
+    {
+      "name": "persona_type",
+      "type": "VARCHAR(50)",
+      "nullable": false,
+      "description": "PersonaRouter에서 사용하는 페르소나 타입 (trading, long_term, dividend, aggressive)",
+      "example": "long_term"
+    },
+    {
+      "name": "priority",
+      "type": "INTEGER",
+      "nullable": false,
+      "description": "충돌 시 우선순위 (높을수록 우선). long_term=100, dividend=90, trading=50, aggressive=30",
+      "example": 100,
+      "constraints": {
+        "check": "priority >= 0 AND priority <= 1000"
+      }
+    },
+    {
+      "name": "time_horizon",
+      "type": "VARCHAR(20)",
+      "nullable": false,
+      "description": "투자 시간 프레임 (short: 1일~1주, medium: 1주~3개월, long: 3개월+)",
+      "example": "long",
+      "constraints": {
+        "check": "time_horizon IN ('short', 'medium', 'long')"
+      }
+    },
+    {
+      "name": "is_active",
+      "type": "BOOLEAN",
+      "nullable": false,
+      "default": true,
+      "description": "전략 활성화 여부. 비활성화 시 새 주문 생성 차단, 소유권 잠금 해제"
+    },
+    {
+      "name": "config_metadata",
+      "type": "JSONB",
+      "nullable": true,
+      "description": "전략별 유연한 설정값 (stop_loss_pct, max_position_size, sector_focus 등)",
+      "example": {
+        "stop_loss_pct": 0.05,
+        "take_profit_pct": 0.15,
+        "max_position_size": 10000,
+        "sector_focus": [
+          "Technology",
+          "Healthcare"
+        ],
+        "rebalance_interval_days": 30
+      }
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMP WITH TIME ZONE",
+      "nullable": false,
+      "default": "NOW()",
+      "description": "전략 생성 시각"
+    },
+    {
+      "name": "updated_at",
+      "type": "TIMESTAMP WITH TIME ZONE",
+      "nullable": false,
+      "default": "NOW()",
+      "description": "전략 정보 최종 수정 시각"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "idx_strategies_name",
+      "columns": [
+        "name"
+      ],
+      "unique": true,
+      "description": "전략명으로 빠른 조회 (UNIQUE 제약조건과 함께)"
+    },
+    {
+      "name": "idx_strategies_priority",
+      "columns": [
+        "priority"
+      ],
+      "unique": false,
+      "order": "DESC",
+      "description": "우선순위 기반 정렬 조회 최적화 (충돌 해결 시 사용)"
+    },
+    {
+      "name": "idx_strategies_active",
+      "columns": [
+        "is_active"
+      ],
+      "unique": false,
+      "partial": "is_active = true",
+      "description": "활성 전략만 빠르게 필터링"
+    }
+  ],
+  "constraints": [
+    {
+      "name": "uq_strategies_name",
+      "type": "UNIQUE",
+      "columns": [
+        "name"
+      ],
+      "description": "전략명 유일성 보장"
+    },
+    {
+      "name": "chk_priority_range",
+      "type": "CHECK",
+      "condition": "priority >= 0 AND priority <= 1000",
+      "description": "우선순위 범위 제한 (0-1000)"
+    },
+    {
+      "name": "chk_time_horizon_valid",
+      "type": "CHECK",
+      "condition": "time_horizon IN ('short', 'medium', 'long')",
+      "description": "유효한 시간 프레임만 허용"
+    }
+  ],
+  "seed_data": [
+    {
+      "name": "long_term",
+      "display_name": "장기 투자",
+      "persona_type": "long_term",
+      "priority": 100,
+      "time_horizon": "long",
+      "is_active": true,
+      "config_metadata": {
+        "holding_period_months": 3,
+        "stop_loss_pct": 0.15,
+        "description": "3개월+ 장기 보유 전략"
+      }
+    },
+    {
+      "name": "dividend",
+      "display_name": "배당 투자",
+      "persona_type": "dividend",
+      "priority": 90,
+      "time_horizon": "long",
+      "is_active": true,
+      "config_metadata": {
+        "min_dividend_yield": 0.02,
+        "holding_period_months": 12,
+        "description": "배당주 장기 보유 전략"
+      }
+    },
+    {
+      "name": "trading",
+      "display_name": "단기 트레이딩",
+      "persona_type": "trading",
+      "priority": 50,
+      "time_horizon": "short",
+      "is_active": true,
+      "config_metadata": {
+        "max_holding_days": 7,
+        "stop_loss_pct": 0.03,
+        "description": "1일~1주 단기 트레이딩"
+      }
+    },
+    {
+      "name": "aggressive",
+      "display_name": "공격적 트레이딩",
+      "persona_type": "aggressive",
+      "priority": 30,
+      "time_horizon": "short",
+      "is_active": true,
+      "config_metadata": {
+        "max_holding_days": 1,
+        "stop_loss_pct": 0.02,
+        "description": "당일 공격적 트레이딩"
+      }
+    }
+  ],
+  "metadata": {
+    "phase": "Phase 0: Multi-Strategy Orchestration - T0.1",
+    "created": "2026-01-11",
+    "update_frequency": "Rarely (strategy configuration changes)",
+    "estimated_rows": "4-10 (limited number of strategies)",
+    "notes": "전략 레지스트리는 적은 수의 레코드를 가지므로 성능 병목 가능성 낮음. config_metadata JSONB는 스키마 진화 유연성 제공."
+  },
+  "design_decisions": {
+    "jsonb_usage": {
+      "reason": "전략별 설정값이 다양하고 확장 가능성이 높음. 스키마 변경 없이 새 설정 추가 가능.",
+      "tradeoff": "타입 안전성 감소, 쿼리 복잡도 증가. 핵심 필드(priority, time_horizon)는 정규 컬럼으로 유지.",
+      "validation": "애플리케이션 레벨에서 Pydantic 스키마로 검증"
+    },
+    "uuid_primary_key": {
+      "reason": "분산 환경 대비, 클라이언트 측 ID 생성 가능, 보안성 향상",
+      "tradeoff": "INTEGER 대비 저장 공간 증가 (16 bytes vs 4 bytes), 인덱스 크기 증가"
+    },
+    "priority_integer": {
+      "reason": "충돌 해결 시 명확한 우선순위 비교 필요. 숫자로 표현하여 정렬 및 비교 용이.",
+      "range": "0-1000 범위로 제한하여 충분한 여유 확보"
+    }
+  }
+}

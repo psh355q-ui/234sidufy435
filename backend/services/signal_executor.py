@@ -83,16 +83,25 @@ class SignalExecutor:
         use_paper_trading: bool = True,
         max_retries: int = 3,
         enable_auto_execute: bool = False,
+        db_session: Optional[Any] = None
     ):
         """
         Args:
             use_paper_trading: 모의투자 사용 여부 (기본: True, 안전)
             max_retries: 실패 시 재시도 횟수
             enable_auto_execute: 자동 실행 활성화 (신호의 auto_execute=True 일 때만)
+            db_session: DB 세션 (OrderManager 사용 시 필수)
         """
         self.use_paper_trading = use_paper_trading
         self.max_retries = max_retries
         self.enable_auto_execute = enable_auto_execute
+        self.db_session = db_session
+        
+        # OrderManager (lazy init)
+        self._order_manager = None
+        if db_session:
+            from backend.execution.order_manager import OrderManager
+            self._order_manager = OrderManager(db_session)
 
         # KIS Client (lazy loading)
         self._kis_client = None
@@ -304,6 +313,7 @@ class SignalExecutor:
         ticker = signal["ticker"]
         action = signal["action"]
         position_size = signal["position_size"]
+        strategy_id = signal.get("strategy_id")
 
         try:
             # 0. Safety Guard (Pre-check)
@@ -344,6 +354,18 @@ class SignalExecutor:
                     message=f"Insufficient balance or invalid quantity: {quantity}",
                     error="INSUFFICIENT_BALANCE"
                 )
+
+            # 3.5 DB Order Creation (Pending)
+            db_order = None
+            if self._order_manager:
+                db_order = self._order_manager.create_order(
+                    ticker=ticker,
+                    action=action,
+                    quantity=quantity,
+                    strategy_id=strategy_id,
+                    metadata=signal.get("metadata")
+                )
+                logger.info(f"DB Order created: ID={db_order.id}, Strategy={strategy_id}")
 
             # Safety Guard Verification
             # TODO: Fetch real daily_pnl from KIS if possible. Currently creating a minimal state.
@@ -397,6 +419,10 @@ class SignalExecutor:
                     f"@ ${current_price:.2f}"
                 )
 
+                # DB Update: SENT -> SUBMITTED
+                if db_order and self._order_manager:
+                     self._order_manager.order_sent(db_order, order_result.get("order_id", "mock_id"))
+
                 # 통계 업데이트
                 self.stats["total_volume"] += quantity * current_price
 
@@ -408,6 +434,10 @@ class SignalExecutor:
                     kis_response=order_result
                 )
             else:
+                # DB Update: Failed
+                if db_order and self._order_manager:
+                    self._order_manager.order_failed(db_order, order_result.get("message", "Execution failed"))
+
                 return ExecutionResult(
                     success=False,
                     status=OrderStatus.FAILED,
@@ -415,7 +445,7 @@ class SignalExecutor:
                     kis_response=order_result,
                     error=order_result.get("error")
                 )
-
+            
         except Exception as e:
             logger.error(f"Order execution error: {e}", exc_info=True)
             return ExecutionResult(

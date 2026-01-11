@@ -325,10 +325,14 @@ class PositionTracker:
         company_name: str,
         initial_price: float,
         initial_amount: float,
-        reasoning: str = "Initial entry"
+        reasoning: str = "Initial entry",
+        strategy_id: Optional[str] = None
     ) -> Position:
         """
         새 포지션 생성 (초기 매수)
+
+        Phase 2, T2.2: Multi-Strategy Orchestration 통합
+        strategy_id가 제공되면 자동으로 PositionOwnership을 생성하여 소유권을 할당합니다.
 
         Args:
             ticker: 종목 티커
@@ -336,6 +340,7 @@ class PositionTracker:
             initial_price: 초기 매수가
             initial_amount: 초기 투자액
             reasoning: 매수 사유
+            strategy_id: 소유 전략 ID (Optional)
 
         Returns:
             생성된 Position
@@ -351,7 +356,48 @@ class PositionTracker:
 
         logger.info(f"Created new position: {ticker} @ ${initial_price:.2f}")
 
+        # Phase 2, T2.2: 자동 소유권 할당
+        if strategy_id:
+            try:
+                self._assign_ownership(ticker, strategy_id, reasoning)
+                logger.info(f"✅ Assigned ownership: {ticker} → strategy {strategy_id[:8]}...")
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to assign ownership for {ticker}: {e}")
+                # 소유권 할당 실패해도 포지션 생성은 성공 (best-effort)
+
         return position
+
+    def _assign_ownership(self, ticker: str, strategy_id: str, reasoning: str):
+        """
+        포지션 소유권 자동 할당 (Phase 2, T2.2)
+
+        Args:
+            ticker: 종목 티커
+            strategy_id: 소유 전략 ID
+            reasoning: 소유 사유
+        """
+        from backend.database.repository import get_sync_session
+        from backend.database.repository_multi_strategy import PositionOwnershipRepository
+
+        db = get_sync_session()
+        try:
+            ownership_repo = PositionOwnershipRepository(session=db)
+
+            # Primary ownership 획득 시도
+            ownership = ownership_repo.create(
+                strategy_id=strategy_id,
+                ticker=ticker.upper(),
+                ownership_type="primary",
+                reasoning=reasoning
+            )
+            db.commit()
+
+            logger.info(f"Ownership created: {ticker} (ID: {ownership.id[:8]}...)")
+        except Exception as e:
+            db.rollback()
+            raise
+        finally:
+            db.close()
 
     def add_dca_entry(
         self,

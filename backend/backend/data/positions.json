@@ -1,0 +1,28 @@
+{
+  "TEST_TSLA": {
+    "ticker": "TEST_TSLA",
+    "company_name": "Tesla Inc",
+    "status": "open",
+    "total_shares": 40.0,
+    "total_invested": 10000.0,
+    "avg_entry_price": 250.0,
+    "dca_entries": [
+      {
+        "entry_date": "2026-01-11T11:43:12.764929",
+        "price": 250.0,
+        "amount": 10000.0,
+        "shares": 40.0,
+        "dca_number": 0,
+        "reasoning": "Test position for Phase 2"
+      }
+    ],
+    "dca_count": 0,
+    "created_at": "2026-01-11T11:43:12.764922",
+    "updated_at": "2026-01-11T11:43:12.764935",
+    "closed_at": null,
+    "exit_price": null,
+    "exit_date": null,
+    "realized_pnl": null,
+    "realized_pnl_pct": null
+  }
+}

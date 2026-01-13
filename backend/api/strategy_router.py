@@ -24,7 +24,7 @@ Usage:
 
 from fastapi import APIRouter, HTTPException, Query, Depends, status
 from typing import List, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 
 from backend.database.repository import get_sync_session
@@ -49,6 +49,9 @@ from backend.api.schemas.strategy_schemas import (
     BulkStrategyActivateRequest,
     BulkOperationResponse
 )
+from backend.core.cache import get_cache
+import hashlib
+import json
 
 
 # ====================================
@@ -83,6 +86,8 @@ def list_strategies(
     - **active_only**: True면 활성 전략만 반환
     - Returns: 우선순위 내림차순으로 정렬된 전략 목록
     """
+    import json
+
     repo = StrategyRepository(db)
 
     if active_only:
@@ -90,7 +95,30 @@ def list_strategies(
     else:
         strategies = repo.get_all()
 
-    return strategies
+    # Parse config_metadata if it's a JSON string (PostgreSQL JSONB serialization issue)
+    response_items = []
+    for strategy in strategies:
+        config_meta = strategy.config_metadata
+        if isinstance(config_meta, str):
+            try:
+                config_meta = json.loads(config_meta)
+            except Exception:
+                config_meta = None
+
+        response_items.append(StrategyResponse(
+            id=strategy.id,
+            name=strategy.name,
+            display_name=strategy.display_name,
+            persona_type=strategy.persona_type,
+            priority=strategy.priority,
+            time_horizon=strategy.time_horizon,
+            is_active=strategy.is_active,
+            config_metadata=config_meta,
+            created_at=strategy.created_at,
+            updated_at=strategy.updated_at
+        ))
+
+    return response_items
 
 
 @strategy_router.post("/", response_model=StrategyResponse, status_code=status.HTTP_201_CREATED)
@@ -342,7 +370,7 @@ ownership_router = APIRouter()
 
 
 @ownership_router.get("/")
-def list_ownerships(
+async def list_ownerships(
     ticker: Optional[str] = Query(None, description="종목 코드 필터"),
     strategy_id: Optional[str] = Query(None, description="전략 ID 필터"),
     page: int = Query(1, ge=1, description="페이지 번호 (1부터 시작)"),
@@ -366,23 +394,45 @@ def list_ownerships(
     - **page_size**: 페이지 크기
     - **total_pages**: 전체 페이지 수
     - **items**: 소유권 목록 (strategy 정보 포함)
+    
+    **Caching**: 3s TTL for dashboard polling optimization
     """
+    # Generate cache key
+    cache_params = {
+        'ticker': ticker,
+        'strategy_id': strategy_id,
+        'page': page,
+        'page_size': page_size
+    }
+    cache_key_str = json.dumps(cache_params, sort_keys=True)
+    cache_key = f"ownership:list:{hashlib.md5(cache_key_str.encode()).hexdigest()}"
+    
+    # Check cache
+    cache = await get_cache()
+    cached_data = await cache.get(cache_key)
+    if cached_data is not None:
+        return cached_data
+    
     repo = PositionOwnershipRepository(db)
 
-    # Build base query
+    # Build base query with eager loading to prevent N+1 queries
+    base_query = db.query(PositionOwnership).options(
+        joinedload(PositionOwnership.strategy)
+    )
+    
     if ticker:
         # Filter by ticker
-        query = db.query(PositionOwnership).filter(
+        query = base_query.filter(
             PositionOwnership.ticker == ticker.upper()
         )
     elif strategy_id:
         # Filter by strategy
-        query = db.query(PositionOwnership).filter(
+        query = base_query.filter(
             PositionOwnership.strategy_id == strategy_id
         )
     else:
         # Get all
-        query = db.query(PositionOwnership)
+        query = base_query
 
     # Get total count
     total = query.count()
@@ -396,55 +446,21 @@ def list_ownerships(
     # Calculate total pages
     total_pages = (total + page_size - 1) // page_size if total > 0 else 0
 
-    # Convert to response models
-    import json
-    items = []
-    for o in ownerships:
-        # Handle strategy with JSON config_metadata
-        strategy_dict = None
-        if o.strategy:
-            config_meta = o.strategy.config_metadata
-            # Parse JSON string if needed
-            if isinstance(config_meta, str):
-                try:
-                    config_meta = json.loads(config_meta)
-                except:
-                    config_meta = None
+    # Convert to response models using Pydantic
+    items = [PositionOwnershipWithStrategy.from_orm(o) for o in ownerships]
 
-            strategy_dict = {
-                "id": o.strategy.id,
-                "name": o.strategy.name,
-                "display_name": o.strategy.display_name,
-                "persona_type": o.strategy.persona_type,
-                "priority": o.strategy.priority,
-                "time_horizon": o.strategy.time_horizon,
-                "is_active": o.strategy.is_active,
-                "config_metadata": config_meta,
-                "created_at": o.strategy.created_at,
-                "updated_at": o.strategy.updated_at
-            }
-
-        # Manually construct response to handle JSON fields
-        item_dict = {
-            "id": o.id,
-            "ticker": o.ticker,
-            "strategy_id": o.strategy_id,
-            "position_id": o.position_id,
-            "ownership_type": o.ownership_type,
-            "locked_until": o.locked_until,
-            "reasoning": o.reasoning,
-            "created_at": o.created_at,
-            "strategy": strategy_dict
-        }
-        items.append(item_dict)
-
-    return {
+    response_data = {
         "total": total,
         "page": page,
         "page_size": page_size,
         "total_pages": total_pages,
         "items": items
     }
+    
+    # Cache for 3 seconds
+    await cache.set(cache_key, response_data, ttl=3)
+    
+    return response_data
 
 
 @ownership_router.get("/{ticker}/primary", response_model=PositionOwnershipResponse)

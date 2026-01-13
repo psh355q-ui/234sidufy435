@@ -15,6 +15,7 @@ import type { Strategy } from '../../types/strategy';
 import {
   PERSONA_ICONS,
   PERSONA_NAMES,
+  TIME_HORIZON_NAMES,
   getPriorityColor,
   STRATEGY_COLORS
 } from '../../types/strategy';
@@ -69,7 +70,7 @@ export function StrategyCard({ strategy, positionCount = 0, onCardClick }: Strat
       {/* Priority Badge */}
       <div className="mb-4">
         <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${priorityColorClass}`}>
-          <span className="mr-1">Priority</span>
+          <span className="mr-1">우선순위</span>
           <span className="font-bold">{strategy.priority}</span>
         </div>
       </div>
@@ -85,19 +86,19 @@ export function StrategyCard({ strategy, positionCount = 0, onCardClick }: Strat
               ? 'bg-green-100 text-green-800'
               : 'bg-gray-100 text-gray-600'
           }`}>
-            {strategy.is_active ? '✓ Active' : '○ Inactive'}
+            {strategy.is_active ? '✓ 활성' : '○ 비활성'}
           </div>
         </div>
         <div className="text-right">
           <div className="text-2xl font-bold text-gray-800">{positionCount}</div>
-          <div className="text-xs text-gray-500">Positions</div>
+          <div className="text-xs text-gray-500">포지션</div>
         </div>
       </div>
 
       {/* Toggle Switch */}
       <div className="flex items-center justify-between pt-3 border-t border-gray-100">
         <span className="text-sm text-gray-600">
-          {strategy.is_active ? 'Deactivate' : 'Activate'}
+          {strategy.is_active ? '비활성화' : '활성화'}
         </span>
         <button
           onClick={handleToggleActive}
@@ -120,7 +121,7 @@ export function StrategyCard({ strategy, positionCount = 0, onCardClick }: Strat
       {/* Time Horizon Badge (optional) */}
       <div className="mt-3">
         <span className="text-xs text-gray-400">
-          Time Horizon: <span className="font-medium capitalize">{strategy.time_horizon}</span>
+          투자 기간: <span className="font-medium">{TIME_HORIZON_NAMES[strategy.time_horizon]}</span>
         </span>
       </div>
     </div>

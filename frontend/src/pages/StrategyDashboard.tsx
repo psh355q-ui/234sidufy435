@@ -48,15 +48,15 @@ export default function StrategyDashboard() {
           <div className="flex items-start gap-3">
             <span className="text-red-500 text-2xl">⚠️</span>
             <div>
-              <h3 className="text-red-800 font-semibold mb-1">Error Loading Strategies</h3>
+              <h3 className="text-red-800 font-semibold mb-1">전략 로딩 오류</h3>
               <p className="text-red-600 text-sm">
-                {error instanceof Error ? error.message : 'Failed to load strategies'}
+                {error instanceof Error ? error.message : '전략을 불러오는데 실패했습니다'}
               </p>
               <button
                 onClick={() => window.location.reload()}
                 className="mt-3 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm"
               >
-                Retry
+                다시 시도
               </button>
             </div>
           </div>
@@ -73,17 +73,17 @@ export default function StrategyDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                Multi-Strategy Orchestrator
+                멀티 전략 오케스트레이터
               </h1>
               <p className="text-sm text-gray-500 mt-1">
-                Manage trading strategies and position ownership
+                트레이딩 전략 및 포지션 소유권 관리
               </p>
             </div>
             <div className="flex items-center gap-3">
               {isLoading && (
                 <div className="flex items-center gap-2 text-gray-500">
                   <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-                  <span className="text-sm">Loading...</span>
+                  <span className="text-sm">로딩 중...</span>
                 </div>
               )}
             </div>
@@ -100,10 +100,10 @@ export default function StrategyDashboard() {
         <section className="mb-12">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-gray-800">
-              Active Strategies
+              활성 전략
             </h2>
             <div className="text-sm text-gray-500">
-              {sortedStrategies.length} {sortedStrategies.length === 1 ? 'strategy' : 'strategies'}
+              {sortedStrategies.length}개 전략
             </div>
           </div>
 
@@ -141,16 +141,16 @@ export default function StrategyDashboard() {
         <section>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-gray-800">
-              Position Ownership
+              포지션 소유권
             </h2>
             <button className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md hover:border-gray-400 transition-colors">
-              View All
+              전체 보기
             </button>
           </div>
 
           <div className="bg-white rounded-lg shadow-md p-8 text-center text-gray-500">
-            <p className="text-sm">Position ownership table coming in T5.4</p>
-            <p className="text-xs text-gray-400 mt-1">API endpoint: GET /api/ownership</p>
+            <p className="text-sm">포지션 소유권 테이블 (T5.4 예정)</p>
+            <p className="text-xs text-gray-400 mt-1">API 엔드포인트: GET /api/ownership</p>
           </div>
         </section>
       </main>

@@ -25,9 +25,9 @@ export function StrategyCardGrid({
     return (
       <div className="bg-white rounded-lg shadow-md p-8 text-center">
         <div className="text-gray-400 text-4xl mb-4">🤷</div>
-        <p className="text-gray-600">No strategies found</p>
+        <p className="text-gray-600">전략이 없습니다</p>
         <p className="text-sm text-gray-400 mt-2">
-          Create a strategy to get started
+          전략을 생성하여 시작하세요
         </p>
       </div>
     );

@@ -55,10 +55,17 @@ export const PERSONA_ICONS: Record<PersonaType, string> = {
 
 // Persona Display Names
 export const PERSONA_NAMES: Record<PersonaType, string> = {
-  long_term: 'Long-Term',
-  dividend: 'Dividend',
-  trading: 'Trading',
-  aggressive: 'Aggressive'
+  long_term: '장기 투자',
+  dividend: '배당 투자',
+  trading: '단기 트레이딩',
+  aggressive: '공격적 투자'
+};
+
+// Time Horizon Display Names
+export const TIME_HORIZON_NAMES: Record<TimeHorizon, string> = {
+  short: '단기',
+  medium: '중기',
+  long: '장기'
 };
 
 // Priority Color Mapping

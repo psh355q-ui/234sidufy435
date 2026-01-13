@@ -40,6 +40,7 @@ import CorrelationDashboard from './pages/CorrelationDashboard';  // 🆕 Phase 
 
 import Performance from './pages/Performance';  // 🆕 Phase 25.2 (performance dashboard)
 import FeedbackDashboard from './pages/FeedbackDashboard'; // 🆕 Phase 6
+import StrategyDashboard from './pages/StrategyDashboard'; // 🆕 Phase 5 (Multi-Strategy Orchestration)
 // ... (imports)
 
 // ...
@@ -86,6 +87,7 @@ const App: React.FC = () => {
               <Route path="/correlation" element={<CorrelationDashboard />} />  {/* 🆕 Phase 32 Asset Correlation */}
 
               <Route path="/feedback" element={<FeedbackDashboard />} />  {/* 🆕 Phase 6 */}
+              <Route path="/strategies" element={<StrategyDashboard />} />  {/* 🆕 Phase 5 Multi-Strategy Orchestration */}
 
               <Route path="/war-room" element={<WarRoomPage />} />
               <Route path="/signal-consolidation" element={<SignalConsolidationPage />} />

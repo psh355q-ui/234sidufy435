@@ -5,7 +5,7 @@ import {
   FileSearch, Settings, X, MessageSquare, TrendingDown, BarChart3,
   LineChart, Brain, Zap, PieChart, TestTube2, Wallet, Globe,
   ChevronDown, ChevronRight, DollarSign, Database, Target, Coins, GraduationCap,
-  Network
+  Network, Users
 } from 'lucide-react';
 
 interface NavItem {
@@ -42,6 +42,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
       title: 'Trading & Strategy',
       items: [
         { path: '/war-room', icon: MessageSquare, label: 'AI War Room' },
+        { path: '/strategies', icon: Users, label: 'Multi-Strategy' }, // 🆕 Phase 5
         { path: '/trading', icon: Zap, label: 'Trading Signals' },
         { path: '/backtest', icon: TestTube2, label: 'Backtest' },
         { path: '/deep-reasoning', icon: Brain, label: 'Deep Reasoning' },

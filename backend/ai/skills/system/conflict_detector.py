@@ -27,6 +27,7 @@ Algorithm:
 from typing import Optional, Tuple
 from datetime import datetime
 from sqlalchemy.orm import Session
+import logging
 
 from backend.database.repository_multi_strategy import (
     StrategyRepository,
@@ -34,13 +35,16 @@ from backend.database.repository_multi_strategy import (
     ConflictLogRepository
 )
 from backend.api.schemas.strategy_schemas import (
-    ConflictResolution, 
-    OrderAction, 
-    ConflictCheckResponse, 
-    ConflictDetail, 
+    ConflictResolution,
+    OrderAction,
+    ConflictCheckResponse,
+    ConflictDetail,
     OwnershipType
 )
 from backend.database.models import Strategy, PositionOwnership
+from backend.events import event_bus, EventType
+
+logger = logging.getLogger(__name__)
 
 class ConflictDetector:
     """전략 충돌 감지 및 해결 엔진"""
@@ -169,6 +173,16 @@ class ConflictDetector:
             ownership_id=ownership.id
         )
 
+        # 4. Publish Events (Phase 4, T4.2)
+        self._publish_conflict_event(
+            ticker=ticker,
+            requesting_strategy=requesting_strategy,
+            owning_strategy=owning_strategy,
+            resolution=decision_resolution,
+            reasoning=decision_reasoning,
+            action=action
+        )
+
         return self._create_response(
             has_conflict=True,
             resolution=decision_resolution,
@@ -200,10 +214,10 @@ class ConflictDetector:
             ownership_id=ownership_id
         )
 
-    def _create_response(self, 
-                         has_conflict: bool, 
-                         resolution: ConflictResolution, 
-                         can_proceed: bool, 
+    def _create_response(self,
+                         has_conflict: bool,
+                         resolution: ConflictResolution,
+                         can_proceed: bool,
                          reasoning: str,
                          detail: Optional[ConflictDetail] = None) -> ConflictCheckResponse:
         """응답 객체 생성 헬퍼"""
@@ -214,3 +228,48 @@ class ConflictDetector:
             reasoning=reasoning,
             conflict_detail=detail
         )
+
+    def _publish_conflict_event(self,
+                                ticker: str,
+                                requesting_strategy: Strategy,
+                                owning_strategy: Strategy,
+                                resolution: ConflictResolution,
+                                reasoning: str,
+                                action: OrderAction):
+        """
+        충돌 이벤트 발행 (Phase 4, T4.2)
+
+        Args:
+            ticker: 종목 코드
+            requesting_strategy: 요청 전략
+            owning_strategy: 소유 전략
+            resolution: 충돌 해결 방법
+            reasoning: 사유
+            action: 주문 액션
+        """
+        event_data = {
+            'ticker': ticker,
+            'requesting_strategy_id': requesting_strategy.id,
+            'requesting_strategy_name': requesting_strategy.name,
+            'requesting_priority': requesting_strategy.priority,
+            'owning_strategy_id': owning_strategy.id,
+            'owning_strategy_name': owning_strategy.name,
+            'owning_priority': owning_strategy.priority,
+            'action': action.value if hasattr(action, 'value') else str(action),
+            'resolution': resolution.value if hasattr(resolution, 'value') else str(resolution),
+            'reasoning': reasoning
+        }
+
+        try:
+            # Always publish CONFLICT_DETECTED
+            event_bus.publish(EventType.CONFLICT_DETECTED, event_data)
+
+            # Additional specific events based on resolution
+            if resolution == ConflictResolution.BLOCKED:
+                event_bus.publish(EventType.ORDER_BLOCKED_BY_CONFLICT, event_data)
+            elif resolution == ConflictResolution.PRIORITY_OVERRIDE:
+                event_bus.publish(EventType.PRIORITY_OVERRIDE, event_data)
+
+        except Exception as e:
+            logger.error(f"Failed to publish conflict event: {e}")
+            # Event publishing failure should not affect conflict detection logic

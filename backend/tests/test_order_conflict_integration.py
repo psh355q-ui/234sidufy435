@@ -35,6 +35,8 @@ if existing_own:
     db.delete(existing_own)
     db.commit()
 
+from backend.execution.state_machine import OrderState
+
 # ==========================================
 # Scenario 1: Block (Low tries to buy High's asset)
 # ==========================================
@@ -45,10 +47,16 @@ db.commit()
 
 try:
     print(f"Low ({strat_low.name}) attempts to buy {TICKER} (owned by High)...")
-    order_manager.create_order(TICKER, "BUY", 10, strategy_id=strat_low.id)
-    print("❌ FAILED: Order should have been blocked")
-except ValueError as e:
-    print(f"✅ BLOCKED as expected: {e}")
+    order = order_manager.create_order(TICKER, "BUY", 10, strategy_id=strat_low.id)
+    
+    if order.status == OrderState.REJECTED.value:
+        print(f"✅ BLOCKED as expected: Status={order.status}")
+        # print(f"Reason: {order.order_metadata}") # If implemented
+    else:
+        print(f"❌ FAILED: Order status is {order.status}, expected REJECTED")
+        
+except Exception as e:
+    print(f"❌ FAILED with Exception: {e}")
 
 # ==========================================
 # Scenario 2: Override (High takes from Low)
@@ -66,7 +74,12 @@ db.commit()
 try:
     print(f"High ({strat_high.name}) attempts to buy {TICKER} (owned by Low)...")
     order = order_manager.create_order(TICKER, "BUY", 10, strategy_id=strat_high.id)
-    print(f"✅ Order Created: {order.id}")
+    print(f"Order Created: {order.id}, Status: {order.status}")
+    
+    if order.status == OrderState.ORDER_PENDING.value:
+        print(f"✅ Order Accepted: Status={order.status}")
+    else:
+        print(f"❌ FAILED: Order status is {order.status}, expected ORDER_PENDING")
     
     # Verify Ownership Transferred
     new_own = repo_own.get_primary_ownership(TICKER)

@@ -377,11 +377,13 @@ class PositionTracker:
             reasoning: 소유 사유
         """
         from backend.database.repository import get_sync_session
-        from backend.database.repository_multi_strategy import PositionOwnershipRepository
+        from backend.database.repository_multi_strategy import PositionOwnershipRepository, StrategyRepository
+        from backend.events import event_bus, EventType
 
         db = get_sync_session()
         try:
             ownership_repo = PositionOwnershipRepository(session=db)
+            strategy_repo = StrategyRepository(session=db)
 
             # Primary ownership 획득 시도
             ownership = ownership_repo.create(
@@ -393,6 +395,24 @@ class PositionTracker:
             db.commit()
 
             logger.info(f"Ownership created: {ticker} (ID: {ownership.id[:8]}...)")
+
+            # Publish OWNERSHIP_ACQUIRED Event (Phase 4, T4.2)
+            try:
+                strategy = strategy_repo.get_by_id(strategy_id)
+                if strategy:
+                    event_bus.publish(EventType.OWNERSHIP_ACQUIRED, {
+                        'ticker': ticker.upper(),
+                        'strategy_id': strategy_id,
+                        'strategy_name': strategy.name,
+                        'ownership_type': 'primary',
+                        'reasoning': reasoning,
+                        'ownership_id': ownership.id
+                    })
+                    logger.info(f"📢 Event published: OWNERSHIP_ACQUIRED for {ticker}")
+            except Exception as e:
+                logger.warning(f"Failed to publish ownership acquired event: {e}")
+                # Event publishing failure should not affect ownership assignment
+
         except Exception as e:
             db.rollback()
             raise

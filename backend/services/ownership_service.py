@@ -28,6 +28,7 @@ from backend.database.repository_multi_strategy import (
 )
 from backend.database.models import PositionOwnership, Strategy
 from backend.api.schemas.strategy_schemas import OwnershipType
+from backend.events import event_bus, EventType
 
 logger = logging.getLogger(__name__)
 
@@ -124,12 +125,23 @@ class OwnershipService:
                 "strategy_id": to_strategy_id,
                 "reasoning": f"Transferred from {from_strategy_id}: {reason}"
             }, synchronize_session=False)
-            
+
             # Flush changes
             self.session.flush()
 
             # Log via scalar values only
             logger.info(f"✅ Ownership transferred: {ticker} | {from_strategy_id} -> {to_strategy_id}")
+
+            # 5. Publish OWNERSHIP_TRANSFERRED Event (Phase 4, T4.2)
+            self._publish_transfer_event(
+                ticker=ticker,
+                from_strategy_id=from_strategy_id,
+                from_strategy_name=current_strategy_name,
+                to_strategy_id=to_strategy_id,
+                to_strategy_name=target_strategy_name,
+                reason=reason,
+                ownership_id=ownership_id
+            )
 
             return {
                 "success": True,
@@ -209,3 +221,40 @@ class OwnershipService:
         except Exception as e:
             logger.warning(f"Failed to log conflict: {e}")
             # 로그 실패는 이전 작업에 영향 주지 않음 (best-effort)
+
+    def _publish_transfer_event(self,
+                                ticker: str,
+                                from_strategy_id: str,
+                                from_strategy_name: str,
+                                to_strategy_id: str,
+                                to_strategy_name: str,
+                                reason: str,
+                                ownership_id: str):
+        """
+        소유권 이전 이벤트 발행 (Phase 4, T4.2)
+
+        Args:
+            ticker: 종목 코드
+            from_strategy_id: 이전 소유 전략 ID
+            from_strategy_name: 이전 소유 전략 이름
+            to_strategy_id: 새 소유 전략 ID
+            to_strategy_name: 새 소유 전략 이름
+            reason: 이전 사유
+            ownership_id: 소유권 ID
+        """
+        event_data = {
+            'ticker': ticker,
+            'from_strategy_id': from_strategy_id,
+            'from_strategy_name': from_strategy_name,
+            'to_strategy_id': to_strategy_id,
+            'to_strategy_name': to_strategy_name,
+            'reason': reason,
+            'ownership_id': ownership_id
+        }
+
+        try:
+            event_bus.publish(EventType.OWNERSHIP_TRANSFERRED, event_data)
+            logger.info(f"📢 Event published: OWNERSHIP_TRANSFERRED for {ticker}")
+        except Exception as e:
+            logger.error(f"Failed to publish ownership transfer event: {e}")
+            # Event publishing failure should not affect ownership transfer logic

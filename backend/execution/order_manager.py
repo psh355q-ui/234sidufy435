@@ -20,6 +20,11 @@ from .state_machine import (
     state_machine
 )
 from backend.events import event_bus, EventType
+from backend.ai.skills.system.conflict_detector import ConflictDetector
+from backend.services.ownership_service import OwnershipService
+from backend.api.schemas.strategy_schemas import OrderAction, ConflictResolution
+from backend.execution.state_machine import OrderState
+from backend.database.models import Order
 
 logger = logging.getLogger(__name__)
 
@@ -52,25 +57,37 @@ class OrderManager:
         - T3.2: Conflict Detection (Check before create)
         - T3.3: Priority Override & Transfer (Handle override resolution)
         """
-        # 0. Validate Strategy ID (Required for conflict check)
         if not strategy_id:
              # Legacy support or error? For now allow but warn, or assume manual intervention
-             # But ConflictDetector requires strategy_id.
-             # If no strategy_id, we might skip conflict check (e.g. manual trade from dashboard?)
-             # Let's assume strategy_id is required for automated flow.
              pass 
 
-        if strategy_id:
-            from backend.ai.skills.system.conflict_detector import ConflictDetector
-            from backend.services.ownership_service import OwnershipService
-            from backend.api.schemas.strategy_schemas import OrderAction, ConflictResolution
-            
+        # 0. Create Order (State: SIGNAL_RECEIVED)
+        # Create DB record immediately to track lifecycle events
+        order = Order(
+            ticker=ticker,
+            action=action,
+            quantity=quantity,
+            strategy_id=strategy_id,
+            status=OrderState.SIGNAL_RECEIVED.value,
+            order_metadata=metadata,
+            created_at=datetime.now()
+        )
+        self.db.add(order)
+        self.db.commit()
+        self.db.refresh(order)
+        
+        logger.info(f"[ORDER_CREATE] Order {order.id} created (SIGNAL_RECEIVED)")
+
+        try:
+            # 1. State: VALIDATING
+            self.transition(order, OrderState.VALIDATING, reason="Starting conflict checks")
+
             detector = ConflictDetector(self.db)
             
             # Map string action to Enum
             order_action = OrderAction.BUY if action.upper() == 'BUY' else OrderAction.SELL
             
-            # 1. Check Conflict
+            # 2. Conflict Check
             conflict_response = detector.check_conflict(
                 strategy_id=strategy_id, 
                 ticker=ticker, 
@@ -78,18 +95,47 @@ class OrderManager:
                 quantity=quantity
             )
             
-            # 2. Handle Resolution
+            # Publish CONFLICT_DETECTED if conflict exists
+            if conflict_response.has_conflict:
+                 event_bus.publish(EventType.CONFLICT_DETECTED, {
+                     'ticker': ticker,
+                     'strategy_id': strategy_id,
+                     'conflict_detail': conflict_response.dict()
+                 })
+
+            # 3. Handle Resolution
             if not conflict_response.can_proceed:
-                error_reason = f"Order BLOCKED by ConflictDetector: {conflict_response.reasoning}"
+                error_reason = f"Order BLOCKED: {conflict_response.reasoning}"
                 logger.warning(f"[ORDER_CREATE] {error_reason}")
-                raise ValueError(error_reason)
+                
+                # Publish BLOCK event
+                event_bus.publish(EventType.ORDER_BLOCKED_BY_CONFLICT, {
+                    'ticker': ticker,
+                    'strategy_id': strategy_id,
+                    'reason': error_reason,
+                    'conflict_detail': conflict_response.dict()
+                })
+                
+                # State: REJECTED
+                self.transition(
+                    order, 
+                    OrderState.REJECTED, 
+                    reason=error_reason, 
+                    metadata={"conflict_detail": conflict_response.dict()}
+                )
+                return order
             
-            # 3. Handle Priority Override (T3.3)
+            # 4. Handle Priority Override (T3.3)
             if conflict_response.resolution == ConflictResolution.PRIORITY_OVERRIDE:
                 logger.info(f"[ORDER_CREATE] Priority Override triggered for {ticker}. Initiating transfer...")
                 
-                # Get current owner from detail or DB
-                # Conflict logic ensures detail is populated for override
+                # Publish OVERRIDE event
+                event_bus.publish(EventType.PRIORITY_OVERRIDE, {
+                    'ticker': ticker,
+                    'strategy_id': strategy_id,
+                    'conflict_detail': conflict_response.dict()
+                })
+                
                 current_owner_id = conflict_response.conflict_detail.owning_strategy_id
                 
                 ownership_service = OwnershipService(self.db)
@@ -103,24 +149,25 @@ class OrderManager:
                 if not transfer_result['success']:
                     error_reason = f"Ownership Transfer FAILED: {transfer_result['message']}"
                     logger.error(f"[ORDER_CREATE] {error_reason}")
-                    raise ValueError(error_reason)
+                    
+                    # State: REJECTED (or FAILED)
+                    self.transition(order, OrderState.REJECTED, reason=error_reason)
+                    return order
                 
-                logger.info(f"[ORDER_CREATE] Ownership transferred successfully. Proceeding with order.")
+                logger.info(f"[ORDER_CREATE] Ownership transferred successfully.")
 
-        from backend.database.models import Order
-        
-        order = Order(
-            ticker=ticker,
-            action=action,
-            quantity=quantity,
-            strategy_id=strategy_id,
-            status=OrderState.CREATED.value if hasattr(OrderState, 'CREATED') else 'PENDING',
-            order_metadata=metadata
-        )
-        self.db.add(order)
-        self.db.commit()
-        self.db.refresh(order)
-        return order
+            # 5. Success -> State: ORDER_PENDING
+            self.transition(order, OrderState.ORDER_PENDING, reason="Validation passed")
+            return order
+
+        except Exception as e:
+            logger.error(f"[ORDER_CREATE] Unexpected error: {e}")
+            # If possible, mark as FAILED
+            try:
+                self.transition(order, OrderState.FAILED, reason=f"System error: {str(e)}")
+            except:
+                pass
+            raise e
         
     # ================================================================
     # 핵심 메서드: 상태 전이 (Single Writer)
@@ -150,11 +197,9 @@ class OrderManager:
         """
         current = OrderState(order.status)
 
-        # 1. 전이 가능 여부 검증
-        if not self.sm.can_transition(current, target):
-            error_msg = f"Invalid transition: {current.value} → {target.value}"
-            logger.error(f"[ORDER:{order.id}] {error_msg}")
-            raise InvalidStateTransitionError(error_msg)
+        # 1. Validate Transition
+        # This will raise InvalidStateTransitionError if invalid
+        self.sm.validate_transition(current, target)
 
         # 2. 상태 변경 (원자적)
         old_status = order.status
@@ -171,6 +216,7 @@ class OrderManager:
         try:
             self.db.add(order)
             self.db.commit()
+            self.db.refresh(order)
         except Exception as e:
             self.db.rollback()
             order.status = old_status  # 롤백

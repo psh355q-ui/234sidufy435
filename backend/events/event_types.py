@@ -49,6 +49,15 @@ class EventType(Enum):
     CIRCUIT_BREAKER = "circuit_breaker"              # 서킷브레이커 발동
 
     # ================================================================
+    # Multi-Strategy 충돌 이벤트 (Phase 4, T4.2)
+    # ================================================================
+    CONFLICT_DETECTED = "conflict_detected"                      # 충돌 감지됨
+    ORDER_BLOCKED_BY_CONFLICT = "order_blocked_by_conflict"      # 충돌로 인한 주문 차단
+    PRIORITY_OVERRIDE = "priority_override"                      # 우선순위 오버라이드
+    OWNERSHIP_ACQUIRED = "ownership_acquired"                    # 소유권 획득
+    OWNERSHIP_TRANSFERRED = "ownership_transferred"              # 소유권 이전
+
+    # ================================================================
     # 시스템 이벤트
     # ================================================================
     SYSTEM_STARTED = "system_started"                # 시스템 시작

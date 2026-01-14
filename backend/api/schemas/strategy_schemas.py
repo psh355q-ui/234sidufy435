@@ -143,7 +143,7 @@ class StrategyResponse(StrategyBase):
     updated_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # ====================================
@@ -182,7 +182,7 @@ class PositionOwnershipResponse(PositionOwnershipBase):
     strategy: Optional[StrategyResponse] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class PositionOwnershipWithStrategy(PositionOwnershipResponse):
@@ -233,7 +233,7 @@ class ConflictLogResponse(ConflictLogBase):
     owning_strategy: Optional[StrategyResponse] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # ====================================

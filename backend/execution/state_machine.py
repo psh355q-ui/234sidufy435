@@ -109,16 +109,19 @@ class OrderStateMachine:
     def can_transition(self, current: OrderState, target: OrderState) -> bool:
         """
         전이 가능 여부 확인
-
-        Args:
-            current: 현재 상태
-            target: 목표 상태
-
-        Returns:
-            bool: 전이 가능 여부
         """
         valid_targets = self.VALID_TRANSITIONS.get(current, set())
         return target in valid_targets
+
+    def validate_transition(self, current: OrderState, target: OrderState):
+        """
+        전이 유효성 검사 (실패 시 예외 발생)
+        """
+        if not self.can_transition(current, target):
+            raise InvalidStateTransitionError(
+                f"Invalid transition: {current.value} -> {target.value}. "
+                f"Allowed: {[s.value for s in self.get_valid_transitions(current)]}"
+            )
 
     def get_valid_transitions(self, current: OrderState) -> Set[OrderState]:
         """현재 상태에서 가능한 전이 목록"""
@@ -131,6 +134,13 @@ class OrderStateMachine:
     def is_pending(self, state: OrderState) -> bool:
         """미완료 상태인지 확인 (Recovery 대상)"""
         return state in self.PENDING_STATES
+
+    def is_active_trade(self, state: OrderState) -> bool:
+        """
+        활성 거래 상태인지 확인 (자산 보유 중)
+        OrderSent, PartialFilled
+        """
+        return state in {OrderState.ORDER_SENT, OrderState.PARTIAL_FILLED}
 
 
 # 싱글톤 인스턴스
